@@ -923,3 +923,17 @@ export function getStore(): Store {
 export function freshDemoStore(): Store {
   return new DemoStore();
 }
+
+/**
+ * Build/runtime-safe read for prerendered pages: if DATABASE_URL is set but
+ * the database is unreachable (or unmigrated), return the fallback instead of
+ * crashing static generation. Writes must never use this — they fail loudly.
+ */
+export async function storeRead<T>(fn: (s: Store) => Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await fn(getStore());
+  } catch (e) {
+    console.warn("[store] database read failed, using fallback:", (e as Error)?.message ?? e);
+    return fallback;
+  }
+}

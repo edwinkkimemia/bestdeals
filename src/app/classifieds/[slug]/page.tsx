@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { LISTINGS, getListing } from "@/data/catalog";
 import { getRelated } from "@/lib/related";
-import { getStore } from "@/lib/store";
+import { storeRead } from "@/lib/store";
 import { ListingDetail } from "@/components/listing-detail";
 import { breadcrumbJsonLd } from "@/lib/seo";
 
@@ -25,7 +25,7 @@ export default async function ClassifiedDetail({ params }: { params: { slug: str
   const l = getListing(params.slug);
   if (!l) notFound();
   const { fromOthers, fromSeller } = getRelated(l);
-  const reviews = await getStore().listApprovedReviewsForSeller(l.sellerName);
+  const reviews = await storeRead((s) => s.listApprovedReviewsForSeller(l.sellerName), []);
   const jsonLd = breadcrumbJsonLd([
     { name: "Home", url: "https://chap.co.ke/" },
     { name: "Classifieds", url: "https://chap.co.ke/classifieds" },

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { SHOPS } from "@/data/catalog";
-import { getStore } from "@/lib/store";
+import { storeRead } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata = {
@@ -9,7 +9,7 @@ export const metadata = {
 };
 
 export default async function ShopsIndex() {
-  const community = await getStore().listShops();
+  const community = await storeRead((s) => s.listShops(), []);
   return (
     <div className="container-bd py-8">
       <nav className="text-xs text-ink-400"><Link href="/" className="hover:underline">Home</Link> / <span>Business Shops</span></nav>

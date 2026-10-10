@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { SHOPS, getShop, shopListings } from "@/data/catalog";
-import { getStore } from "@/lib/store";
+import { storeRead } from "@/lib/store";
 import { ReviewsBlock } from "@/components/reviews-block";
 import { ListingCard } from "@/components/ui/listing-card";
 import { Badge } from "@/components/ui/badge";
@@ -25,10 +25,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 export default async function ShopPage({ params }: { params: { slug: string } }) {
   const s = getShop(params.slug);
   if (!s) {
-    // Seller-created shop from the store.
-    const stored = await getStore().getShopBySlug(params.slug);
+    // Seller-created shop from the store (skipped if the DB is unreachable).
+    const stored = await storeRead((st) => st.getShopBySlug(params.slug), null);
     if (!stored) notFound();
-    const storedReviews = await getStore().listApprovedReviewsForShop(stored.slug);
+    const storedReviews = await storeRead((st) => st.listApprovedReviewsForShop(stored.slug), []);
     return (
       <div className="container-bd py-8">
         <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{stored.name} {stored.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</h1>
@@ -39,7 +39,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
     );
   }
   const items = shopListings(s.slug);
-  const reviews = await getStore().listApprovedReviewsForShop(s.slug);
+  const reviews = await storeRead((st) => st.listApprovedReviewsForShop(s.slug), []);
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
