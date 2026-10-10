@@ -41,7 +41,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
             items: [
               "Check the seller badge: ✓ Verified means ID or business checks passed. Unverified doesn't mean unsafe — just inspect more carefully.",
               "Compare the same item across sellers with the 'Related from other sellers' rail on every listing page.",
-              "For classifieds, use Contact seller or WhatsApp; for shop products, add to cart and check out with M-Pesa, card, or cash on delivery where offered.",
+              "For classifieds, use Message seller or WhatsApp; for shop products, add to cart and check out with M-Pesa, card, or cash on delivery where offered.",
               "Save anything with the heart icon — your wishlist, price history, and order tracking live in your account.",
             ],
           },

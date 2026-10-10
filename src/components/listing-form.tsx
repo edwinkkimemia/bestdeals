@@ -67,7 +67,7 @@ export function ListingForm() {
           </select></div>
         <div><label className="label-bd" htmlFor="l-tx">How will buyers transact?</label>
           <select id="l-tx" className="input-bd" {...register("transactionMethod")}>
-            <option value="contact_seller">Contact seller</option><option value="buy_online">Buy online</option><option value="request_quote">Request a quote</option><option value="enquiry">Make an enquiry</option>
+            <option value="contact_seller">Message seller</option><option value="buy_online">Buy online</option><option value="request_quote">Request a quote</option><option value="enquiry">Make an enquiry</option>
           </select></div>
       </div>
       <div><label className="label-bd" htmlFor="l-title">Title</label><input id="l-title" className="input-bd" placeholder="e.g. Samsung Galaxy A15 128GB, sealed" {...register("title")} />{errors.title && <p className="text-xs text-red-600">{String(errors.title.message)}</p>}</div>

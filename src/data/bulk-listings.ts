@@ -13,23 +13,24 @@ type Seller = {
   kind: "individual" | "business";
   shop?: string;
   verified: boolean;
+  phone: string; // fictional 0700-000-xxx demo range; production uses verified numbers
   county: string;
   town: string;
 };
 
 const SELLERS: Seller[] = [
-  { name: "FonZone Nairobi", kind: "business", shop: "fon-zone-nairobi", verified: true, county: "Nairobi", town: "CBD" },
-  { name: "Mama Fua Styles", kind: "business", shop: "mama-fua-styles", verified: true, county: "Nairobi", town: "Eastleigh" },
-  { name: "Rift Hardware Ltd", kind: "business", shop: "rift-hardware", verified: false, county: "Nakuru", town: "Nakuru Town" },
-  { name: "Pwani Fresh Foods", kind: "business", shop: "pwani-fresh-foods", verified: true, county: "Mombasa", town: "Nyali" },
-  { name: "Wanjiku M.", kind: "individual", verified: false, county: "Kiambu", town: "Thika" },
-  { name: "Otieno J.", kind: "individual", verified: true, county: "Kisumu", town: "Kondele" },
-  { name: "Chebet R.", kind: "individual", verified: false, county: "Uasin Gishu", town: "Eldoret" },
-  { name: "Mwangi K.", kind: "individual", verified: false, county: "Nakuru", town: "Naivasha" },
-  { name: "Savannah SACCO", kind: "business", verified: true, county: "Nairobi", town: "CBD" },
-  { name: "Kamau FixIt", kind: "individual", verified: true, county: "Kajiado", town: "Kitengela" },
-  { name: "Naliaka W.", kind: "individual", verified: false, county: "Nairobi", town: "Kilimani" },
-  { name: "Baraka T.", kind: "individual", verified: false, county: "Mombasa", town: "Likoni" },
+  { name: "FonZone Nairobi", kind: "business", shop: "fon-zone-nairobi", verified: true, phone: "0722123456", county: "Nairobi", town: "CBD" },
+  { name: "Mama Fua Styles", kind: "business", shop: "mama-fua-styles", verified: true, phone: "0733987654", county: "Nairobi", town: "Eastleigh" },
+  { name: "Rift Hardware Ltd", kind: "business", shop: "rift-hardware", verified: false, phone: "0711223344", county: "Nakuru", town: "Nakuru Town" },
+  { name: "Pwani Fresh Foods", kind: "business", shop: "pwani-fresh-foods", verified: true, phone: "0700111222", county: "Mombasa", town: "Nyali" },
+  { name: "Wanjiku M.", kind: "individual", verified: false, phone: "0710000101", county: "Kiambu", town: "Thika" },
+  { name: "Otieno J.", kind: "individual", verified: true, phone: "0710000102", county: "Kisumu", town: "Kondele" },
+  { name: "Chebet R.", kind: "individual", verified: false, phone: "0710000103", county: "Uasin Gishu", town: "Eldoret" },
+  { name: "Mwangi K.", kind: "individual", verified: false, phone: "0710000104", county: "Nakuru", town: "Naivasha" },
+  { name: "Savannah SACCO", kind: "business", verified: true, phone: "0710000105", county: "Nairobi", town: "CBD" },
+  { name: "Kamau FixIt", kind: "individual", verified: true, phone: "0710000106", county: "Kajiado", town: "Kitengela" },
+  { name: "Naliaka W.", kind: "individual", verified: false, phone: "0710000107", county: "Nairobi", town: "Kilimani" },
+  { name: "Baraka T.", kind: "individual", verified: false, phone: "0710000108", county: "Mombasa", town: "Likoni" },
 ];
 
 const CAT_IMG: Record<string, string> = {
@@ -95,6 +96,7 @@ function B(title: string, desc: string, cat: string, price: number, o: Opts = {}
     images: o.imgs ?? [CAT_IMG[cat]],
     sellerName: s.name,
     sellerType: s.kind,
+    sellerPhone: s.phone,
     ...(s.shop ? { shopSlug: s.shop } : {}),
     verified: s.verified,
     featured: o.feat,

@@ -10,8 +10,15 @@ export async function POST(req: NextRequest) {
   if (!gate.ok) return gate.response;
   const user = gate.seller;
   const form = await req.formData().catch(() => null);
-  const name = String(form?.get("name") || (await req.json().catch(() => ({} as Record<string, unknown>))).name || "").trim();
+  const json = form ? ({} as Record<string, unknown>) : await req.json().catch(() => ({} as Record<string, unknown>));
+  const get = (k: string) => String(form?.get(k) ?? json[k] ?? "").trim();
+  const name = get("name");
   if (name.length < 3) return NextResponse.json({ error: "Business name too short." }, { status: 400 });
+  // Every shop needs a reachable phone — it becomes the public WhatsApp contact.
+  const phone = get("phone") || user.phone;
+  if (!/^(\+254|0)[17]\d{8}$/.test(phone)) {
+    return NextResponse.json({ error: "A valid Kenyan phone is required — buyers reach you on it via WhatsApp." }, { status: 400 });
+  }
   let slug = slugify(name);
   const store = getStore();
   if (SHOPS.some((s) => s.slug === slug) || (await store.getShopBySlug(slug))) {
@@ -20,11 +27,11 @@ export async function POST(req: NextRequest) {
   await store.createShop({
     slug,
     name,
-    description: String(form?.get("description") || `${name} — storefront on Chap.`).slice(0, 2000),
-    businessCategory: String(form?.get("businessCategory") || "General retail"),
-    county: String(form?.get("county") || ""),
-    town: String(form?.get("town") || ""),
-    phone: String(form?.get("phone") || ""),
+    description: (get("description") || `${name} — storefront on Chap.`).slice(0, 2000),
+    businessCategory: get("businessCategory") || "General retail",
+    county: get("county"),
+    town: get("town"),
+    phone,
     ownerId: user.id,
   });
   return NextResponse.redirect(new URL(`/shops/${encodeURIComponent(slug)}`, req.url), 303);

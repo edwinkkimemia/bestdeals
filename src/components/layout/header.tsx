@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Heart, MapPin, Menu, Search, ShoppingCart, Store, User, X } from "lucide-react";
+import { Heart, MapPin, Menu, MessageCircle, Search, ShoppingCart, Store, User, X } from "lucide-react";
 import { useCart } from "../cart-provider";
 import { COUNTY_NAMES } from "@/lib/kenya";
 import { CATEGORIES } from "@/data/catalog";
@@ -26,6 +26,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
   const [county, setCounty] = useState("all");
   const [sugs, setSugs] = useState<string[]>([]);
   const [showSearch, setShowSearch] = useState(false);
+  const [unread, setUnread] = useState(0);
   const box = useRef<HTMLDivElement>(null);
   const [hideStrip, setHideStrip] = useState(false);
   const lastY = useRef(0);
@@ -75,6 +76,33 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
     }, 220);
     return () => clearTimeout(t);
   }, [q]);
+
+  useEffect(() => {
+    if (!user) {
+      setUnread(0);
+      return;
+    }
+    let stop = false;
+    const load = async () => {
+      try {
+        const r = await fetch("/api/conversations");
+        if (!r.ok || stop) return;
+        const j = await r.json();
+        setUnread((j.items ?? []).reduce((s: number, c: { unread?: number }) => s + (c.unread ?? 0), 0));
+      } catch {}
+    };
+    load();
+    const t = setInterval(load, 60000);
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    window.addEventListener("bd:messages", onFocus);
+    return () => {
+      stop = true;
+      clearInterval(t);
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("bd:messages", onFocus);
+    };
+  }, [user]);
 
   useEffect(() => {
     try {
@@ -175,6 +203,12 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
             </select>
           </label>
           <Link href="/wishlist" className="rounded-lg p-2 hover:bg-sand-100" aria-label="Wishlist"><Heart className="h-5 w-5" /></Link>
+          {user && (
+            <Link href="/messages" className="relative rounded-lg p-2 hover:bg-sand-100" aria-label={unread > 0 ? `Messages, ${unread} unread` : "Messages"}>
+              <MessageCircle className="h-5 w-5" />
+              {unread > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-bold text-white">{unread > 99 ? "99+" : unread}</span>}
+            </Link>
+          )}
           <Link href="/cart" className="relative rounded-lg p-2 hover:bg-sand-100" aria-label={`Cart, ${count} items`}>
             <ShoppingCart className="h-5 w-5" />
             {count > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-bold text-white">{count}</span>}

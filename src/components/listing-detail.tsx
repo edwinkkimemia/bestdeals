@@ -9,6 +9,7 @@ import {
   MapPin,
   MessageCircle,
   Minus,
+  Phone,
   Plus,
   Send,
   Share2,
@@ -208,21 +209,31 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
                   </button>
                   <WishlistButton id={listing.id} title={listing.title} />
                 </div>
-                {waOrderHref && (
-                  <a href={waOrderHref} target="_blank" rel="noreferrer" className="btn-whatsapp w-full">
-                    <WhatsAppIcon className="h-4 w-4" /> Order via WhatsApp
-                  </a>
+                {waPhone && waOrderHref && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <a href={`tel:+${waPhone}`} className="btn-secondary !px-3" title={`Call ${listing.sellerName}`}>
+                      <Phone className="h-4 w-4" /> Call seller
+                    </a>
+                    <a href={waOrderHref} target="_blank" rel="noreferrer" className="btn-whatsapp !px-3">
+                      <WhatsAppIcon className="h-4 w-4" /> WhatsApp
+                    </a>
+                  </div>
                 )}
               </div>
             ) : (
               <div className="grid gap-2">
-                <Link href={`/messages/new?listing=${listing.id}`} className="btn-primary"><MessageCircle className="h-4 w-4" /> {listing.transactionMethod === "request_quote" ? "Request a quote" : "Contact seller"}</Link>
-                {waOrderHref ? (
-                  <a href={waOrderHref} target="_blank" rel="noreferrer" className="btn-whatsapp w-full">
-                    <WhatsAppIcon className="h-4 w-4" /> Order via WhatsApp
-                  </a>
+                <Link href={`/messages/new?listing=${listing.id}`} className="btn-primary"><MessageCircle className="h-4 w-4" /> {listing.transactionMethod === "request_quote" ? "Request a quote" : "Message seller"}</Link>
+                {waPhone && waOrderHref ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <a href={`tel:+${waPhone}`} className="btn-secondary !px-3" title={`Call ${listing.sellerName}`}>
+                      <Phone className="h-4 w-4" /> Call seller
+                    </a>
+                    <a href={waOrderHref} target="_blank" rel="noreferrer" className="btn-whatsapp !px-3">
+                      <WhatsAppIcon className="h-4 w-4" /> WhatsApp
+                    </a>
+                  </div>
                 ) : (
-                  <p className="text-xs text-ink-400">This seller hasn&apos;t shared a WhatsApp number — use Contact seller and they&apos;ll reply with one if they choose.</p>
+                  <p className="text-xs text-ink-400">This seller hasn&apos;t shared a WhatsApp number — use Message seller and they&apos;ll reply with one if they choose.</p>
                 )}
                 <p className="text-xs text-ink-400">Contact details are shared per the seller&apos;s preferences. Meet in public & verify before paying.</p>
               </div>

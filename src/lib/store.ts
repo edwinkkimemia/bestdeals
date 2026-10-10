@@ -147,6 +147,35 @@ export type DisputeRecord = {
   createdAt: string;
 };
 
+export type ConversationRecord = {
+  id: string;
+  listingId?: string;
+  listingTitle?: string;
+  sellerName?: string;
+  sellerId?: string;
+  buyerId?: string;
+  buyerName?: string;
+  buyerPhone?: string;
+  createdAt: string;
+};
+
+export type MessageRecord = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  senderLabel: string;
+  body: string; // markdown source
+  bodyHtml?: string; // sanitized render (computed at write)
+  read: boolean;
+  createdAt: string;
+};
+
+export type ConversationWithMeta = ConversationRecord & {
+  lastMessage?: string;
+  lastAt?: string;
+  unread: number;
+};
+
 export interface Store {
   // users
   findUserByEmail(email: string): Promise<UserRecord | null>;
@@ -198,6 +227,13 @@ export interface Store {
   listDisputes(status?: string): Promise<DisputeRecord[]>;
   respondDispute(id: string, response: string): Promise<void>;
   resolveDispute(id: string, outcome: "refund" | "reject", adminId: string): Promise<void>;
+  // conversations (in-app messaging)
+  createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }): Promise<ConversationRecord>;
+  getConversation(id: string): Promise<ConversationRecord | null>;
+  listConversations(identity: { userId?: string; phone?: string; sellerName?: string }): Promise<ConversationWithMeta[]>;
+  listMessages(conversationId: string): Promise<MessageRecord[]>;
+  addMessage(m: Omit<MessageRecord, "id" | "read" | "createdAt">): Promise<MessageRecord>;
+  markConversationRead(conversationId: string, viewerId: string): Promise<void>;
 }
 
 const now = () => new Date().toISOString();
@@ -215,6 +251,8 @@ class DemoStore implements Store {
   verifications = new Map<string, VerificationRecord>();
   reviews = new Map<string, ReviewRecord>();
   disputes = new Map<string, DisputeRecord>();
+  conversations = new Map<string, ConversationRecord>();
+  messages = new Map<string, MessageRecord[]>();
 
   async findUserByEmail(email: string) {
     return [...this.users.values()].find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
@@ -431,6 +469,64 @@ class DemoStore implements Store {
   async resolveDispute(id: string, outcome: "refund" | "reject") {
     const d = this.disputes.get(id);
     if (d) d.status = outcome === "refund" ? "resolved_refund" : "resolved_reject";
+  }
+
+  async createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }) {
+    const rec: ConversationRecord = {
+      id: uid("convo"), listingId: c.listingId, listingTitle: c.listingTitle,
+      sellerName: c.sellerName, sellerId: c.sellerId, buyerId: c.buyerId,
+      buyerName: c.buyerName, buyerPhone: c.buyerPhone, createdAt: now(),
+    };
+    this.conversations.set(rec.id, rec);
+    this.messages.set(rec.id, []);
+    await this.addMessage({
+      conversationId: rec.id, senderId: c.firstMessage.senderId,
+      senderLabel: c.firstMessage.senderLabel, body: c.firstMessage.body, bodyHtml: c.firstMessage.bodyHtml,
+    });
+    return rec;
+  }
+  async getConversation(id: string) {
+    return this.conversations.get(id) ?? null;
+  }
+  private convoMatches(c: ConversationRecord, identity: { userId?: string; phone?: string; sellerName?: string }): boolean {
+    if (identity.userId && (c.buyerId === identity.userId || c.sellerId === identity.userId)) return true;
+    if (identity.phone && (c.buyerPhone === identity.phone || c.buyerId === `phone:${identity.phone}`)) return true;
+    if (identity.sellerName && c.sellerName === identity.sellerName) return true;
+    return false;
+  }
+  private viewerId(identity: { userId?: string; phone?: string }): string {
+    return identity.userId ?? (identity.phone ? `phone:${identity.phone}` : "");
+  }
+  async listConversations(identity: { userId?: string; phone?: string; sellerName?: string }) {
+    const viewer = this.viewerId(identity);
+    const out: ConversationWithMeta[] = [];
+    for (const c of this.conversations.values()) {
+      if (!this.convoMatches(c, identity)) continue;
+      const msgs = this.messages.get(c.id) ?? [];
+      const last = msgs[msgs.length - 1];
+      out.push({
+        ...c,
+        lastMessage: last?.body.slice(0, 120),
+        lastAt: last?.createdAt ?? c.createdAt,
+        unread: msgs.filter((m) => m.senderId !== viewer && !m.read).length,
+      });
+    }
+    return out.sort((a, b) => +new Date(b.lastAt ?? 0) - +new Date(a.lastAt ?? 0));
+  }
+  async listMessages(conversationId: string) {
+    return [...(this.messages.get(conversationId) ?? [])];
+  }
+  async addMessage(m: Omit<MessageRecord, "id" | "read" | "createdAt">) {
+    const rec: MessageRecord = { ...m, id: uid("msg"), read: false, createdAt: now() };
+    const arr = this.messages.get(m.conversationId) ?? [];
+    arr.push(rec);
+    this.messages.set(m.conversationId, arr);
+    return rec;
+  }
+  async markConversationRead(conversationId: string, viewerId: string) {
+    for (const m of this.messages.get(conversationId) ?? []) {
+      if (m.senderId !== viewerId) m.read = true;
+    }
   }
 }
 
@@ -907,6 +1003,75 @@ class PrismaStore implements Store {
     await this.p.dispute.update({
       where: { id },
       data: { status: outcome === "refund" ? "resolved_refund" : "resolved_reject", decidedBy: adminId, decidedAt: new Date() },
+    });
+  }
+
+  async createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }) {
+    const convo = await this.p.conversation.create({
+      data: {
+        listingId: c.listingId ?? null,
+        buyerId: c.buyerId ?? c.buyerPhone ?? "guest",
+        sellerId: c.sellerId ?? (c.sellerName ? `seller:${c.sellerName}` : "unknown"),
+      },
+    });
+    await this.p.message.create({
+      data: { conversationId: convo.id, senderId: c.firstMessage.senderId, body: c.firstMessage.body },
+    });
+    return {
+      id: convo.id, listingId: c.listingId, listingTitle: c.listingTitle,
+      sellerName: c.sellerName, sellerId: c.sellerId, buyerId: c.buyerId,
+      buyerName: c.buyerName, buyerPhone: c.buyerPhone, createdAt: convo.createdAt.toISOString(),
+    };
+  }
+  async getConversation(id: string) {
+    const c = await this.p.conversation.findUnique({ where: { id } });
+    if (!c) return null;
+    return { id: c.id, listingId: c.listingId ?? undefined, createdAt: c.createdAt.toISOString() };
+  }
+  async listConversations(identity: { userId?: string; phone?: string; sellerName?: string }) {
+    const ors = [];
+    if (identity.userId) ors.push({ buyerId: identity.userId }, { sellerId: identity.userId });
+    if (identity.phone) ors.push({ buyerId: identity.phone }, { buyerId: `phone:${identity.phone}` });
+    // Prisma stores the seller link as `seller:<display name>` when no account id is known.
+    if (identity.sellerName) ors.push({ sellerId: `seller:${identity.sellerName}` });
+    if (ors.length === 0) return [];
+    const viewer = identity.userId ?? (identity.phone ? `phone:${identity.phone}` : "");
+    const convos = await this.p.conversation.findMany({
+      where: { OR: ors },
+      orderBy: { createdAt: "desc" }, take: 100,
+      include: { messages: { orderBy: { createdAt: "desc" }, take: 20 } },
+    });
+    return convos.map((c: { id: string; listingId: string | null; createdAt: Date; messages: { body: string; createdAt: Date; senderId: string; readAt: Date | null }[] }) => {
+      const last = c.messages[0];
+      return {
+        id: c.id, listingId: c.listingId ?? undefined, createdAt: c.createdAt.toISOString(),
+        lastMessage: last?.body.slice(0, 120), lastAt: last?.createdAt.toISOString() ?? c.createdAt.toISOString(),
+        unread: c.messages.filter((m) => m.senderId !== viewer && !m.readAt).length,
+      };
+    });
+  }
+  async listMessages(conversationId: string) {
+    const recs = await this.p.message.findMany({ where: { conversationId }, orderBy: { createdAt: "asc" }, take: 200 });
+    return recs.map((m: { id: string; conversationId: string; senderId: string; body: string; readAt: Date | null; createdAt: Date }) => ({
+      id: m.id, conversationId: m.conversationId, senderId: m.senderId,
+      senderLabel: m.senderId.startsWith("phone:") ? m.senderId.slice(6) : "Seller",
+      body: m.body, read: !!m.readAt, createdAt: m.createdAt.toISOString(),
+    }));
+  }
+  async addMessage(m: Omit<MessageRecord, "id" | "read" | "createdAt">) {
+    const rec = await this.p.message.create({
+      data: { conversationId: m.conversationId, senderId: m.senderId, body: m.body },
+    });
+    return {
+      id: rec.id, conversationId: rec.conversationId, senderId: rec.senderId,
+      senderLabel: m.senderLabel, body: rec.body, bodyHtml: m.bodyHtml,
+      read: false, createdAt: rec.createdAt.toISOString(),
+    };
+  }
+  async markConversationRead(conversationId: string, viewerId: string) {
+    await this.p.message.updateMany({
+      where: { conversationId, NOT: { senderId: viewerId }, readAt: null },
+      data: { readAt: new Date() },
     });
   }
 }

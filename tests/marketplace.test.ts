@@ -8,6 +8,7 @@ import { getRelated, listingHref } from "../src/lib/related.ts";
 import { getListing, LISTINGS, CATEGORIES } from "../src/data/catalog.ts";
 import { freshDemoStore } from "../src/lib/store.ts";
 import { reviewSchema, disputeSchema } from "../src/lib/validators.ts";
+import { toSafeHtml, toExcerpt } from "../src/lib/richtext.ts";
 
 describe("pricing", () => {
   it("computes subtotal/discount/delivery/total", () => {
@@ -196,12 +197,50 @@ describe("catalogue", () => {
       assert.ok(cats.has(l.categorySlug), `unknown category ${l.categorySlug}`);
       assert.ok(l.title.length >= 8 && l.price >= 0);
       assert.ok(l.images.length >= 1);
+      assert.ok(l.sellerPhone && /^(\+254|0)[17]\d{8}$/.test(l.sellerPhone), `seller phone missing/invalid on ${l.id}`);
       if (l.compareAt) assert.ok(l.compareAt > l.price, `bogus discount on ${l.id}`);
     }
   });
   it("covers products, classifieds and services", () => {
     const types = new Set(LISTINGS.map((l) => l.listingType));
     assert.ok(types.has("product") && types.has("classified") && types.has("service"));
+  });
+});
+
+describe("richtext", () => {
+  it("renders markdown subset and neutralises attacks", () => {
+    assert.equal(toSafeHtml("**bold** and *italic*"), "<p><strong>bold</strong> and <em>italic</em></p>");
+    assert.equal(
+      toSafeHtml("[Chap](https://chap.co.ke)"),
+      '<p><a href="https://chap.co.ke" target="_blank" rel="nofollow noopener ugc">Chap</a></p>'
+    );
+    const evil = toSafeHtml('<script>alert(1)</script> [x](javascript:alert(1))');
+    assert.ok(!evil.includes("<script")); // tags escaped, never elements
+    assert.ok(!/href="javascript/i.test(evil)); // no executable link targets
+    assert.ok(evil.includes("&lt;script&gt;"));
+    assert.equal(toSafeHtml("- a\n- b"), "<ul><li>a</li><li>b</li></ul>");
+  });
+  it("excerpts plain text", () => {
+    assert.equal(toExcerpt("**Hi** [there](https://x.co.ke) friend", 20), "Hi there friend");
+  });
+});
+
+describe("conversations", () => {
+  it("threads messages with unread tracking", async () => {
+    const s = freshDemoStore();
+    const c = await s.createConversation({
+      listingId: "p1", listingTitle: "Phone", sellerName: "Amina",
+      buyerId: "u-brian", buyerName: "Brian", buyerPhone: "0722000000",
+      firstMessage: { senderId: "u-brian", senderLabel: "Brian", body: "Hi **there**", bodyHtml: "<p>Hi</p>" },
+    });
+    await s.addMessage({ conversationId: c.id, senderId: "seller-amina", senderLabel: "Amina", body: "Available!" });
+    const inbox = await s.listConversations({ userId: "u-brian" });
+    assert.equal(inbox.length, 1);
+    assert.equal(inbox[0].unread, 1);
+    assert.equal((await s.listMessages(c.id)).length, 2);
+    await s.markConversationRead(c.id, "u-brian");
+    assert.equal((await s.listConversations({ userId: "u-brian" }))[0].unread, 0);
+    assert.equal((await s.listConversations({ userId: "nobody" })).length, 0);
   });
 });
 
