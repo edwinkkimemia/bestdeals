@@ -4,6 +4,7 @@ import { ArrowRight, BadgeCheck, MapPin, Search, ShieldCheck, Store, Truck } fro
 import { CATEGORIES, LISTINGS, SHOPS, POPULAR_SEARCHES } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
 import { Badge } from "@/components/ui/badge";
+import { CategoryIcon } from "@/components/category-icon";
 
 export const metadata: Metadata = {
   title: "chap.co.ke — Kenya's Marketplace for Everything",
@@ -111,11 +112,20 @@ export default function HomePage() {
       <section className="container-bd py-10" aria-labelledby="dept">
         <h2 id="dept" className="section-title">Shop by department</h2>
         <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {CATEGORIES.slice(0, 8).map((c, i) => (
-            <Link key={c.slug} href={`/shop/${c.slug}`} className={`rounded-card p-5 text-white transition hover:opacity-95 ${i % 4 === 0 ? "bg-brand-700" : i % 4 === 1 ? "bg-ink-900" : i % 4 === 2 ? "bg-accent-600" : "bg-brand-600"}`}>
-              <p className="text-lg font-bold">{c.name}</p>
-              <p className="mt-1 text-sm opacity-80">{c.blurb}</p>
-              <p className="mt-3 text-sm font-semibold">Shop now →</p>
+          {CATEGORIES.slice(0, 8).map((c) => (
+            <Link key={c.slug} href={`/shop/${c.slug}`} className="card group overflow-hidden transition hover:shadow-lg">
+              <div className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={c.image} alt="" loading="lazy" className="h-32 w-full object-cover transition duration-300 group-hover:scale-105" />
+                <span className="absolute bottom-2.5 left-2.5 flex h-9 w-9 items-center justify-center rounded-xl bg-white/95 text-brand-700 shadow">
+                  <CategoryIcon name={c.icon} className="h-[18px] w-[18px]" />
+                </span>
+              </div>
+              <div className="p-4">
+                <p className="text-base font-bold leading-tight group-hover:text-brand-700">{c.name}</p>
+                <p className="clamp-2 mt-1 text-sm text-ink-500">{c.blurb}</p>
+                <p className="mt-2 text-sm font-semibold text-brand-700">Shop now →</p>
+              </div>
             </Link>
           ))}
         </div>

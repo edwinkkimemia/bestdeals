@@ -23,7 +23,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
-  const [county, setCounty] = useState("All Kenya");
+  const [county, setCounty] = useState("all");
   const [sugs, setSugs] = useState<string[]>([]);
   const box = useRef<HTMLDivElement>(null);
   const [hideStrip, setHideStrip] = useState(false);
@@ -77,7 +77,8 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
 
   useEffect(() => {
     try {
-      setCounty(localStorage.getItem("bd_county") || "All Kenya");
+      const saved = localStorage.getItem("bd_county") || "all";
+      setCounty(saved === "All Kenya" ? "all" : saved);
     } catch {}
   }, []);
 
@@ -160,7 +161,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
           <label className="hidden items-center gap-1 rounded-lg border border-neutral-200 px-2 py-1.5 text-xs xl:flex">
             <MapPin className="h-3.5 w-3.5 text-brand-600" />
             <select aria-label="Location" value={county} onChange={(e) => { setCounty(e.target.value); try { localStorage.setItem("bd_county", e.target.value); } catch {} }} className="bg-transparent outline-none">
-              <option>All Kenya</option>
+              <option value="all">All Kenya</option>
               {COUNTY_NAMES.map((c) => <option key={c}>{c}</option>)}
             </select>
           </label>

@@ -199,7 +199,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-3 lg:sticky lg:top-36 lg:self-start">
           <div className="card space-y-3 p-5">
             <div className="flex flex-wrap items-center gap-2">
               <Badge>{listing.listingType}</Badge>

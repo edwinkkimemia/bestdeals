@@ -7,10 +7,12 @@ import { COUNTY_NAMES } from "@/lib/kenya";
 export const metadata = { title: "Search" };
 
 export default function SearchPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+  const rawCounty = (searchParams.county ?? "").trim();
+  const county = !rawCounty || rawCounty.toLowerCase() === "all" || rawCounty === "All Kenya" ? "all" : rawCounty;
   const params = {
     q: searchParams.q ?? "",
     category: searchParams.category ?? "all",
-    county: searchParams.county && COUNTY_NAMES.includes(searchParams.county) ? searchParams.county : searchParams.county || "all",
+    county,
     min: searchParams.min ? Number(searchParams.min) : undefined,
     max: searchParams.max ? Number(searchParams.max) : undefined,
     condition: searchParams.condition ?? "all",
@@ -67,6 +69,13 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
             <select id="f-cat" name="category" defaultValue={params.category} className="input-bd">
               <option value="all">All categories</option>
               {CATEGORIES.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label-bd" htmlFor="f-county">Location</label>
+            <select id="f-county" name="county" defaultValue={params.county} className="input-bd">
+              <option value="all">All Kenya</option>
+              {COUNTY_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">

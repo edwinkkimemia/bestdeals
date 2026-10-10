@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CATEGORIES } from "@/data/catalog";
 import { LISTINGS } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
+import { CategoryIcon } from "@/components/category-icon";
 
 export const metadata = {
   title: "Shop Products",
@@ -32,9 +33,18 @@ export default function ShopIndex() {
       <h2 className="mt-8 font-bold">Shop by category</h2>
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {CATEGORIES.map((c) => (
-          <Link key={c.slug} href={`/shop/${c.slug}`} className="card group p-3 hover:border-brand-600">
-            <p className="text-sm font-semibold group-hover:text-brand-700">{c.name}</p>
-            <p className="clamp-2 mt-0.5 text-xs text-ink-400">{c.blurb}</p>
+          <Link key={c.slug} href={`/shop/${c.slug}`} className="card group overflow-hidden hover:border-brand-600">
+            <div className="relative">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={c.image} alt="" loading="lazy" className="h-20 w-full object-cover transition duration-300 group-hover:scale-105" />
+              <span className="absolute bottom-2 left-2 flex h-8 w-8 items-center justify-center rounded-lg bg-white/95 text-brand-700 shadow">
+                <CategoryIcon name={c.icon} className="h-4 w-4" />
+              </span>
+            </div>
+            <div className="p-3">
+              <p className="text-sm font-semibold leading-tight group-hover:text-brand-700">{c.name}</p>
+              <p className="clamp-2 mt-0.5 text-xs text-ink-400">{c.blurb}</p>
+            </div>
           </Link>
         ))}
       </div>
