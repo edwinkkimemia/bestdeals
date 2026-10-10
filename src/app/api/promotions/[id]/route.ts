@@ -18,6 +18,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!parsed.success) return NextResponse.json({ error: "Unknown action. Use cancel, activate or expire." }, { status: 400 });
 
   const store = getStore();
+  await store.sweepExpiredPromotions().catch(() => null);
   const promo = await store.getPromotion(params.id);
   if (!promo) return NextResponse.json({ error: "Promotion not found." }, { status: 404 });
   const isAdmin = user.role === "ADMIN";
@@ -36,10 +37,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
   } else {
     if (!isAdmin) return NextResponse.json({ error: "Only admins confirm payments." }, { status: 403 });
-    await store.setPromotionStatus(promo.id, action === "activate" ? "active" : "expired");
     if (action === "activate") {
+      await store.activatePromotion(promo.id);
       await store.setListingFeatured(promo.listingId, true).catch(() => null);
     } else {
+      await store.setPromotionStatus(promo.id, "expired");
       const rest = await store.listPromotionsByListing(promo.listingId);
       if (!rest.some((p) => p.id !== promo.id && p.status === "active")) {
         await store.setListingFeatured(promo.listingId, false).catch(() => null);

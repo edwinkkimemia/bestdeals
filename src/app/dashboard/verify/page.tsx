@@ -18,6 +18,10 @@ export default function VerifyPage() {
   };
   useEffect(() => {
     load();
+    // Business signups land here with ?kind=business — preselect the permit path.
+    try {
+      if (new URLSearchParams(window.location.search).get("kind") === "business") setKind("business");
+    } catch {}
   }, []);
 
   const approved = items.some((v) => v.status === "approved");

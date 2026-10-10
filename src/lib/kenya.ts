@@ -20,5 +20,32 @@ export const KENYA_COUNTIES: { county: string; towns: string[] }[] = [
 export const COUNTY_NAMES = KENYA_COUNTIES.map((c) => c.county);
 
 export function townsFor(county: string): string[] {
-  return KENYA_COUNTIES.find((c) => c.county === county)?.towns ?? [];
+  const t = county.trim().toLowerCase();
+  return KENYA_COUNTIES.find((c) => c.county.toLowerCase() === t)?.towns ?? [];
+}
+
+/**
+ * Resolve free user input to a canonical county slug for filtering.
+ * Accepts "all"/"All Kenya"/"", county names in any case ("nakuru"),
+ * and town names ("Eldoret" → "Uasin Gishu", "Thika" → "Kiambu").
+ * Unresolvable input falls back to "all" — showing unfiltered results
+ * instead of a bogus empty page.
+ */
+export function resolveCounty(input: string | null | undefined): string {
+  const t = (input ?? "").trim();
+  if (!t) return "all";
+  const low = t.toLowerCase();
+  if (low === "all" || low === "all kenya") return "all";
+  const county = KENYA_COUNTIES.find((c) => c.county.toLowerCase() === low);
+  if (county) return county.county;
+  const byTown = KENYA_COUNTIES.find((c) => c.towns.some((town) => town.toLowerCase() === low));
+  if (byTown) return byTown.county;
+  return "all";
+}
+
+/** Case-insensitive county equality for filtering (both sides may be raw). */
+export function countyMatches(listingCounty: string, filterCounty: string | null | undefined): boolean {
+  const f = resolveCounty(filterCounty);
+  if (f === "all") return true;
+  return listingCounty.trim().toLowerCase() === f.toLowerCase();
 }

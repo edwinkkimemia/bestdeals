@@ -13,11 +13,13 @@ const buySchema = z.object({
   phone: z.string().regex(/^(\+254|0)[17]\d{8}$/, "Use a valid Kenyan phone e.g. 0712345678").optional(),
 });
 
-/** My promotions (receipts + statuses). */
+/** My promotions (receipts + statuses). Expired boosts settle first so lists read true. */
 export async function GET() {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
-  const items = await getStore().listPromotionsForOwner(user.id);
+  const store = getStore();
+  await store.sweepExpiredPromotions().catch(() => null);
+  const items = await store.listPromotionsForOwner(user.id);
   return NextResponse.json({ items });
 }
 
@@ -36,6 +38,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid input." }, { status: 400 });
 
   const store = getStore();
+  await store.sweepExpiredPromotions().catch(() => null);
   const fresh = await store.findUserById(user.id).catch(() => null);
   const listing = await store.getListing(parsed.data.listingId);
   if (!listing) return NextResponse.json({ error: "Listing not found." }, { status: 404 });

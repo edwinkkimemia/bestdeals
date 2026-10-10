@@ -5,6 +5,7 @@ import { CATEGORIES, LISTINGS, SHOPS, POPULAR_SEARCHES } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
 import { Badge } from "@/components/ui/badge";
 import { CategoryIcon } from "@/components/category-icon";
+import { COUNTY_NAMES } from "@/lib/kenya";
 
 export const metadata: Metadata = {
   title: "chap.co.ke — Kenya's Marketplace for Everything",
@@ -160,7 +161,10 @@ export default function HomePage() {
             <p className="text-sm text-ink-500">Pick your county to see relevant products & classifieds. No precise location needed.</p>
           </div>
           <form action="/search" className="flex w-full gap-2 sm:w-auto">
-            <input name="county" placeholder="e.g. Nakuru" aria-label="County" className="input-bd sm:w-52" />
+            <select name="county" aria-label="County" className="input-bd sm:w-52" defaultValue="all">
+              <option value="all">All Kenya</option>
+              {COUNTY_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
             <button className="btn-primary shrink-0" type="submit">Show</button>
           </form>
         </div>

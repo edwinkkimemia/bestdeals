@@ -8,6 +8,7 @@ export const signupSchema = z.object({
     .regex(/^(\+254|0)[17]\d{8}$/, "Use a valid Kenyan phone e.g. 0712345678"),
   password: z.string().min(8, "Minimum 8 characters").max(72),
   acceptTerms: z.literal(true, { error: "You must accept the Terms" }),
+  sellerKind: z.enum(["individual", "business"]).default("individual"),
 });
 
 export const signinSchema = z.object({

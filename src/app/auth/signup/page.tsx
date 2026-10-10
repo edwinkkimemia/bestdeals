@@ -17,15 +17,18 @@ function SignupForm() {
   const router = useRouter();
   const sp = useSearchParams();
   const next = safeNext(sp.get("next"));
+  const initialKind = sp.get("kind") === "business" ? "business" : "individual";
   const [err, setErr] = useState("");
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(signupSchema),
+    defaultValues: { sellerKind: initialKind } as never,
   });
+  const kind = (watch("sellerKind") as string | undefined) ?? initialKind;
 
   return (
     <div className="container-bd max-w-md py-12">
       <h1 className="text-2xl font-bold">Create your account</h1>
-      <p className="text-sm text-ink-500">Free for buyers & individual sellers. Only necessary details collected.</p>
+      <p className="text-sm text-ink-500">Free for individuals. Businesses open a shop after verifying. Only necessary details collected.</p>
       <form
         className="card mt-5 space-y-3 p-5"
         onSubmit={handleSubmit(async (data) => {
@@ -39,10 +42,32 @@ function SignupForm() {
           const r = await fetch("/api/auth/signup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
           const j = await r.json();
           if (!r.ok) return setErr(j.error || "Signup failed");
-          router.push(next ?? (j.role === "ADMIN" ? "/admin" : "/dashboard"));
+          if (j.role === "ADMIN") {
+            router.push("/admin");
+          } else if (next) {
+            router.push(next);
+          } else {
+            // Businesses land on shop setup (with business verification preselected); individuals go to the dashboard.
+            router.push(data.sellerKind === "business" ? "/dashboard/shop?new=business" : "/dashboard");
+          }
           router.refresh();
         })}
       >
+        <div>
+          <span className="label-bd" id="kind-label">I&apos;m registering as</span>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-labelledby="kind-label">
+            <label className={`cursor-pointer rounded-xl border p-3 text-sm ${kind === "individual" ? "border-brand-600 bg-brand-50" : "border-neutral-200"}`}>
+              <input type="radio" value="individual" className="sr-only" {...register("sellerKind")} />
+              <span className="font-bold">Individual</span>
+              <span className="mt-0.5 block text-xs text-ink-500">Sell pre-owned & new items · verify with national ID</span>
+            </label>
+            <label className={`cursor-pointer rounded-xl border p-3 text-sm ${kind === "business" ? "border-brand-600 bg-brand-50" : "border-neutral-200"}`}>
+              <input type="radio" value="business" className="sr-only" {...register("sellerKind")} />
+              <span className="font-bold">Business</span>
+              <span className="mt-0.5 block text-xs text-ink-500">Open a shop · verify with permit / KRA PIN</span>
+            </label>
+          </div>
+        </div>
         <div><label className="label-bd" htmlFor="name">Full name</label><input id="name" className="input-bd" autoComplete="name" {...register("name")} />{errors.name && <p className="text-xs text-red-600">{String(errors.name.message)}</p>}</div>
         <div><label className="label-bd" htmlFor="email">Email</label><input id="email" className="input-bd" type="email" autoComplete="email" {...register("email")} />{errors.email && <p className="text-xs text-red-600">{String(errors.email.message)}</p>}</div>
         <div><label className="label-bd" htmlFor="phone">Phone (M-Pesa)</label><input id="phone" className="input-bd" placeholder="0712345678" autoComplete="tel" {...register("phone")} />{errors.phone && <p className="text-xs text-red-600">{String(errors.phone.message)}</p>}</div>

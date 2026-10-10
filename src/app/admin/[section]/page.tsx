@@ -211,6 +211,7 @@ export default async function AdminSection({
   // promotions
   const tabs = ["pending_payment", "active", "cancelled", "expired", "all"];
   const status = tabs.includes(searchParams.status ?? "") ? searchParams.status! : "pending_payment";
+  await store.sweepExpiredPromotions().catch(() => null);
   const items = await store.listPromotions(status === "all" ? undefined : status);
   return (
     <div>

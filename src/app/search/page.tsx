@@ -2,14 +2,16 @@ import Link from "next/link";
 import { CATEGORIES, categoryBySlug } from "@/data/catalog";
 import { searchListings } from "@/lib/search";
 import { ListingCard } from "@/components/ui/listing-card";
-import { COUNTY_NAMES } from "@/lib/kenya";
+import { COUNTY_NAMES, resolveCounty } from "@/lib/kenya";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 export const metadata = { title: "Search" };
 
 export default function SearchPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+  // Canonicalises case ("nakuru" → "Nakuru") and towns ("Eldoret" → "Uasin Gishu").
   const rawCounty = (searchParams.county ?? "").trim();
-  const county = !rawCounty || rawCounty.toLowerCase() === "all" || rawCounty === "All Kenya" ? "all" : rawCounty;
+  const county = resolveCounty(rawCounty);
+  const countyFallback = rawCounty.length > 0 && county === "all";
   const params = {
     q: searchParams.q ?? "",
     category: searchParams.category ?? "all",
@@ -46,6 +48,13 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
     const qs = s.toString();
     return `/search${qs ? `?${qs}` : ""}`;
   };
+  const clearCountyHref = (() => {
+    const s = new URLSearchParams(keep);
+    s.delete("county");
+    if (params.type !== "all") s.set("type", params.type);
+    const qs = s.toString();
+    return `/search${qs ? `?${qs}` : ""}`;
+  })();
   const tabs = [
     { key: "all", label: "All results", n: counts.all },
     { key: "product", label: "Shop products", n: counts.product },
@@ -59,6 +68,14 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
       <h1 className="section-title mt-2">
         {params.q ? `Results for “${params.q}”` : "Browse the marketplace"} ({total})
       </h1>
+      {countyFallback && (
+        <p className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
+          Location “{rawCounty}” isn&apos;t a recognised county — showing all of Kenya instead. Try the Location filter.
+        </p>
+      )}
+      {county !== "all" && (
+        <p className="mt-2 text-sm text-ink-500">Showing results in <strong>{county}</strong> · <Link href={clearCountyHref} className="link-bd">clear</Link></p>
+      )}
 
       <div className="mt-5 grid gap-6 lg:grid-cols-[240px_1fr]">
         <form action="/search" method="get" className="card h-fit space-y-3 p-4">

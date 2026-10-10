@@ -18,11 +18,11 @@ export async function POST(req: NextRequest) {
   const name = parsed.data.name.trim();
   const email = parsed.data.email.trim().toLowerCase();
   const phone = parsed.data.phone.trim();
-  const { password } = parsed.data;
+  const { password, sellerKind } = parsed.data;
   const store = getStore();
   if (await store.findUserByEmail(email)) return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
   const role = (isAdminEmail(email) ? "ADMIN" : "SELLER") as "SELLER" | "ADMIN";
-  const user = await store.createUser({ name, email, phone, role, verified: false, emailVerified: false, passwordHash: await hashPassword(password) });
+  const user = await store.createUser({ name, email, phone, role, verified: false, emailVerified: false, sellerKind, passwordHash: await hashPassword(password) });
   const token = await createSessionToken({ id: user.id, name, email, phone, role, verified: false });
   // Welcome email-verification link (best-effort — never fails signup).
   try {

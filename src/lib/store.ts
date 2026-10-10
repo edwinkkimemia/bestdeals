@@ -18,6 +18,7 @@ export type UserRecord = {
   role: Role;
   verified: boolean;
   emailVerified: boolean;
+  sellerKind: "individual" | "business";
   passwordHash: string;
   createdAt: string;
 };
@@ -191,11 +192,25 @@ export type ConversationWithMeta = ConversationRecord & {
   unread: number;
 };
 
+/**
+ * A promotion only counts while its window hasn't passed. Readers apply this
+ * so an `active` boost past `endsAt` behaves as `expired` even before the
+ * sweeper persists it (lazy expiry — no cron needed).
+ */
+export function promoIsLive(p: Pick<PromotionRecord, "status" | "endsAt">, now = Date.now()): boolean {
+  return p.status === "active" && new Date(p.endsAt).getTime() > now;
+}
+
+/** Presentation status: `active` past its window reads as `expired`. */
+export function promoDisplayStatus(p: PromotionRecord, now = Date.now()): string {
+  return p.status === "active" && new Date(p.endsAt).getTime() <= now ? "expired" : p.status;
+}
+
 export interface Store {
   // users
   findUserByEmail(email: string): Promise<UserRecord | null>;
   findUserById(id: string): Promise<UserRecord | null>;
-  createUser(u: Omit<UserRecord, "id" | "createdAt" | "emailVerified"> & { emailVerified?: boolean }): Promise<UserRecord>;
+  createUser(u: Omit<UserRecord, "id" | "createdAt" | "emailVerified" | "sellerKind"> & { emailVerified?: boolean; sellerKind?: "individual" | "business" }): Promise<UserRecord>;
   setUserVerified(id: string, verified: boolean): Promise<void>;
   setEmailVerified(id: string, verified: boolean): Promise<void>;
   setUserPassword(id: string, passwordHash: string): Promise<void>;
@@ -254,6 +269,10 @@ export interface Store {
   listPromotionsForOwner(ownerId: string): Promise<PromotionRecord[]>;
   listPromotionsByListing(listingId: string): Promise<PromotionRecord[]>;
   setPromotionStatus(id: string, status: string): Promise<void>;
+  /** Activate a boost; if its window already lapsed (late payment), restart it from now. */
+  activatePromotion(id: string, now?: number): Promise<PromotionRecord | null>;
+  /** Persist lazy expiry: flip past-window `active` promos to `expired`, unfeature bare listings. Returns count flipped. */
+  sweepExpiredPromotions(now?: number): Promise<number>;
   // conversations (in-app messaging)
   createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }): Promise<ConversationRecord>;
   getConversation(id: string): Promise<ConversationRecord | null>;
@@ -288,8 +307,8 @@ class DemoStore implements Store {
   async findUserById(id: string) {
     return this.users.get(id) ?? null;
   }
-  async createUser(u: Omit<UserRecord, "id" | "createdAt" | "emailVerified"> & { emailVerified?: boolean }) {
-    const rec: UserRecord = { ...u, emailVerified: u.emailVerified ?? false, id: uid("u"), createdAt: now() };
+  async createUser(u: Omit<UserRecord, "id" | "createdAt" | "emailVerified" | "sellerKind"> & { emailVerified?: boolean; sellerKind?: "individual" | "business" }) {
+    const rec: UserRecord = { ...u, emailVerified: u.emailVerified ?? false, sellerKind: u.sellerKind ?? "individual", id: uid("u"), createdAt: now() };
     this.users.set(rec.id, rec);
     return rec;
   }
@@ -360,15 +379,19 @@ class DemoStore implements Store {
     return rec;
   }
   async getListing(id: string) {
-    return this.listings.get(id) ?? null;
+    const l = this.listings.get(id) ?? null;
+    return l ? { ...l, featured: this.listingHasLivePromo(id) ? true : false } : null;
   }
   async listListingsByOwner(ownerId: string) {
     return [...this.listings.values()]
       .filter((l) => l.ownerId === ownerId)
-      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+      .map((l) => ({ ...l, featured: this.listingHasLivePromo(l.id) ? true : false }));
   }
   async listListingsByStatus(status: string) {
-    return [...this.listings.values()].filter((l) => l.status === status);
+    return [...this.listings.values()]
+      .filter((l) => l.status === status)
+      .map((l) => ({ ...l, featured: this.listingHasLivePromo(l.id) ? true : false }));
   }
   async setListingStatus(id: string, status: string) {
     const l = this.listings.get(id);
@@ -377,6 +400,13 @@ class DemoStore implements Store {
   async setListingFeatured(id: string, featured: boolean) {
     const l = this.listings.get(id);
     if (l) l.featured = featured;
+  }
+  /** Effective visibility derives from live promotions — the stored flag is only a fast hint. */
+  private listingHasLivePromo(listingId: string, now = Date.now()): boolean {
+    for (const p of this.promotions.values()) {
+      if (p.listingId === listingId && promoIsLive(p, now)) return true;
+    }
+    return false;
   }
   async updateListing(id: string, patch: Partial<ListingRecord>) {
     const l = this.listings.get(id);
@@ -542,23 +572,55 @@ class DemoStore implements Store {
   async listPromotionsForOwner(ownerId: string) {
     return [...this.promotions.values()]
       .filter((p) => p.ownerId === ownerId)
-      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+      .map((p) => ({ ...p, status: promoDisplayStatus(p) }));
   }
   async getPromotion(id: string) {
-    return this.promotions.get(id) ?? null;
+    const p = this.promotions.get(id) ?? null;
+    return p ? { ...p, status: promoDisplayStatus(p) } : null;
   }
   async listPromotions(status?: string) {
-    const all = [...this.promotions.values()].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    const all = [...this.promotions.values()]
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+      .map((p) => ({ ...p, status: promoDisplayStatus(p) }));
     return status ? all.filter((p) => p.status === status) : all;
   }
   async listPromotionsByListing(listingId: string) {
     return [...this.promotions.values()]
       .filter((p) => p.listingId === listingId)
-      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+      .map((p) => ({ ...p, status: promoDisplayStatus(p) }));
+  }
+  async sweepExpiredPromotions(now = Date.now()): Promise<number> {
+    let flipped = 0;
+    const touched = new Set<string>();
+    for (const p of this.promotions.values()) {
+      if (p.status === "active" && new Date(p.endsAt).getTime() <= now) {
+        p.status = "expired";
+        flipped += 1;
+        touched.add(p.listingId);
+      }
+    }
+    for (const listingId of touched) {
+      if (!this.listingHasLivePromo(listingId, now)) {
+        const l = this.listings.get(listingId);
+        if (l) l.featured = false;
+      }
+    }
+    return flipped;
   }
   async setPromotionStatus(id: string, status: string) {
     const p = this.promotions.get(id);
     if (p) p.status = status;
+  }
+  async activatePromotion(id: string, now = Date.now()) {
+    const p = this.promotions.get(id);
+    if (!p) return null;
+    p.status = "active";
+    if (new Date(p.endsAt).getTime() <= now) {
+      p.endsAt = new Date(now + p.days * 86400_000).toISOString();
+    }
+    return { ...p, status: promoDisplayStatus(p, now) };
   }
 
   async createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }) {
@@ -625,12 +687,30 @@ class DemoStore implements Store {
 const mapUser = (u: {
   id: string; name: string; email: string; phone: string; role: string;
   verified: boolean; passwordHash: string; createdAt: Date; emailVerified?: boolean;
+  sellerKind?: string;
 }): UserRecord => ({
   id: u.id, name: u.name, email: u.email, phone: u.phone,
   role: u.role as Role, verified: u.verified, emailVerified: u.emailVerified ?? false,
+  sellerKind: u.sellerKind === "business" ? "business" : "individual",
   passwordHash: u.passwordHash,
   createdAt: u.createdAt.toISOString(),
 });
+
+type PromoRow = {
+  id: string; listingId: string; kind: string; amount: number; status: string;
+  startsAt: Date; endsAt: Date;
+};
+
+/** Map a promotion row, applying lazy expiry to the presented status. */
+const mapPromo = (r: PromoRow, ownerId?: string): PromotionRecord => {
+  const base: PromotionRecord = {
+    id: r.id, listingId: r.listingId, ownerId, kind: r.kind,
+    days: Math.max(1, Math.round((+r.endsAt - +r.startsAt) / 86400_000)),
+    amount: r.amount, status: r.status,
+    startsAt: r.startsAt.toISOString(), endsAt: r.endsAt.toISOString(), createdAt: r.startsAt.toISOString(),
+  };
+  return { ...base, status: promoDisplayStatus(base) };
+};
 
 class PrismaStore implements Store {
   constructor(private prisma: PrismaClient) {}
@@ -646,7 +726,7 @@ class PrismaStore implements Store {
     const u = await this.p.user.findUnique({ where: { id } });
     return u ? mapUser(u) : null;
   }
-  async createUser(u: Omit<UserRecord, "id" | "createdAt" | "emailVerified"> & { emailVerified?: boolean }) {
+  async createUser(u: Omit<UserRecord, "id" | "createdAt" | "emailVerified" | "sellerKind"> & { emailVerified?: boolean; sellerKind?: "individual" | "business" }) {
     const rec = await this.p.user.create({
       data: {
         name: u.name, email: u.email.toLowerCase(), phone: u.phone,
@@ -701,7 +781,7 @@ class PrismaStore implements Store {
     ]);
     return {
       exportedAt: now(),
-      user: { id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, verified: u.verified, emailVerified: u.emailVerified ?? false, createdAt: u.createdAt },
+      user: { id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, verified: u.verified, emailVerified: u.emailVerified ?? false, sellerKind: u.sellerKind ?? "individual", createdAt: u.createdAt },
       listings: listings.map((l: { id: string; title: string; status: unknown }) => ({ id: l.id, title: l.title, status: String(l.status) })),
       orders: orders.map((o: { id: string; total: number; status: unknown }) => ({ id: o.id, total: o.total, status: String(o.status) })),
       reviews: reviews.length,
@@ -758,6 +838,7 @@ class PrismaStore implements Store {
   async getListing(id: string) {
     const rec = await this.p.listing.findUnique({ where: { id }, include: { images: { orderBy: { position: "asc" } }, seller: true } });
     if (!rec) return null;
+    const live = await this.livePromoListingIds([id]);
     return {
       id: rec.id, slug: rec.slug, title: rec.title, description: rec.description,
       type: rec.type as ListingRecord["type"], status: rec.status as string,
@@ -769,8 +850,17 @@ class PrismaStore implements Store {
       ownerId: (rec.seller as { userId?: string } | null)?.userId ?? rec.sellerProfileId ?? undefined,
       sellerName: rec.sellerName ?? "Seller",
       sellerPhone: rec.sellerPhone ?? undefined,
-      shopSlug: undefined, categorySlug: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: (rec as { featured?: boolean }).featured ?? false, createdAt: rec.createdAt.toISOString(),
+      shopSlug: undefined, categorySlug: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(id), createdAt: rec.createdAt.toISOString(),
     };
+  }
+  /** Listing ids with a live (active + unexpired) boost — backing the effective Featured flag. */
+  private async livePromoListingIds(ids: string[], now = Date.now()): Promise<Set<string>> {
+    if (ids.length === 0) return new Set<string>();
+    const rows = await this.p.promotion.findMany({
+      where: { listingId: { in: ids }, status: "active" },
+      select: { listingId: true, endsAt: true },
+    });
+    return new Set(rows.filter((r: { endsAt: Date }) => +r.endsAt > now).map((r: { listingId: string }) => r.listingId));
   }
   async listListingsByOwner(ownerId: string) {
     // ownerId is the User id — resolve to the seller profile first.
@@ -781,6 +871,7 @@ class PrismaStore implements Store {
       orderBy: { createdAt: "desc" }, take: 200,
       include: { images: { orderBy: { position: "asc" }, take: 1 } },
     });
+    const live = await this.livePromoListingIds(recs.map((r: { id: string }) => r.id));
     return recs.map((rec: (typeof recs)[number]) => ({
       id: rec.id, slug: rec.slug, title: rec.title, description: rec.description,
       type: rec.type as ListingRecord["type"], status: rec.status as string,
@@ -791,7 +882,7 @@ class PrismaStore implements Store {
       attributes: (rec as { attributes?: Record<string, string> }).attributes ?? {}, ownerId,
       sellerName: rec.sellerName ?? "Seller",
       sellerPhone: rec.sellerPhone ?? undefined,
-      shopSlug: undefined, categorySlug: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: (rec as { featured?: boolean }).featured ?? false, createdAt: rec.createdAt.toISOString(),
+      shopSlug: undefined, categorySlug: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(rec.id), createdAt: rec.createdAt.toISOString(),
     }));
   }
   async listListingsByStatus(status: string) {
@@ -800,6 +891,7 @@ class PrismaStore implements Store {
       orderBy: { createdAt: "desc" }, take: 200,
       include: { images: { orderBy: { position: "asc" }, take: 1 }, seller: true },
     });
+    const live = await this.livePromoListingIds(recs.map((r: { id: string }) => r.id));
     return recs.map((rec: (typeof recs)[number]) => ({
       id: rec.id, slug: rec.slug, title: rec.title, description: rec.description,
       type: rec.type as ListingRecord["type"], status: rec.status as string,
@@ -811,7 +903,7 @@ class PrismaStore implements Store {
       ownerId: ((rec as { seller?: { userId?: string } | null }).seller)?.userId ?? rec.sellerProfileId ?? undefined,
       sellerName: rec.sellerName ?? "Seller",
       sellerPhone: rec.sellerPhone ?? undefined,
-      shopSlug: undefined, categorySlug: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: (rec as { featured?: boolean }).featured ?? false, createdAt: rec.createdAt.toISOString(),
+      shopSlug: undefined, categorySlug: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(rec.id), createdAt: rec.createdAt.toISOString(),
     }));
   }
   async updateListing(id: string, patch: Partial<ListingRecord>) {
@@ -1168,49 +1260,58 @@ class PrismaStore implements Store {
     const ids = listings.map((l: { id: string }) => l.id);
     if (ids.length === 0) return [];
     const recs = await this.p.promotion.findMany({ where: { listingId: { in: ids } }, orderBy: { startsAt: "desc" }, take: 200 });
-    return recs.map((r: { id: string; listingId: string; kind: string; amount: number; status: string; startsAt: Date; endsAt: Date }) => ({
-      id: r.id, listingId: r.listingId, ownerId, kind: r.kind,
-      days: Math.max(1, Math.round((+r.endsAt - +r.startsAt) / 86400_000)),
-      amount: r.amount, status: r.status,
-      startsAt: r.startsAt.toISOString(), endsAt: r.endsAt.toISOString(), createdAt: r.startsAt.toISOString(),
-    }));
+    return recs.map((r: PromoRow) => mapPromo(r, ownerId));
   }
   async getPromotion(id: string) {
     const r = await this.p.promotion.findUnique({ where: { id } }).catch(() => null);
     if (!r) return null;
     const listing = await this.p.listing.findUnique({ where: { id: r.listingId }, include: { seller: true } }).catch(() => null);
-    return {
-      id: r.id, listingId: r.listingId,
-      ownerId: (listing?.seller as { userId?: string } | null)?.userId,
-      kind: r.kind,
-      days: Math.max(1, Math.round((+r.endsAt - +r.startsAt) / 86400_000)),
-      amount: r.amount, status: r.status,
-      startsAt: r.startsAt.toISOString(), endsAt: r.endsAt.toISOString(), createdAt: r.startsAt.toISOString(),
-    };
+    return mapPromo(r, (listing?.seller as { userId?: string } | null)?.userId);
   }
   async listPromotions(status?: string) {
+    // Lapsed `active` rows present as `expired`, so fetch both when either is asked.
+    const where =
+      status === "active" || status === "expired"
+        ? { status: { in: ["active", "expired"] } }
+        : status ? { status } : undefined;
     const recs = await this.p.promotion.findMany({
-      where: status ? { status } : undefined,
+      where,
       orderBy: { startsAt: "desc" }, take: 200,
     });
-    return recs.map((r: { id: string; listingId: string; kind: string; amount: number; status: string; startsAt: Date; endsAt: Date }) => ({
-      id: r.id, listingId: r.listingId, kind: r.kind,
-      days: Math.max(1, Math.round((+r.endsAt - +r.startsAt) / 86400_000)),
-      amount: r.amount, status: r.status,
-      startsAt: r.startsAt.toISOString(), endsAt: r.endsAt.toISOString(), createdAt: r.startsAt.toISOString(),
-    }));
+    const mapped = recs.map((r: PromoRow) => mapPromo(r));
+    // `active` past its window presents as expired — filter on the presented status.
+    return status ? mapped.filter((p) => p.status === status) : mapped;
   }
   async listPromotionsByListing(listingId: string) {
     const recs = await this.p.promotion.findMany({ where: { listingId }, orderBy: { startsAt: "desc" }, take: 50 });
-    return recs.map((r: { id: string; listingId: string; kind: string; amount: number; status: string; startsAt: Date; endsAt: Date }) => ({
-      id: r.id, listingId: r.listingId, kind: r.kind,
-      days: Math.max(1, Math.round((+r.endsAt - +r.startsAt) / 86400_000)),
-      amount: r.amount, status: r.status,
-      startsAt: r.startsAt.toISOString(), endsAt: r.endsAt.toISOString(), createdAt: r.startsAt.toISOString(),
-    }));
+    return recs.map((r: PromoRow) => mapPromo(r));
   }
   async setPromotionStatus(id: string, status: string) {
     await this.p.promotion.update({ where: { id }, data: { status } });
+  }
+  async activatePromotion(id: string, now = Date.now()) {
+    const r = await this.p.promotion.findUnique({ where: { id } });
+    if (!r) return null;
+    const data: { status: string; endsAt?: Date } =
+      +r.endsAt <= now
+        ? { status: "active", endsAt: new Date(now + Math.max(1, Math.round((+r.endsAt - +r.startsAt) / 86400_000)) * 86400_000) }
+        : { status: "active" };
+    const updated = await this.p.promotion.update({ where: { id }, data });
+    return mapPromo(updated);
+  }
+  async sweepExpiredPromotions(now = Date.now()): Promise<number> {
+    const stale = await this.p.promotion.findMany({ where: { status: "active" }, select: { id: true, listingId: true, endsAt: true } });
+    const dead = stale.filter((r: { endsAt: Date }) => +r.endsAt <= now);
+    for (const r of dead) {
+      await this.p.promotion.update({ where: { id: (r as { id: string }).id }, data: { status: "expired" } });
+    }
+    const listingIds = [...new Set(dead.map((r: { listingId: string }) => r.listingId))];
+    for (const listingId of listingIds) {
+      if ((await this.livePromoListingIds([listingId], now)).size === 0) {
+        await this.p.listing.update({ where: { id: listingId }, data: { featured: false } }).catch(() => null);
+      }
+    }
+    return dead.length;
   }
 
   async createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }) {

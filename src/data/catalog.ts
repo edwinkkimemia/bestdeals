@@ -148,8 +148,9 @@ export const COMMISSION_BPS_DEFAULT = 500; // 5%
 
 /** Paid visibility products: clearly labelled Featured boosts, fixed KES prices. */
 export const BOOST_PRODUCTS = [
-  { id: "boost-7", name: "Featured · 7 days", kind: "featured", days: 7, price: 499 },
-  { id: "boost-30", name: "Featured · 30 days", kind: "featured", days: 30, price: 1499 },
+  { id: "boost-7", name: "Featured · 7 days", kind: "featured", days: 7, price: 249 },
+  { id: "boost-14", name: "Featured · 14 days", kind: "featured", days: 14, price: 399 },
+  { id: "boost-30", name: "Featured · 30 days", kind: "featured", days: 30, price: 599 },
 ];
 
 export const boostProductById = (id: string) => BOOST_PRODUCTS.find((p) => p.id === id) ?? null;

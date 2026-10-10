@@ -3,10 +3,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Heart, MapPin, Menu, MessageCircle, Search, ShoppingCart, Store, User, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { Heart, LogOut, MapPin, Menu, MessageCircle, Search, ShoppingCart, Store, User, X } from "lucide-react";
 import { useCart } from "../cart-provider";
 import { COUNTY_NAMES } from "@/lib/kenya";
-import { CATEGORIES } from "@/data/catalog";
+import { CATEGORIES, POPULAR_SEARCHES } from "@/data/catalog";
 
 const NAV = [
   { href: "/", label: "Home" },
@@ -19,15 +21,36 @@ const NAV = [
 ];
 
 export function Header({ user }: { user?: { name: string; role: string } | null }) {
+  const router = useRouter();
   const { count } = useCart();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("all");
   const [county, setCounty] = useState("all");
   const [sugs, setSugs] = useState<string[]>([]);
+  const [searchFocus, setSearchFocus] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [unread, setUnread] = useState(0);
   const box = useRef<HTMLDivElement>(null);
+
+  const signOut = async () => {
+    try {
+      await fetch("/api/auth/signout", { method: "POST", headers: { "Content-Type": "application/json" } });
+    } catch {}
+    setOpen(false);
+    router.push("/");
+    router.refresh();
+  };
+
+  const sugHref = (s: string) => {
+    const p = new URLSearchParams({ q: s });
+    if (cat !== "all") p.set("category", cat);
+    if (county !== "all") p.set("county", county);
+    return `/search?${p.toString()}`;
+  };
+  // Popular shortcuts when the box is focused but empty — typing filters live from the first keystroke.
+  const showPopular = searchFocus && q.trim().length === 0;
+  const dropItems = q.trim().length > 0 ? sugs : showPopular ? POPULAR_SEARCHES.slice(0, 6) : [];
 
   useEffect(() => {
     // Lock background scroll while the mobile drawer is open.
@@ -38,8 +61,9 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
   }, [open]);
 
   useEffect(() => {
+    // Live suggestions from the first keystroke (short debounce keeps it instant).
     const t = setTimeout(async () => {
-      if (q.trim().length < 2) return setSugs([]);
+      if (q.trim().length < 1) return setSugs([]);
       try {
         const r = await fetch(`/api/search/suggest?q=${encodeURIComponent(q)}`);
         const j = await r.json();
@@ -47,9 +71,21 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
       } catch {
         setSugs([]);
       }
-    }, 220);
+    }, 120);
     return () => clearTimeout(t);
   }, [q]);
+
+  useEffect(() => {
+    // Close the suggestion dropdown on outside click.
+    const onDown = (e: MouseEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) {
+        setSugs([]);
+        setSearchFocus(false);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -136,6 +172,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
               name="q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
+              onFocus={() => setSearchFocus(true)}
               placeholder="Search phones, cars, rentals, services…"
               className="w-full px-4 py-2.5 text-sm outline-none"
               aria-label="Search Chap"
@@ -147,12 +184,15 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
               <Search className="h-4 w-4" /> <span className="hidden xl:inline">Search</span>
             </button>
           </form>
-          {sugs.length > 0 && (
+          {dropItems.length > 0 && (
             <ul className="absolute inset-x-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg">
-              {sugs.map((s) => (
+              {showPopular && q.trim().length === 0 && (
+                <li className="px-4 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">Popular right now</li>
+              )}
+              {dropItems.map((s) => (
                 <li key={s}>
-                  <Link href={`/search?q=${encodeURIComponent(s)}`} className="block px-4 py-2 text-sm hover:bg-sand-50" onClick={() => setSugs([])}>
-                    {s}
+                  <Link href={sugHref(s)} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-sand-50" onClick={() => { setSugs([]); setSearchFocus(false); }}>
+                    <Search className="h-3.5 w-3.5 text-ink-400" /> {s}
                   </Link>
                 </li>
               ))}
@@ -188,9 +228,48 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
             {count > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-bold text-white">{count}</span>}
           </Link>
           {user ? (
-            <Link href={user.role === "ADMIN" ? "/admin" : "/dashboard"} className="hidden items-center gap-1.5 rounded-xl bg-sand-100 px-3 py-2 text-sm font-semibold sm:flex">
-              <User className="h-4 w-4" /> {user.name.split(" ")[0]}
-            </Link>
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <button className="hidden items-center gap-1.5 rounded-xl bg-sand-100 px-3 py-2 text-sm font-semibold hover:bg-sand-200 sm:flex" aria-label="Account menu">
+                  <User className="h-4 w-4" /> {user.name.split(" ")[0]}
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  align="end"
+                  sideOffset={8}
+                  className="z-50 w-52 overflow-hidden rounded-xl border border-neutral-200 bg-white p-1.5 shadow-lg"
+                >
+                  <DropdownMenu.Label className="px-2.5 py-1.5 text-xs font-semibold text-ink-400">
+                    {user.name}
+                  </DropdownMenu.Label>
+                  <DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
+                  {[
+                    { href: user.role === "ADMIN" ? "/admin" : "/dashboard", label: "My dashboard" },
+                    { href: "/dashboard/listings", label: "My listings" },
+                    { href: "/dashboard/messages", label: "Enquiries" },
+                    { href: "/dashboard/profile", label: "Profile" },
+                    { href: "/dashboard/settings", label: "Settings" },
+                    { href: "/sell", label: "Sell an item" },
+                  ].map((l) => (
+                    <DropdownMenu.Item key={l.href + l.label} asChild>
+                      <Link href={l.href} className="block rounded-lg px-2.5 py-2 text-sm font-medium text-ink-700 outline-none hover:bg-sand-100 focus:bg-sand-100">
+                        {l.label}
+                      </Link>
+                    </DropdownMenu.Item>
+                  ))}
+                  <DropdownMenu.Separator className="my-1 h-px bg-neutral-100" />
+                  <DropdownMenu.Item asChild>
+                    <button
+                      onClick={signOut}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-red-700 outline-none hover:bg-red-50 focus:bg-red-50"
+                    >
+                      <LogOut className="h-4 w-4" /> Sign out
+                    </button>
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
           ) : (
             <Link href="/auth/signin" className="btn-primary hidden !px-4 sm:inline-flex">Sign in</Link>
           )}
@@ -203,6 +282,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
         <div className="container-bd pb-3 md:hidden">
           <form action="/search" className="flex overflow-hidden rounded-xl border-2 border-brand-600">
             <input name="q" autoFocus placeholder="Search Chap…" aria-label="Search Chap" className="w-full px-4 py-2 text-sm outline-none" />
+            <input type="hidden" name="county" value={county} />
             <button className="bg-brand-600 px-4 text-white" aria-label="Search"><Search className="h-4 w-4" /></button>
           </form>
         </div>
@@ -241,6 +321,11 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
               {!user && <Link href="/auth/signin" onClick={() => setOpen(false)} className="btn-primary">Sign in / Register</Link>}
               {user && <Link href={user.role === "ADMIN" ? "/admin" : "/dashboard"} onClick={() => setOpen(false)} className="btn-secondary">My dashboard</Link>}
               <Link href="/cart" onClick={() => setOpen(false)} className="btn-secondary">Cart ({count})</Link>
+              {user && (
+                <button onClick={signOut} className="flex items-center justify-center gap-2 rounded-xl border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50">
+                  <LogOut className="h-4 w-4" /> Sign out
+                </button>
+              )}
             </div>
           </div>
         </div>

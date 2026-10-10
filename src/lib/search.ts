@@ -1,4 +1,5 @@
 import { LISTINGS, type Listing } from "@/data/catalog";
+import { countyMatches } from "@/lib/kenya";
 
 export type SearchParams = {
   q?: string;
@@ -66,7 +67,8 @@ export function searchListings(p: SearchParams): {
     if (p.type && p.type !== "all" && l.listingType !== p.type) return false;
     if (p.seller && p.seller !== "all" && l.sellerType !== p.seller) return false;
     if (p.condition && p.condition !== "all" && l.condition !== p.condition) return false;
-    if (p.county && p.county !== "all" && l.county !== p.county) return false;
+    // Case-insensitive; towns resolve to their county ("Eldoret" → "Uasin Gishu").
+    if (!countyMatches(l.county, p.county ?? "all")) return false;
     if (p.min != null && l.price < p.min) return false;
     if (p.max != null && l.price > p.max) return false;
     if (tokens.length > 0 && score(l, tokens) <= 0) return false;
@@ -92,5 +94,8 @@ export function suggestions(q: string, limit = 7): string[] {
   if (t.length < 1) return [];
   const titles = LISTINGS.map((l) => l.title);
   const cats = ["Phones & Tablets", "Automotive", "Property", "Fashion", "Laptops", "Services"];
-  return [...titles, ...cats].filter((s) => s.toLowerCase().includes(t)).slice(0, limit);
+  const hits = [...titles, ...cats].filter((s) => s.toLowerCase().includes(t));
+  // Prefix matches first so early keystrokes already feel relevant.
+  hits.sort((a, b) => Number(!a.toLowerCase().startsWith(t)) - Number(!b.toLowerCase().startsWith(t)));
+  return hits.slice(0, limit);
 }
