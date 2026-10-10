@@ -825,7 +825,7 @@ class PrismaStore implements Store {
       where: { sellerName, status: "approved" },
       orderBy: { createdAt: "desc" }, take: 50,
     });
-    return recs.map((r: { id: string; orderId?: string; listingId: string | null; shopSlug: string | null; sellerName: string | null; authorName: string | null; rating: number; body: string | null; verifiedPurchase: boolean; status: string; createdAt: Date }) => ({
+    return recs.map((r: { id: string; orderId: string | null; listingId: string | null; shopSlug: string | null; sellerName: string | null; authorName: string | null; rating: number; body: string | null; verifiedPurchase: boolean; status: string; createdAt: Date }) => ({
       id: r.id, listingId: r.listingId ?? undefined, shopSlug: r.shopSlug ?? undefined,
       sellerName: r.sellerName ?? undefined, authorName: r.authorName ?? "Buyer",
       rating: r.rating, body: r.body ?? undefined,

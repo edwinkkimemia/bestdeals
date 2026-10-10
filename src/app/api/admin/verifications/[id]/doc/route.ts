@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import { join } from "path";
 import { currentUser } from "@/lib/auth";
+import { privateBaseDir } from "@/lib/storage";
 
 /** Admin-only: stream a private verification document. Never publicly linkable. */
 export async function GET(
@@ -19,7 +20,7 @@ export async function GET(
   const rel = v.docPath.slice("private:".length).replace(/[^a-zA-Z0-9\-_./]/g, "");
   if (rel.includes("..")) return NextResponse.json({ error: "Invalid path." }, { status: 400 });
   try {
-    const buf = await readFile(join(process.cwd(), ".data", "private", rel));
+    const buf = await readFile(join(privateBaseDir(), rel));
     const ext = rel.split(".").pop()?.toLowerCase();
     const type = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
     return new NextResponse(new Uint8Array(buf), {

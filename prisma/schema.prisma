@@ -371,8 +371,9 @@ model Message {
 }
 
 model Review {
-  id               String   @id @default(cuid())
-  listingId        String?
+  id        String   @id @default(cuid())
+  orderId   String?
+  listingId String?
   shopId           String?
   shopSlug         String?
   sellerName       String?

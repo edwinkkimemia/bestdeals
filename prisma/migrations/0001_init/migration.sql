@@ -326,6 +326,7 @@ CREATE TABLE "Message" (
 -- CreateTable
 CREATE TABLE "Review" (
     "id" TEXT NOT NULL,
+    "orderId" TEXT,
     "listingId" TEXT,
     "shopId" TEXT,
     "shopSlug" TEXT,

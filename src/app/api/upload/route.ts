@@ -4,6 +4,7 @@ import { join } from "path";
 import { currentUser } from "@/lib/auth";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { uid, slugify } from "@/lib/utils";
+import { uploadsBaseDir, privateBaseDir, uploadPublicUrl, isServerlessUploads } from "@/lib/storage";
 
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX = 5 * 1024 * 1024;
@@ -48,17 +49,21 @@ export async function POST(req: NextRequest) {
     const buf = Buffer.from(await f.arrayBuffer());
     const name = `${Date.now().toString(36)}-${uid("f").slice(-6)}${slugify(f.name.replace(/\.[^.]+$/, "")).slice(0, 24)}${EXT[f.type]}`;
     if (isPrivate) {
-      // Never under public/: only readable via the admin verification endpoint.
-      const dir = join(process.cwd(), ".data", "private", stamp);
+      // Never web-served: only readable via the admin verification endpoint.
+      const dir = join(privateBaseDir(), stamp);
       await mkdir(dir, { recursive: true });
       await writeFile(join(dir, name), buf);
       urls.push(`private:${stamp}/${name}`);
     } else {
-      const dir = join(process.cwd(), "public", "uploads", stamp);
+      const dir = join(uploadsBaseDir(), stamp);
       await mkdir(dir, { recursive: true });
       await writeFile(join(dir, name), buf);
-      urls.push(`/uploads/${stamp}/${name}`);
+      urls.push(uploadPublicUrl(stamp, name));
     }
   }
-  return NextResponse.json({ ok: true, urls });
+  return NextResponse.json({
+    ok: true,
+    urls,
+    ...(isServerlessUploads() ? { note: "Serverless uploads are ephemeral — configure S3 for production (docs/providers.md)." } : {}),
+  });
 }
