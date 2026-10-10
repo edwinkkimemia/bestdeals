@@ -3,6 +3,8 @@ import { signupSchema } from "@/lib/validators";
 import { hashPassword, createSessionToken, SESSION_COOKIE } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
+import { createPurposeToken } from "@/lib/auth-tokens";
+import { sendNotification } from "@/lib/notify";
 
 const isAdminEmail = (email: string) =>
   (process.env.ADMIN_EMAILS || "admin@chap.co.ke").split(",").map((s) => s.trim().toLowerCase()).includes(email.toLowerCase());
@@ -13,12 +15,26 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const parsed = signupSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid input" }, { status: 400 });
-  const { name, email, phone, password } = parsed.data;
+  const name = parsed.data.name.trim();
+  const email = parsed.data.email.trim().toLowerCase();
+  const phone = parsed.data.phone.trim();
+  const { password } = parsed.data;
   const store = getStore();
   if (await store.findUserByEmail(email)) return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
   const role = (isAdminEmail(email) ? "ADMIN" : "SELLER") as "SELLER" | "ADMIN";
-  const user = await store.createUser({ name, email, phone, role, verified: false, passwordHash: await hashPassword(password) });
+  const user = await store.createUser({ name, email, phone, role, verified: false, emailVerified: false, passwordHash: await hashPassword(password) });
   const token = await createSessionToken({ id: user.id, name, email, phone, role, verified: false });
+  // Welcome email-verification link (best-effort — never fails signup).
+  try {
+    const vToken = await createPurposeToken({ purpose: "email-verify", userId: user.id, email });
+    const base = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
+    await sendNotification({
+      channel: "email",
+      to: email,
+      subject: "Verify your Chap email",
+      message: `Welcome to Chap ✓ — confirm your email (expires in 24 hours): ${base}/auth/email/verify?token=${encodeURIComponent(vToken)}`,
+    });
+  } catch {}
   const res = NextResponse.json({ ok: true, role });
   res.cookies.set(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 604800 });
   return res;

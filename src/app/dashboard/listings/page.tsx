@@ -5,12 +5,12 @@ import { getStore } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
 import { formatKES } from "@/lib/format";
 
-const TABS = ["all", "active", "pending", "rejected", "sold", "hidden"];
+const TABS = ["all", "active", "pending", "rejected", "sold", "hidden", "draft", "expired"];
 
 export default async function MyListings({ searchParams }: { searchParams: { tab?: string } }) {
   const user = await currentUser();
   if (!user) redirect("/auth/signin?next=/dashboard/listings");
-  const tab = searchParams.tab ?? "all";
+  const tab = TABS.includes(searchParams.tab ?? "") ? (searchParams.tab as string) : "all";
   const mine = await getStore().listListingsByOwner(user.id);
   const items = mine.filter((l) => tab === "all" || l.status === tab);
 
@@ -37,11 +37,12 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
             <li key={l.id} className="card flex items-center gap-3 p-3">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={l.images[0] ?? "/chaplogo.png"} alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{l.title}</p>
                 <p className="text-xs text-ink-400">{l.type} · {formatKES(l.price)} · {l.town}, {l.county}</p>
               </div>
               <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
+              <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">Manage</Link>
             </li>
           ))}
         </ul>

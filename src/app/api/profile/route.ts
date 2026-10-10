@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { currentUser, SESSION_COOKIE } from "@/lib/auth";
+import { currentUser, createSessionToken, SESSION_COOKIE } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 
@@ -19,7 +19,18 @@ export async function PUT(req: NextRequest) {
   }
   const updated = await getStore().updateUser(user.id, { name, phone });
   if (!updated) return NextResponse.json({ error: "Account not found." }, { status: 404 });
-  return NextResponse.json({ ok: true, name: updated.name, phone: updated.phone });
+  // Re-issue the session cookie so header/dashboard show the new name/phone immediately.
+  const token = await createSessionToken({
+    id: updated.id,
+    name: updated.name,
+    email: updated.email,
+    phone: updated.phone,
+    role: updated.role,
+    verified: updated.verified,
+  });
+  const res = NextResponse.json({ ok: true, name: updated.name, phone: updated.phone });
+  res.cookies.set(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 604800 });
+  return res;
 }
 
 /** Export my data (Data Protection Act, 2019 — access right). */

@@ -17,6 +17,7 @@ export type UserRecord = {
   phone: string;
   role: Role;
   verified: boolean;
+  emailVerified: boolean;
   passwordHash: string;
   createdAt: string;
 };
@@ -43,6 +44,7 @@ export type ListingRecord = {
   sellerPhone?: string;
   shopSlug?: string;
   categorySlug?: string;
+  featured?: boolean;
   createdAt: string;
 };
 
@@ -147,6 +149,19 @@ export type DisputeRecord = {
   createdAt: string;
 };
 
+export type PromotionRecord = {
+  id: string;
+  listingId: string;
+  ownerId?: string;
+  kind: string; // featured | sponsored
+  days: number;
+  amount: number;
+  status: string; // pending_payment | active | expired | cancelled
+  startsAt: string;
+  endsAt: string;
+  createdAt: string;
+};
+
 export type ConversationRecord = {
   id: string;
   listingId?: string;
@@ -180,8 +195,10 @@ export interface Store {
   // users
   findUserByEmail(email: string): Promise<UserRecord | null>;
   findUserById(id: string): Promise<UserRecord | null>;
-  createUser(u: Omit<UserRecord, "id" | "createdAt">): Promise<UserRecord>;
+  createUser(u: Omit<UserRecord, "id" | "createdAt" | "emailVerified"> & { emailVerified?: boolean }): Promise<UserRecord>;
   setUserVerified(id: string, verified: boolean): Promise<void>;
+  setEmailVerified(id: string, verified: boolean): Promise<void>;
+  setUserPassword(id: string, passwordHash: string): Promise<void>;
   updateUser(id: string, patch: { name?: string; phone?: string }): Promise<UserRecord | null>;
   deleteUserAccount(id: string): Promise<void>;
   exportUserData(id: string): Promise<Record<string, unknown>>;
@@ -192,6 +209,9 @@ export interface Store {
   listListingsByOwner(ownerId: string): Promise<ListingRecord[]>;
   listListingsByStatus(status: string): Promise<ListingRecord[]>;
   setListingStatus(id: string, status: string, adminId?: string, reason?: string): Promise<void>;
+  setListingFeatured(id: string, featured: boolean): Promise<void>;
+  updateListing(id: string, patch: Partial<Pick<ListingRecord, "title" | "description" | "type" | "price" | "compareAt" | "condition" | "txMethod" | "negotiable" | "stock" | "county" | "town" | "images" | "attributes" | "categorySlug" | "shopSlug">>): Promise<ListingRecord | null>;
+  deleteListing(id: string): Promise<void>;
   // orders + payments
   createOrder(o: Omit<OrderRecord, "id" | "createdAt" | "status" | "paymentStatus"> & { id?: string; status?: string; paymentStatus?: string }): Promise<OrderRecord>;
   getOrder(id: string): Promise<OrderRecord | null>;
@@ -227,6 +247,13 @@ export interface Store {
   listDisputes(status?: string): Promise<DisputeRecord[]>;
   respondDispute(id: string, response: string): Promise<void>;
   resolveDispute(id: string, outcome: "refund" | "reject", adminId: string): Promise<void>;
+  // promotions (paid featured visibility)
+  createPromotion(p: { listingId: string; ownerId?: string; kind: string; days: number; amount: number }): Promise<PromotionRecord>;
+  getPromotion(id: string): Promise<PromotionRecord | null>;
+  listPromotions(status?: string): Promise<PromotionRecord[]>;
+  listPromotionsForOwner(ownerId: string): Promise<PromotionRecord[]>;
+  listPromotionsByListing(listingId: string): Promise<PromotionRecord[]>;
+  setPromotionStatus(id: string, status: string): Promise<void>;
   // conversations (in-app messaging)
   createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }): Promise<ConversationRecord>;
   getConversation(id: string): Promise<ConversationRecord | null>;
@@ -253,6 +280,7 @@ class DemoStore implements Store {
   disputes = new Map<string, DisputeRecord>();
   conversations = new Map<string, ConversationRecord>();
   messages = new Map<string, MessageRecord[]>();
+  promotions = new Map<string, PromotionRecord>();
 
   async findUserByEmail(email: string) {
     return [...this.users.values()].find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
@@ -260,14 +288,22 @@ class DemoStore implements Store {
   async findUserById(id: string) {
     return this.users.get(id) ?? null;
   }
-  async createUser(u: Omit<UserRecord, "id" | "createdAt">) {
-    const rec = { ...u, id: uid("u"), createdAt: now() };
+  async createUser(u: Omit<UserRecord, "id" | "createdAt" | "emailVerified"> & { emailVerified?: boolean }) {
+    const rec: UserRecord = { ...u, emailVerified: u.emailVerified ?? false, id: uid("u"), createdAt: now() };
     this.users.set(rec.id, rec);
     return rec;
   }
   async setUserVerified(id: string, verified: boolean) {
     const u = this.users.get(id);
     if (u) u.verified = verified;
+  }
+  async setEmailVerified(id: string, verified: boolean) {
+    const u = this.users.get(id);
+    if (u) u.emailVerified = verified;
+  }
+  async setUserPassword(id: string, passwordHash: string) {
+    const u = this.users.get(id);
+    if (u) u.passwordHash = passwordHash;
   }
   async updateUser(id: string, patch: { name?: string; phone?: string }) {
     const u = this.users.get(id);
@@ -327,7 +363,9 @@ class DemoStore implements Store {
     return this.listings.get(id) ?? null;
   }
   async listListingsByOwner(ownerId: string) {
-    return [...this.listings.values()].filter((l) => l.ownerId === ownerId);
+    return [...this.listings.values()]
+      .filter((l) => l.ownerId === ownerId)
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   }
   async listListingsByStatus(status: string) {
     return [...this.listings.values()].filter((l) => l.status === status);
@@ -335,6 +373,23 @@ class DemoStore implements Store {
   async setListingStatus(id: string, status: string) {
     const l = this.listings.get(id);
     if (l) l.status = status;
+  }
+  async setListingFeatured(id: string, featured: boolean) {
+    const l = this.listings.get(id);
+    if (l) l.featured = featured;
+  }
+  async updateListing(id: string, patch: Partial<ListingRecord>) {
+    const l = this.listings.get(id);
+    if (!l) return null;
+    const next: ListingRecord = { ...l };
+    for (const k of ["title", "description", "type", "price", "compareAt", "condition", "txMethod", "negotiable", "stock", "county", "town", "images", "attributes", "categorySlug", "shopSlug"] as const) {
+      if (patch[k] !== undefined) (next as Record<string, unknown>)[k] = patch[k];
+    }
+    this.listings.set(id, next);
+    return next;
+  }
+  async deleteListing(id: string) {
+    this.listings.delete(id);
   }
 
   async createOrder(o: Omit<OrderRecord, "id" | "createdAt" | "status" | "paymentStatus"> & { id?: string; status?: string; paymentStatus?: string }) {
@@ -471,6 +526,41 @@ class DemoStore implements Store {
     if (d) d.status = outcome === "refund" ? "resolved_refund" : "resolved_reject";
   }
 
+  async createPromotion(p: { listingId: string; ownerId?: string; kind: string; days: number; amount: number }) {
+    const startsAt = new Date().toISOString();
+    const rec: PromotionRecord = {
+      ...p,
+      id: uid("promo"),
+      status: "pending_payment",
+      startsAt,
+      endsAt: new Date(Date.now() + p.days * 86400_000).toISOString(),
+      createdAt: startsAt,
+    };
+    this.promotions.set(rec.id, rec);
+    return rec;
+  }
+  async listPromotionsForOwner(ownerId: string) {
+    return [...this.promotions.values()]
+      .filter((p) => p.ownerId === ownerId)
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  }
+  async getPromotion(id: string) {
+    return this.promotions.get(id) ?? null;
+  }
+  async listPromotions(status?: string) {
+    const all = [...this.promotions.values()].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    return status ? all.filter((p) => p.status === status) : all;
+  }
+  async listPromotionsByListing(listingId: string) {
+    return [...this.promotions.values()]
+      .filter((p) => p.listingId === listingId)
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  }
+  async setPromotionStatus(id: string, status: string) {
+    const p = this.promotions.get(id);
+    if (p) p.status = status;
+  }
+
   async createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }) {
     const rec: ConversationRecord = {
       id: uid("convo"), listingId: c.listingId, listingTitle: c.listingTitle,
@@ -534,10 +624,11 @@ class DemoStore implements Store {
 
 const mapUser = (u: {
   id: string; name: string; email: string; phone: string; role: string;
-  verified: boolean; passwordHash: string; createdAt: Date;
+  verified: boolean; passwordHash: string; createdAt: Date; emailVerified?: boolean;
 }): UserRecord => ({
   id: u.id, name: u.name, email: u.email, phone: u.phone,
-  role: u.role as Role, verified: u.verified, passwordHash: u.passwordHash,
+  role: u.role as Role, verified: u.verified, emailVerified: u.emailVerified ?? false,
+  passwordHash: u.passwordHash,
   createdAt: u.createdAt.toISOString(),
 });
 
@@ -555,7 +646,7 @@ class PrismaStore implements Store {
     const u = await this.p.user.findUnique({ where: { id } });
     return u ? mapUser(u) : null;
   }
-  async createUser(u: Omit<UserRecord, "id" | "createdAt">) {
+  async createUser(u: Omit<UserRecord, "id" | "createdAt" | "emailVerified"> & { emailVerified?: boolean }) {
     const rec = await this.p.user.create({
       data: {
         name: u.name, email: u.email.toLowerCase(), phone: u.phone,
@@ -567,6 +658,12 @@ class PrismaStore implements Store {
   }
   async setUserVerified(id: string, verified: boolean) {
     await this.p.user.update({ where: { id }, data: { verified } });
+  }
+  async setEmailVerified(id: string, verified: boolean) {
+    await this.p.user.update({ where: { id }, data: { emailVerified: verified } });
+  }
+  async setUserPassword(id: string, passwordHash: string) {
+    await this.p.user.update({ where: { id }, data: { passwordHash } });
   }
   async updateUser(id: string, patch: { name?: string; phone?: string }) {
     const data: { name?: string; phone?: string } = {};
@@ -604,7 +701,7 @@ class PrismaStore implements Store {
     ]);
     return {
       exportedAt: now(),
-      user: { id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, verified: u.verified, createdAt: u.createdAt },
+      user: { id: u.id, name: u.name, email: u.email, phone: u.phone, role: u.role, verified: u.verified, emailVerified: u.emailVerified ?? false, createdAt: u.createdAt },
       listings: listings.map((l: { id: string; title: string; status: unknown }) => ({ id: l.id, title: l.title, status: String(l.status) })),
       orders: orders.map((o: { id: string; total: number; status: unknown }) => ({ id: o.id, total: o.total, status: String(o.status) })),
       reviews: reviews.length,
@@ -642,7 +739,7 @@ class PrismaStore implements Store {
         sellerName: l.sellerName,
         sellerPhone: l.sellerPhone ?? null,
         sellerProfileId: sellerProfileId ?? null,
-        subcategory: undefined,
+        subcategory: l.categorySlug ?? undefined,
         attributes: l.attributes ?? {},
         images: l.images?.length
           ? { create: l.images.map((url, i) => ({ url, position: i })) }
@@ -655,29 +752,32 @@ class PrismaStore implements Store {
       condition: l.condition, txMethod: l.txMethod, negotiable: rec.negotiable,
       stock: rec.stock, county: rec.county, town: rec.town, images: l.images ?? [],
       attributes: l.attributes ?? {}, ownerId: l.ownerId, sellerName: l.sellerName,
-      shopSlug: l.shopSlug, categorySlug: l.categorySlug, createdAt: rec.createdAt.toISOString(),
+      shopSlug: l.shopSlug, categorySlug: l.categorySlug, featured: false, createdAt: rec.createdAt.toISOString(),
     };
   }
   async getListing(id: string) {
-    const rec = await this.p.listing.findUnique({ where: { id }, include: { images: { orderBy: { position: "asc" } } } });
+    const rec = await this.p.listing.findUnique({ where: { id }, include: { images: { orderBy: { position: "asc" } }, seller: true } });
     if (!rec) return null;
     return {
       id: rec.id, slug: rec.slug, title: rec.title, description: rec.description,
       type: rec.type as ListingRecord["type"], status: rec.status as string,
-      price: rec.price, compareAt: rec.compareAt, condition: rec.status as string,
+      price: rec.price, compareAt: rec.compareAt, condition: rec.condition as string,
       txMethod: rec.txMethod as string, negotiable: rec.negotiable, stock: rec.stock,
       county: rec.county, town: rec.town,
       images: rec.images.map((i: { url: string }) => i.url),
       attributes: (rec.attributes as Record<string, string>) ?? {},
-      ownerId: rec.sellerProfileId ?? undefined,
+      ownerId: (rec.seller as { userId?: string } | null)?.userId ?? rec.sellerProfileId ?? undefined,
       sellerName: rec.sellerName ?? "Seller",
       sellerPhone: rec.sellerPhone ?? undefined,
-      shopSlug: undefined, categorySlug: undefined, createdAt: rec.createdAt.toISOString(),
+      shopSlug: undefined, categorySlug: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: (rec as { featured?: boolean }).featured ?? false, createdAt: rec.createdAt.toISOString(),
     };
   }
   async listListingsByOwner(ownerId: string) {
+    // ownerId is the User id — resolve to the seller profile first.
+    const profile = await this.p.sellerProfile.findUnique({ where: { userId: ownerId } }).catch(() => null);
+    if (!profile) return [];
     const recs = await this.p.listing.findMany({
-      where: { sellerProfileId: ownerId },
+      where: { sellerProfileId: profile.id },
       orderBy: { createdAt: "desc" }, take: 200,
       include: { images: { orderBy: { position: "asc" }, take: 1 } },
     });
@@ -688,17 +788,17 @@ class PrismaStore implements Store {
       txMethod: rec.txMethod as string, negotiable: rec.negotiable, stock: rec.stock,
       county: rec.county, town: rec.town,
       images: rec.images.map((i: { url: string }) => i.url),
-      attributes: {}, ownerId,
+      attributes: (rec as { attributes?: Record<string, string> }).attributes ?? {}, ownerId,
       sellerName: rec.sellerName ?? "Seller",
       sellerPhone: rec.sellerPhone ?? undefined,
-      shopSlug: undefined, categorySlug: undefined, createdAt: rec.createdAt.toISOString(),
+      shopSlug: undefined, categorySlug: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: (rec as { featured?: boolean }).featured ?? false, createdAt: rec.createdAt.toISOString(),
     }));
   }
   async listListingsByStatus(status: string) {
     const recs = await this.p.listing.findMany({
       where: { status: status as never },
       orderBy: { createdAt: "desc" }, take: 200,
-      include: { images: { orderBy: { position: "asc" }, take: 1 } },
+      include: { images: { orderBy: { position: "asc" }, take: 1 }, seller: true },
     });
     return recs.map((rec: (typeof recs)[number]) => ({
       id: rec.id, slug: rec.slug, title: rec.title, description: rec.description,
@@ -707,11 +807,44 @@ class PrismaStore implements Store {
       txMethod: rec.txMethod as string, negotiable: rec.negotiable, stock: rec.stock,
       county: rec.county, town: rec.town,
       images: rec.images.map((i: { url: string }) => i.url),
-      attributes: {}, ownerId: rec.sellerProfileId ?? undefined,
+      attributes: (rec as { attributes?: Record<string, string> }).attributes ?? {},
+      ownerId: ((rec as { seller?: { userId?: string } | null }).seller)?.userId ?? rec.sellerProfileId ?? undefined,
       sellerName: rec.sellerName ?? "Seller",
       sellerPhone: rec.sellerPhone ?? undefined,
-      shopSlug: undefined, categorySlug: undefined, createdAt: rec.createdAt.toISOString(),
+      shopSlug: undefined, categorySlug: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: (rec as { featured?: boolean }).featured ?? false, createdAt: rec.createdAt.toISOString(),
     }));
+  }
+  async updateListing(id: string, patch: Partial<ListingRecord>) {
+    const existing = await this.p.listing.findUnique({ where: { id } });
+    if (!existing) return null;
+    const data: Record<string, unknown> = {};
+    if (patch.title !== undefined) data.title = patch.title;
+    if (patch.description !== undefined) data.description = patch.description;
+    if (patch.type !== undefined) data.type = patch.type;
+    if (patch.price !== undefined) data.price = patch.price;
+    if (patch.compareAt !== undefined) data.compareAt = patch.compareAt;
+    if (patch.condition !== undefined) data.condition = patch.condition;
+    if (patch.txMethod !== undefined) data.txMethod = patch.txMethod;
+    if (patch.negotiable !== undefined) data.negotiable = patch.negotiable;
+    if (patch.stock !== undefined) data.stock = patch.stock;
+    if (patch.county !== undefined) data.county = patch.county;
+    if (patch.town !== undefined) data.town = patch.town;
+    if (patch.attributes !== undefined) data.attributes = patch.attributes;
+    if (patch.categorySlug !== undefined) data.subcategory = patch.categorySlug;
+    await this.p.listing.update({ where: { id }, data: data as never });
+    if (patch.images !== undefined) {
+      await this.p.listingImage.deleteMany({ where: { listingId: id } });
+      if (patch.images.length > 0) {
+        await this.p.listingImage.createMany({
+          data: patch.images.map((url, i) => ({ listingId: id, url, position: i })),
+        });
+      }
+    }
+    return this.getListing(id);
+  }
+  async deleteListing(id: string) {
+    await this.p.listingImage.deleteMany({ where: { listingId: id } }).catch(() => null);
+    await this.p.listing.delete({ where: { id } }).catch(() => null);
   }
   async setListingStatus(id: string, status: string, adminId?: string, reason?: string) {
     await this.p.listing.update({ where: { id }, data: { status: status as never } });
@@ -719,6 +852,9 @@ class PrismaStore implements Store {
       await this.p.moderationAction.create({ data: { listingId: id, adminId, action: status, reason: reason ?? status } });
       await this.p.auditLog.create({ data: { actorId: adminId, action: `listing.${status}`, entity: "Listing", entityId: id, reason: reason ?? null } });
     }
+  }
+  async setListingFeatured(id: string, featured: boolean) {
+    await this.p.listing.update({ where: { id }, data: { featured } });
   }
 
   async createOrder(o: Omit<OrderRecord, "id" | "createdAt" | "status" | "paymentStatus"> & { status?: string; paymentStatus?: string; id?: string }) {
@@ -1004,6 +1140,77 @@ class PrismaStore implements Store {
       where: { id },
       data: { status: outcome === "refund" ? "resolved_refund" : "resolved_reject", decidedBy: adminId, decidedAt: new Date() },
     });
+  }
+
+  async createPromotion(p: { listingId: string; ownerId?: string; kind: string; days: number; amount: number }) {
+    const startsAt = new Date();
+    const rec = await this.p.promotion.create({
+      data: {
+        listingId: p.listingId,
+        kind: p.kind,
+        amount: p.amount,
+        status: "pending_payment",
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + p.days * 86400_000),
+      },
+    });
+    return {
+      id: rec.id, listingId: rec.listingId, ownerId: p.ownerId, kind: rec.kind,
+      days: p.days, amount: rec.amount, status: rec.status,
+      startsAt: rec.startsAt.toISOString(), endsAt: rec.endsAt.toISOString(),
+      createdAt: rec.startsAt.toISOString(),
+    };
+  }
+  async listPromotionsForOwner(ownerId: string) {
+    const profile = await this.p.sellerProfile.findUnique({ where: { userId: ownerId } }).catch(() => null);
+    if (!profile) return [];
+    const listings = await this.p.listing.findMany({ where: { sellerProfileId: profile.id }, select: { id: true } });
+    const ids = listings.map((l: { id: string }) => l.id);
+    if (ids.length === 0) return [];
+    const recs = await this.p.promotion.findMany({ where: { listingId: { in: ids } }, orderBy: { startsAt: "desc" }, take: 200 });
+    return recs.map((r: { id: string; listingId: string; kind: string; amount: number; status: string; startsAt: Date; endsAt: Date }) => ({
+      id: r.id, listingId: r.listingId, ownerId, kind: r.kind,
+      days: Math.max(1, Math.round((+r.endsAt - +r.startsAt) / 86400_000)),
+      amount: r.amount, status: r.status,
+      startsAt: r.startsAt.toISOString(), endsAt: r.endsAt.toISOString(), createdAt: r.startsAt.toISOString(),
+    }));
+  }
+  async getPromotion(id: string) {
+    const r = await this.p.promotion.findUnique({ where: { id } }).catch(() => null);
+    if (!r) return null;
+    const listing = await this.p.listing.findUnique({ where: { id: r.listingId }, include: { seller: true } }).catch(() => null);
+    return {
+      id: r.id, listingId: r.listingId,
+      ownerId: (listing?.seller as { userId?: string } | null)?.userId,
+      kind: r.kind,
+      days: Math.max(1, Math.round((+r.endsAt - +r.startsAt) / 86400_000)),
+      amount: r.amount, status: r.status,
+      startsAt: r.startsAt.toISOString(), endsAt: r.endsAt.toISOString(), createdAt: r.startsAt.toISOString(),
+    };
+  }
+  async listPromotions(status?: string) {
+    const recs = await this.p.promotion.findMany({
+      where: status ? { status } : undefined,
+      orderBy: { startsAt: "desc" }, take: 200,
+    });
+    return recs.map((r: { id: string; listingId: string; kind: string; amount: number; status: string; startsAt: Date; endsAt: Date }) => ({
+      id: r.id, listingId: r.listingId, kind: r.kind,
+      days: Math.max(1, Math.round((+r.endsAt - +r.startsAt) / 86400_000)),
+      amount: r.amount, status: r.status,
+      startsAt: r.startsAt.toISOString(), endsAt: r.endsAt.toISOString(), createdAt: r.startsAt.toISOString(),
+    }));
+  }
+  async listPromotionsByListing(listingId: string) {
+    const recs = await this.p.promotion.findMany({ where: { listingId }, orderBy: { startsAt: "desc" }, take: 50 });
+    return recs.map((r: { id: string; listingId: string; kind: string; amount: number; status: string; startsAt: Date; endsAt: Date }) => ({
+      id: r.id, listingId: r.listingId, kind: r.kind,
+      days: Math.max(1, Math.round((+r.endsAt - +r.startsAt) / 86400_000)),
+      amount: r.amount, status: r.status,
+      startsAt: r.startsAt.toISOString(), endsAt: r.endsAt.toISOString(), createdAt: r.startsAt.toISOString(),
+    }));
+  }
+  async setPromotionStatus(id: string, status: string) {
+    await this.p.promotion.update({ where: { id }, data: { status } });
   }
 
   async createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }) {

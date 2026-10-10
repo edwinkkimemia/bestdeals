@@ -21,7 +21,7 @@ export default async function SellPage() {
           <p className="mt-2 text-ink-500">Sign in to post your item — it takes a minute, and listing is free for individuals.</p>
           <div className="card mt-5 space-y-2 p-5">
             <Link href="/auth/signin?next=/sell" className="btn-primary w-full">Sign in to continue</Link>
-            <Link href="/auth/signup" className="btn-secondary w-full">Create free account</Link>
+            <Link href="/auth/signup?next=/sell" className="btn-secondary w-full">Create free account</Link>
             <Link href="/start-selling" className="link-bd mt-1 inline-block text-sm">How selling works →</Link>
           </div>
         </div>

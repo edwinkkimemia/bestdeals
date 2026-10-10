@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     stock: d.stock,
     county: d.county,
     town: d.town,
-    images: d.images ?? [],
+    images: (d.images ?? []).filter((u) => u.startsWith("https://") || u.startsWith("/uploads/")).slice(0, 8),
     attributes: d.attributes ?? {},
     ownerId: user.id,
     sellerName: user.name,

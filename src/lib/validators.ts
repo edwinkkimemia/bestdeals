@@ -15,6 +15,15 @@ export const signinSchema = z.object({
   password: z.string().min(1),
 });
 
+export const passwordRequestSchema = z.object({
+  email: z.string().email("Enter a valid email"),
+});
+
+export const passwordResetSchema = z.object({
+  token: z.string().min(1, "Missing reset token"),
+  password: z.string().min(8, "Minimum 8 characters").max(72),
+});
+
 export const listingSchema = z.object({
   title: z.string().min(8, "Title needs at least 8 characters").max(120),
   description: z.string().min(20, "Describe the item (min 20 chars)").max(5000),

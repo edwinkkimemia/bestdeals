@@ -9,7 +9,7 @@ export function middleware(req: NextRequest) {
   if (!needsAuth) return NextResponse.next();
   if (!req.cookies.get("bd_session")) {
     const url = new URL("/auth/signin", req.url);
-    url.searchParams.set("next", pathname);
+    url.searchParams.set("next", pathname + req.nextUrl.search);
     return NextResponse.redirect(url);
   }
   return NextResponse.next();

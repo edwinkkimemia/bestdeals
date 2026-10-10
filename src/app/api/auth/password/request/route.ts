@@ -1,0 +1,37 @@
+import { NextRequest, NextResponse } from "next/server";
+import { passwordRequestSchema } from "@/lib/validators";
+import { getStore } from "@/lib/store";
+import { rateLimit, clientKey } from "@/lib/rate-limit";
+import { createPurposeToken, hashFingerprint } from "@/lib/auth-tokens";
+import { sendNotification } from "@/lib/notify";
+
+/**
+ * Request a password reset. Always returns ok (no account enumeration):
+ * the email is only sent when the account exists.
+ */
+export async function POST(req: NextRequest) {
+  const rl = rateLimit(clientKey(req, "auth:pw-request"), { limit: 5, windowMs: 60_000 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429 });
+  const body = await req.json().catch(() => ({}));
+  const parsed = passwordRequestSchema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: "Enter a valid email." }, { status: 400 });
+  const email = parsed.data.email.trim().toLowerCase();
+  const user = await getStore().findUserByEmail(email).catch(() => null);
+  if (user) {
+    const token = await createPurposeToken({
+      purpose: "password-reset",
+      userId: user.id,
+      email: user.email,
+      fingerprint: hashFingerprint(user.passwordHash),
+    });
+    const base = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
+    const link = `${base}/auth/password/reset?token=${encodeURIComponent(token)}`;
+    await sendNotification({
+      channel: "email",
+      to: user.email,
+      subject: "Reset your Chap password",
+      message: `Reset your Chap password (expires in 1 hour): ${link} — if you didn't ask, ignore this.`,
+    }).catch(() => null);
+  }
+  return NextResponse.json({ ok: true, message: "If that email has an account, a reset link is on its way." });
+}

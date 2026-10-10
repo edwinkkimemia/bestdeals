@@ -82,6 +82,7 @@ model User {
   passwordHash String
   role         Role           @default(SELLER)
   verified     Boolean        @default(false)
+  emailVerified Boolean       @default(false)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   seller       SellerProfile?
@@ -434,6 +435,7 @@ model Promotion {
   id        String   @id @default(cuid())
   listingId String
   kind      String // featured | sponsored
+  amount    Int      @default(0)
   startsAt  DateTime
   endsAt    DateTime
   status    String   @default("active")

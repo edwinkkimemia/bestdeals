@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { currentUser } from "@/lib/auth";
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { getStore } from "@/lib/store";
-import { formatKES } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
-import { ProfileForm, SettingsPanel } from "./forms";
+import { ProfileForm, SettingsPanel, EmailVerifyPanel } from "./forms";
+import { PromotePanel } from "./promote";
 
 export function generateStaticParams() {
   return [{ page: "profile" }, { page: "promotion" }, { page: "settings" }];
@@ -14,7 +14,8 @@ export const metadata = { title: "Dashboard", robots: { index: false, follow: fa
 
 export default async function DashPage({ params }: { params: { page: string } }) {
   const user = await currentUser();
-  if (!user) redirect("/auth/signin");
+  if (!user) redirect(`/auth/signin?next=${encodeURIComponent(`/dashboard/${params.page}`)}`);
+  if (!["profile", "promotion", "settings"].includes(params.page)) notFound();
   const store = getStore();
   const fresh = await store.findUserById(user.id).catch(() => null);
 
@@ -23,6 +24,7 @@ export default async function DashPage({ params }: { params: { page: string } })
       <div className="container-bd max-w-2xl py-8">
         <h1 className="section-title">Profile</h1>
         <p className="mt-1 text-sm text-ink-500">This is what buyers see on your listings. Verification is handled separately and can&rsquo;t be self-awarded.</p>
+        <div className="mt-4"><EmailVerifyPanel verified={fresh?.emailVerified ?? false} email={user.email} /></div>
         <div className="card mt-4 space-y-4 p-5">
           <ProfileForm name={fresh?.name ?? user.name} phone={fresh?.phone ?? user.phone} />
           <div className="flex flex-wrap items-center gap-2 border-t border-neutral-200 pt-4 text-sm">
@@ -41,7 +43,6 @@ export default async function DashPage({ params }: { params: { page: string } })
 
   if (params.page === "promotion") {
     const mine = await store.listListingsByOwner(user.id);
-    const eligible = mine.filter((l) => l.status === "active");
     return (
       <div className="container-bd max-w-2xl py-8">
         <h1 className="section-title">Promotion</h1>
@@ -65,18 +66,11 @@ export default async function DashPage({ params }: { params: { page: string } })
             <Link href="/sell" className="btn-primary mt-3">Create a listing</Link>
           </div>
         ) : (
-          <ul className="mt-2 space-y-2">
-            {mine.map((l) => {
-              const ok = l.status === "active" && l.images.length > 0;
-              return (
-                <li key={l.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
-                  <span className="flex-1"><strong>{l.title}</strong> <span className="text-ink-400">· {formatKES(l.price)}</span></span>
-                  <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : "neutral"}>{l.status}</Badge>
-                  <span className="chip">{ok ? "Eligible ✓" : l.status !== "active" ? "Needs approval" : "Add photos"}</span>
-                </li>
-              );
-            })}
-          </ul>
+          <PromotePanel
+            listings={mine.map((l) => ({ id: l.id, title: l.title, price: l.price, status: l.status, images: l.images.length }))}
+            phone={fresh?.phone ?? user.phone}
+            isAdmin={user.role === "ADMIN"}
+          />
         )}
       </div>
     );
