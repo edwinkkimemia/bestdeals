@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { CartProvider } from "@/components/cart-provider";
 import { currentUser } from "@/lib/auth";
 
@@ -36,6 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Header user={user ? { name: user.name, role: user.role } : null} />
           <main className="min-h-[60vh]">{children}</main>
           <Footer />
+          <BottomNav />
         </CartProvider>
       </body>
     </html>

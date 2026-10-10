@@ -3,6 +3,7 @@ import { CATEGORIES, categoryBySlug } from "@/data/catalog";
 import { searchListings } from "@/lib/search";
 import { ListingCard } from "@/components/ui/listing-card";
 import { COUNTY_NAMES } from "@/lib/kenya";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 export const metadata = { title: "Search" };
 
@@ -54,9 +55,7 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
 
   return (
     <div className="container-bd py-8">
-      <nav className="text-xs text-ink-400" aria-label="Breadcrumb">
-        <Link href="/" className="hover:underline">Home</Link> / <span>Search{params.q ? ` · “${params.q}”` : ""}</span>
-      </nav>
+      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: params.q ? `Search: ${params.q.slice(0, 40)}` : "Search" }]} />
       <h1 className="section-title mt-2">
         {params.q ? `Results for “${params.q}”` : "Browse the marketplace"} ({total})
       </h1>

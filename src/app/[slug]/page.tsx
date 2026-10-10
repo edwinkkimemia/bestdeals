@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { INFO_PAGES } from "@/content/info-pages";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { slugify } from "@/lib/utils";
 
 export function generateStaticParams() {
@@ -23,10 +24,8 @@ export default function InfoPage({ params }: { params: { slug: string } }) {
   if (!d) notFound();
 
   return (
-    <div className="container-bd max-w-3xl py-10">
-      <nav className="text-xs text-ink-400" aria-label="Breadcrumb">
-        <Link href="/" className="hover:underline">Home</Link> / <span>{d.title}</span>
-      </nav>
+    <div className="container-bd max-w-3xl py-8">
+      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: d.title }]} />
       <h1 className="section-title mt-2">{d.title}</h1>
       <p className="mt-1 text-xs text-ink-400">Last updated: {d.updated}</p>
       <p className="mt-3 leading-relaxed text-ink-700">{d.intro}</p>

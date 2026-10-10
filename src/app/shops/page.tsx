@@ -2,6 +2,7 @@ import Link from "next/link";
 import { SHOPS } from "@/data/catalog";
 import { storeRead } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 export const metadata = {
   title: "Business Shops",
@@ -12,7 +13,7 @@ export default async function ShopsIndex() {
   const community = await storeRead((s) => s.listShops(), []);
   return (
     <div className="container-bd py-8">
-      <nav className="text-xs text-ink-400"><Link href="/" className="hover:underline">Home</Link> / <span>Business Shops</span></nav>
+      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Business Shops" }]} />
       <h1 className="section-title mt-2">Business shops</h1>
       <p className="max-w-2xl text-sm text-ink-500">Branded storefronts with full catalogues, delivery info, bulk-buyer enquiries and moderated reviews — each shop lives at its own chap.co.ke address.</p>
 

@@ -25,6 +25,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
   const [cat, setCat] = useState("all");
   const [county, setCounty] = useState("all");
   const [sugs, setSugs] = useState<string[]>([]);
+  const [showSearch, setShowSearch] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   const [hideStrip, setHideStrip] = useState(false);
   const lastY = useRef(0);
@@ -158,6 +159,14 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
         </div>
 
         <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <button
+            className="rounded-lg p-2 hover:bg-sand-100 md:hidden"
+            aria-label={showSearch ? "Close search" : "Open search"}
+            aria-expanded={showSearch}
+            onClick={() => setShowSearch((v) => !v)}
+          >
+            {showSearch ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+          </button>
           <label className="hidden items-center gap-1 rounded-lg border border-neutral-200 px-2 py-1.5 text-xs xl:flex">
             <MapPin className="h-3.5 w-3.5 text-brand-600" />
             <select aria-label="Location" value={county} onChange={(e) => { setCounty(e.target.value); try { localStorage.setItem("bd_county", e.target.value); } catch {} }} className="bg-transparent outline-none">
@@ -181,13 +190,15 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
         </div>
       </div>
 
-      {/* mobile search */}
-      <div className="container-bd pb-3 md:hidden">
-        <form action="/search" className="flex overflow-hidden rounded-xl border-2 border-brand-600">
-          <input name="q" placeholder="Search Chap…" aria-label="Search Chap" className="w-full px-4 py-2 text-sm outline-none" />
-          <button className="bg-brand-600 px-4 text-white" aria-label="Search"><Search className="h-4 w-4" /></button>
-        </form>
-      </div>
+      {/* mobile search — opens from the search icon */}
+      {showSearch && (
+        <div className="container-bd pb-3 md:hidden">
+          <form action="/search" className="flex overflow-hidden rounded-xl border-2 border-brand-600">
+            <input name="q" autoFocus placeholder="Search Chap…" aria-label="Search Chap" className="w-full px-4 py-2 text-sm outline-none" />
+            <button className="bg-brand-600 px-4 text-white" aria-label="Search"><Search className="h-4 w-4" /></button>
+          </form>
+        </div>
+      )}
 
       {/* desktop nav */}
       <nav className="hidden border-t border-neutral-100 lg:block" aria-label="Main">

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { CATEGORIES, categoryBySlug } from "@/data/catalog";
 import { searchListings } from "@/lib/search";
 import { ListingCard } from "@/components/ui/listing-card";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 export function generateStaticParams() {
   return CATEGORIES.map((c) => ({ category: c.slug }));
@@ -25,9 +26,7 @@ export default function CategoryPage({ params }: { params: { category: string } 
   const { items, total } = searchListings({ category: c.slug, sort: "relevance", perPage: 48 });
   return (
     <div className="container-bd py-8">
-      <nav className="text-xs text-ink-400" aria-label="Breadcrumb">
-        <Link href="/" className="hover:underline">Home</Link> / <Link href="/shop" className="hover:underline">Shop</Link> / <span>{c.name}</span>
-      </nav>
+      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { href: "/shop", label: "Shop" }, { label: c.name }]} />
       <h1 className="section-title mt-2">{c.name} ({total})</h1>
       <p className="text-sm text-ink-500">{c.blurb}</p>
       {c.subcategories.length > 0 && (

@@ -1,4 +1,5 @@
 /** Central catalogue: categories, demo listings, shops. Backed by Postgres in production (Prisma); this module is the demo-mode source of truth + seed. */
+import { BULK_LISTINGS } from "./bulk-listings";
 
 export type Category = {
   slug: string;
@@ -85,7 +86,7 @@ export const SHOPS: Shop[] = [
 
 const img = (id: string) => `https://images.unsplash.com/${id}?w=800&q=80`;
 
-export const LISTINGS: Listing[] = [
+const CORE_LISTINGS: Listing[] = [
   { id: "p1", slug: "samsung-galaxy-a55-128gb-nairobi", title: "Samsung Galaxy A55 5G 128GB — Sealed, 1-Yr Warranty", description: "Brand-new Samsung Galaxy A55, sealed in box with 1-year Samsung Kenya warranty and free cover + protector. Pickup at Luthuli or same-day delivery in Nairobi.", categorySlug: "phones-tablets", subcategory: "Smartphones", price: 52999, compareAt: 59999, condition: "new", listingType: "product", transactionMethod: "buy_online", county: "Nairobi", town: "CBD", negotiable: false, stock: 14, images: [img("photo-1511707171634-5f897ff02aa9"), img("photo-1592750475338-74b7b21085ab")], sellerName: "FonZone Nairobi", sellerType: "business", shopSlug: "fon-zone-nairobi", verified: true, featured: true, rating: 4.8, createdAt: new Date(Date.now() - 2 * 864e5).toISOString(), attributes: { brand: "Samsung", storage: "128GB", ram: "8GB" } },
   { id: "p2", slug: "hp-pavilion-15-i5-laptop", title: "HP Pavilion 15 — Core i5 13th Gen, 16GB/512GB SSD", description: "New HP Pavilion 15 with Windows 11, backlit keyboard and 1-year warranty. Ideal for campus and office work.", categorySlug: "computers-electronics", subcategory: "Laptops", price: 98500, compareAt: 109000, condition: "new", listingType: "product", transactionMethod: "buy_online", county: "Nairobi", town: "Westlands", negotiable: false, stock: 6, images: [img("photo-1496181133206-80ce9b88a853")], sellerName: "FonZone Nairobi", sellerType: "business", shopSlug: "fon-zone-nairobi", verified: true, featured: true, rating: 4.7, createdAt: new Date(Date.now() - 1 * 864e5).toISOString(), attributes: { brand: "HP", processor: "i5-1335U", ram: "16GB" } },
   { id: "p3", slug: "tcl-55-inch-4k-smart-tv", title: 'TCL 55" 4K QLED Smart TV — Netflix & YouTube', description: "Crisp 4K QLED panel, Dolby Audio, 2-year warranty. Free wall bracket on installation within Nairobi.", categorySlug: "tvs-entertainment", subcategory: "Smart TVs", price: 54999, compareAt: 64999, condition: "new", listingType: "product", transactionMethod: "buy_online", county: "Nairobi", town: "Kilimani", negotiable: false, stock: 9, images: [img("photo-1593359677879-a4bb92f829d1")], sellerName: "FonZone Nairobi", sellerType: "business", shopSlug: "fon-zone-nairobi", verified: true, featured: true, rating: 4.6, createdAt: new Date(Date.now() - 3 * 864e5).toISOString(), attributes: { size: '55"' } },
@@ -99,6 +100,9 @@ export const LISTINGS: Listing[] = [
   { id: "p6", slug: "cement-bamburi-50kg-nakuru", title: "Bamburi Cement 50kg — Wholesale from 50 Bags", description: "Genuine Bamburi Power Plus. Bulk discount + delivery within Nakuru county.", categorySlug: "hardware-building", subcategory: "Materials", price: 780, compareAt: 850, condition: "new", listingType: "product", transactionMethod: "buy_online", county: "Nakuru", town: "Nakuru Town", negotiable: false, stock: 2000, images: [img("photo-1504148455328-c376907d081c")], sellerName: "Rift Hardware Ltd", sellerType: "business", shopSlug: "rift-hardware", verified: false, rating: 4.2, createdAt: new Date(Date.now() - 7 * 864e4).toISOString(), attributes: {} },
   { id: "c5", slug: "accountant-nairobi-cbd-hiring", title: "Hiring: Junior Accountant — Nairobi CBD (Verified Employer)", description: "CPA part-qualified, 1+ yr experience. Apply with CV before expiry. No application fee — report anyone asking for money.", categorySlug: "jobs", subcategory: "Full-time", price: 0, compareAt: null, condition: "new", listingType: "classified", transactionMethod: "enquiry", county: "Nairobi", town: "CBD", negotiable: false, stock: 2, images: [img("photo-1521737604893-d14cc237f11d")], sellerName: "Savannah SACCO", sellerType: "business", verified: true, createdAt: new Date(Date.now() - 3 * 864e5).toISOString(), attributes: { employmentType: "Full-time" } },
 ];
+
+/** Full demo catalogue: 12 curated + 88 bulk = 100 listings. */
+export const LISTINGS: Listing[] = [...CORE_LISTINGS, ...BULK_LISTINGS];
 
 export function getListing(slugOrId: string): Listing | undefined {
   return LISTINGS.find((l) => l.slug === slugOrId || l.id === slugOrId);

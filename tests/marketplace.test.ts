@@ -5,7 +5,7 @@ import { slugify } from "../src/lib/utils.ts";
 import { validateMpesaCallback } from "../src/lib/payments.ts";
 import { searchListings } from "../src/lib/search.ts";
 import { getRelated, listingHref } from "../src/lib/related.ts";
-import { getListing } from "../src/data/catalog.ts";
+import { getListing, LISTINGS, CATEGORIES } from "../src/data/catalog.ts";
 import { freshDemoStore } from "../src/lib/store.ts";
 import { reviewSchema, disputeSchema } from "../src/lib/validators.ts";
 
@@ -171,6 +171,25 @@ describe("trust-validators", () => {
     assert.ok(!reviewSchema.safeParse({ authorName: "B", rating: 9 }).success);
     assert.ok(disputeSchema.safeParse({ orderId: "O1", reason: "damaged", name: "Brian", phone: "0722000000" }).success);
     assert.ok(!disputeSchema.safeParse({ orderId: "O1", reason: "x", name: "B", phone: "123" }).success);
+  });
+});
+
+describe("catalogue", () => {
+  it("holds 100 listings with unique ids/slugs and valid categories", () => {
+    assert.equal(LISTINGS.length, 100);
+    assert.equal(new Set(LISTINGS.map((l) => l.id)).size, 100);
+    assert.equal(new Set(LISTINGS.map((l) => l.slug)).size, 100);
+    const cats = new Set(CATEGORIES.map((c) => c.slug));
+    for (const l of LISTINGS) {
+      assert.ok(cats.has(l.categorySlug), `unknown category ${l.categorySlug}`);
+      assert.ok(l.title.length >= 8 && l.price >= 0);
+      assert.ok(l.images.length >= 1);
+      if (l.compareAt) assert.ok(l.compareAt > l.price, `bogus discount on ${l.id}`);
+    }
+  });
+  it("covers products, classifieds and services", () => {
+    const types = new Set(LISTINGS.map((l) => l.listingType));
+    assert.ok(types.has("product") && types.has("classified") && types.has("service"));
   });
 });
 

@@ -3,6 +3,7 @@ import { CATEGORIES } from "@/data/catalog";
 import { LISTINGS } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
 import { CategoryIcon } from "@/components/category-icon";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 export const metadata = {
   title: "Shop Products",
@@ -13,7 +14,7 @@ export default function ShopIndex() {
   const products = LISTINGS.filter((l) => l.listingType === "product");
   return (
     <div className="container-bd py-8">
-      <nav className="text-xs text-ink-400"><Link href="/" className="hover:underline">Home</Link> / <span>Shop</span></nav>
+      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Shop" }]} />
       <h1 className="section-title mt-2">Shop Products</h1>
       <p className="text-sm text-ink-500">New products from retailers, wholesalers and independent merchants — with cart, M-Pesa checkout and delivery across all 47 counties.</p>
 

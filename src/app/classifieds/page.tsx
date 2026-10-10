@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LISTINGS } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 export const metadata = {
   title: "Classifieds — New & Pre-owned in Kenya",
@@ -11,7 +12,7 @@ export default function ClassifiedsIndex() {
   const items = LISTINGS.filter((l) => l.listingType === "classified");
   return (
     <div className="container-bd py-8">
-      <nav className="text-xs text-ink-400"><Link href="/" className="hover:underline">Home</Link> / <span>Classifieds</span></nav>
+      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Classifieds" }]} />
       <h1 className="section-title mt-2">Classifieds</h1>
       <p className="text-sm text-ink-500">New & secondhand from individuals and businesses. Enquire, negotiate and meet safely — no checkout pressure.</p>
       <div className="mt-4 flex flex-wrap gap-2">

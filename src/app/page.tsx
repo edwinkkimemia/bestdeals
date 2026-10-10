@@ -24,43 +24,63 @@ export default function HomePage() {
 
   return (
     <div>
-      {/* A: Hero + search — fits one viewport, no scrolling needed */}
-      <section className="flex min-h-[calc(100svh-10rem)] items-center bg-gradient-to-b from-brand-50 to-white">
-        <div className="container-bd grid w-full items-center gap-6 py-8 lg:grid-cols-2 lg:gap-8">
-          <div>
+      {/* A: Hero + search — mobile-first: headline, search, swipeable categories */}
+      <section className="bg-gradient-to-b from-brand-50 via-white to-white">
+        <div className="container-bd grid items-center gap-6 py-8 md:py-10 lg:grid-cols-[1.1fr_1fr] lg:gap-10">
+          <div className="min-w-0">
             <Badge tone="green">🇰🇪 Made for Kenya · KES · M-Pesa ready</Badge>
-            <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-ink-900 sm:text-4xl xl:text-5xl">
+            <h1 className="mt-3 text-[28px] font-extrabold leading-[1.08] tracking-tight text-ink-900 sm:text-4xl xl:text-5xl">
               Everything You Need. <span className="text-brand-600">All in One Place.</span>
             </h1>
-            <p className="mt-3 max-w-xl text-base text-ink-500">
-              Discover great deals, shop trusted businesses, buy and sell new or pre-owned items, and find services across Kenya.
+            <p className="mt-2 max-w-xl text-[15px] text-ink-500 sm:text-base">
+              Shop trusted businesses, buy and sell new or pre-owned items, and find services across Kenya.
             </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Link href="/shop" className="btn-primary !h-11 !px-6 !text-base">Explore Marketplace <ArrowRight className="h-4 w-4" /></Link>
-              <Link href="/sell" className="btn-secondary !h-11 !px-6 !text-base"><Store className="h-4 w-4" /> Sell on Chap</Link>
-            </div>
             <form action="/search" className="mt-4 flex max-w-xl overflow-hidden rounded-2xl border-2 border-brand-600 bg-white shadow-card">
-              <input name="q" aria-label="Search the marketplace" placeholder="Try 'Samsung A55' or '2 bedroom Mtwapa'…" className="w-full px-4 py-2.5 text-sm outline-none" />
-              <button className="flex items-center gap-2 bg-brand-600 px-6 font-semibold text-white hover:bg-brand-700" type="submit">
-                <Search className="h-4 w-4" /> Search
+              <input name="q" aria-label="Search the marketplace" placeholder="Search phones, cars, rentals, fundis…" className="w-full min-w-0 px-4 py-3 text-[15px] outline-none" />
+              <button className="flex shrink-0 items-center gap-2 bg-brand-600 px-5 font-semibold text-white hover:bg-brand-700 sm:px-6" type="submit">
+                <Search className="h-4 w-4" /> <span className="hidden min-[400px]:inline">Search</span>
               </button>
             </form>
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
+              <Link href="/shop" className="btn-primary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base">Explore <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/sell" className="btn-secondary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base"><Store className="h-4 w-4" /> Sell on Chap</Link>
+            </div>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              <span className="text-ink-400">Popular:</span>
-              {POPULAR_SEARCHES.slice(0, 5).map((s) => (
+              <span className="self-center text-ink-400">Popular:</span>
+              {POPULAR_SEARCHES.slice(0, 4).map((s) => (
                 <Link key={s} href={`/search?q=${encodeURIComponent(s)}`} className="chip hover:border-brand-600">{s}</Link>
               ))}
             </div>
           </div>
-          <div className="hidden grid-cols-2 gap-3 sm:grid" aria-hidden={false}>
+          {/* Desktop collage */}
+          <div className="hidden grid-cols-2 gap-3 lg:grid" aria-hidden={false}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&q=80" alt="Smartphones on Chap" className="h-40 rounded-2xl object-cover shadow-card lg:h-52" loading="eager" />
+            <img src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&q=80" alt="Smartphones on Chap" className="h-52 rounded-2xl object-cover shadow-card" loading="eager" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80" alt="Cars on Chap" className="mt-4 h-40 rounded-2xl object-cover shadow-card lg:h-52" loading="eager" />
+            <img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80" alt="Cars on Chap" className="mt-5 h-52 rounded-2xl object-cover shadow-card" loading="eager" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&q=80" alt="Furniture on Chap" className="h-36 rounded-2xl object-cover shadow-card lg:h-44" loading="lazy" />
+            <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&q=80" alt="Furniture on Chap" className="h-44 rounded-2xl object-cover shadow-card" loading="lazy" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80" alt="Fashion on Chap" className="mt-4 h-36 rounded-2xl object-cover shadow-card lg:h-44" loading="lazy" />
+            <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80" alt="Fashion on Chap" className="mt-5 h-44 rounded-2xl object-cover shadow-card" loading="lazy" />
+          </div>
+        </div>
+        {/* Mobile/tablet swipeable category strip with pics */}
+        <div className="pb-7 lg:hidden">
+          <div className="container-bd flex items-center justify-between">
+            <p className="text-sm font-bold">Shop by category</p>
+            <Link href="/shop" className="link-bd text-xs">View all →</Link>
+          </div>
+          <div className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1" role="list" aria-label="Categories">
+            {CATEGORIES.slice(0, 10).map((c) => (
+              <Link key={c.slug} href={`/shop/${c.slug}`} role="listitem" className="card w-32 shrink-0 snap-start overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={c.image} alt="" loading="lazy" className="h-20 w-full object-cover" />
+                <p className="truncate p-2 text-xs font-semibold">{c.name}</p>
+              </Link>
+            ))}
+            <Link href="/shop" role="listitem" className="flex w-32 shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-card border border-dashed border-brand-600/50 bg-brand-50 p-2 text-center">
+              <span className="text-xs font-bold text-brand-700">View all categories →</span>
+            </Link>
           </div>
         </div>
       </section>

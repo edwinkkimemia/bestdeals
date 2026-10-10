@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LISTINGS } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 export const metadata = {
   title: "Today's Best Deals",
@@ -11,9 +12,7 @@ export default function DealsPage() {
   const deals = LISTINGS.filter((l) => l.compareAt && l.compareAt > l.price);
   return (
     <div className="container-bd py-8">
-      <nav className="text-xs text-ink-400" aria-label="Breadcrumb">
-        <Link href="/" className="hover:underline">Home</Link> / <span>Best Deals</span>
-      </nav>
+      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Best Deals" }]} />
       <h1 className="section-title mt-2">Today&apos;s Best Deals</h1>
       <p className="mt-1 max-w-2xl text-sm text-ink-500">
         Real savings from verified sellers across Kenya. Every deal shows a genuine previous

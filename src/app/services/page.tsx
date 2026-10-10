@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LISTINGS } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 export const metadata = {
   title: "Services across Kenya",
@@ -11,7 +12,7 @@ export default function ServicesIndex() {
   const items = LISTINGS.filter((l) => l.listingType === "service");
   return (
     <div className="container-bd py-8">
-      <nav className="text-xs text-ink-400"><Link href="/" className="hover:underline">Home</Link> / <span>Services</span></nav>
+      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Services" }]} />
       <h1 className="section-title mt-2">Professional & local services</h1>
       <p className="text-sm text-ink-500">Fundis, cleaners, tutors and pros — compare coverage areas, price ranges and reviews, then request a quote.</p>
 

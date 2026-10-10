@@ -70,7 +70,7 @@ function ShareButtons({ title }: { title: string }) {
     { label: "Share on Telegram", href: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, Icon: Send },
   ];
   return (
-    <div className="flex items-center gap-1.5" aria-label="Share this listing">
+    <div className="flex flex-wrap items-center gap-1.5" aria-label="Share this listing">
       <span className="flex items-center gap-1 text-xs font-semibold text-ink-500"><Share2 className="h-3.5 w-3.5" /> Share:</span>
       {items.map(({ label, href, Icon }) => (
         <a key={label} href={href} target="_blank" rel="noreferrer" aria-label={label} title={label}
@@ -134,7 +134,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
   const lowStock = listing.stock > 0 && listing.stock <= 5 && listing.transactionMethod === "buy_online";
 
   return (
-    <div className="pb-8">
+    <div className="overflow-x-clip pb-8">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <nav className="border-b border-neutral-200 bg-sand-50" aria-label="Breadcrumb">
         <div className="container-bd flex flex-wrap items-center gap-1.5 py-2.5 text-xs text-ink-400">
@@ -143,13 +143,13 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
           <Link href={listing.listingType === "classified" ? "/classifieds" : listing.listingType === "service" ? "/services" : "/shop"} className="font-medium hover:text-brand-700 hover:underline">
             {listing.listingType === "classified" ? "Classifieds" : listing.listingType === "service" ? "Services" : "Shop"}
           </Link>
-          <span aria-hidden className="text-ink-300">/</span>
-          <span className="font-semibold text-ink-700">{listing.title.slice(0, 60)}…</span>
+          <span aria-hidden className="shrink-0 text-ink-300">/</span>
+          <span className="min-w-0 break-words font-semibold text-ink-700">{listing.title.slice(0, 60)}…</span>
         </div>
       </nav>
       <div className="container-bd">
       <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <div>
+        <div className="min-w-0">
           <div className="card overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={listing.images[img]} alt={listing.title} className="aspect-[4/3] w-full object-cover" />
@@ -166,13 +166,13 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
           )}
           <div className="card mt-4 p-5">
             <h2 className="font-bold">Description</h2>
-            <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-700">{listing.description}</p>
+            <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-ink-700">{listing.description}</p>
             {Object.keys(listing.attributes).length > 0 && (
               <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
                 {Object.entries(listing.attributes).map(([k, v]) => (
-                  <div key={k} className="rounded-lg bg-sand-50 px-3 py-2">
+                  <div key={k} className="min-w-0 rounded-lg bg-sand-50 px-3 py-2">
                     <dt className="text-xs capitalize text-ink-400">{k}</dt>
-                    <dd className="font-semibold">{v}</dd>
+                    <dd className="break-words font-semibold">{v}</dd>
                   </div>
                 ))}
               </dl>
@@ -199,14 +199,14 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
           </div>
         </div>
 
-        <div className="space-y-3 lg:sticky lg:top-36 lg:self-start">
+        <div className="min-w-0 space-y-3 lg:sticky lg:top-36 lg:self-start">
           <div className="card space-y-3 p-5">
             <div className="flex flex-wrap items-center gap-2">
               <Badge>{listing.listingType}</Badge>
               <ConditionBadge condition={listing.condition} />
               {listing.negotiable && <Badge tone="red">Negotiable</Badge>}
             </div>
-            <h1 className="text-xl font-bold leading-snug sm:text-2xl">{listing.title}</h1>
+            <h1 className="break-words text-xl font-bold leading-snug sm:text-2xl">{listing.title}</h1>
             <Price value={listing.price} compareAt={listing.compareAt} />
             <p className="flex items-center gap-1 text-sm text-ink-500">
               <MapPin className="h-3.5 w-3.5" /> {listing.town}, {listing.county} ·{" "}
@@ -216,13 +216,13 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
 
             {listing.transactionMethod === "buy_online" ? (
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-sm font-medium">Qty:</span>
-                  <button aria-label="Decrease quantity" className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-300" onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus className="h-4 w-4" /></button>
+                  <button aria-label="Decrease quantity" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutral-300" onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus className="h-4 w-4" /></button>
                   <span className="w-8 text-center font-bold" aria-live="polite">{qty}</span>
-                  <button aria-label="Increase quantity" className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-300" onClick={() => setQty((q) => Math.min(Math.max(listing.stock, 1), 99, q + 1))}><Plus className="h-4 w-4" /></button>
+                  <button aria-label="Increase quantity" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutral-300" onClick={() => setQty((q) => Math.min(Math.max(listing.stock, 1), 99, q + 1))}><Plus className="h-4 w-4" /></button>
                   <button
-                    className="btn-primary flex-1"
+                    className="btn-primary min-w-0 flex-1"
                     disabled={listing.stock <= 0}
                     onClick={() => {
                       add(listing.id, qty);
