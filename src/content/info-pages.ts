@@ -64,7 +64,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "Get verified (national ID, passport, or business permit) to earn the ✓ badge buyers filter for.",
             ],
           },
-          { type: "links", links: [{ href: "/sell", label: "Sell on Chap" }, { href: "/pricing", label: "Business plans" }, { href: "/sellers", label: "Seller Guidelines" }] },
+          { type: "links", links: [{ href: "/start-selling", label: "Sell on Chap" }, { href: "/pricing", label: "Business plans" }, { href: "/sellers", label: "Seller Guidelines" }] },
         ],
       },
       {
@@ -206,7 +206,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "Can I sell wholesale? Yes — Growth and Professional shops support bulk catalogues, CSV upload, and bulk-buyer enquiries.",
             ],
           },
-          { type: "links", links: [{ href: "/sell", label: "Sell on Chap" }, { href: "/sellers", label: "Seller Guidelines" }] },
+          { type: "links", links: [{ href: "/start-selling", label: "Sell on Chap" }, { href: "/sellers", label: "Seller Guidelines" }] },
         ],
       },
     ],
@@ -356,7 +356,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
       },
     ],
     related: [
-      { href: "/sell", label: "Sell on Chap" },
+      { href: "/start-selling", label: "Sell on Chap" },
       { href: "/pricing", label: "Business plans" },
       { href: "/prohibited", label: "Prohibited Items" },
     ],
@@ -407,7 +407,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
       },
     ],
     related: [
-      { href: "/sell", label: "Sell on Chap" },
+      { href: "/start-selling", label: "Sell on Chap" },
       { href: "/contact", label: "Contact" },
       { href: "/help", label: "Help Centre" },
     ],
@@ -762,7 +762,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
     ],
     related: [
       { href: "/pricing", label: "Business plans" },
-      { href: "/sell", label: "Sell on Chap" },
+      { href: "/start-selling", label: "Sell on Chap" },
       { href: "/sellers", label: "Seller Guidelines" },
     ],
   },

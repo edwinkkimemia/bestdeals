@@ -16,7 +16,7 @@ export default function ClassifiedsIndex() {
       <h1 className="section-title mt-2">Classifieds</h1>
       <p className="text-sm text-ink-500">New & secondhand from individuals and businesses. Enquire, negotiate and meet safely — no checkout pressure.</p>
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link href="/dashboard/listings/new?type=classified" className="btn-primary">Post a free ad</Link>
+        <Link href="/sell?type=classified" className="btn-primary">Post a free ad</Link>
         <Link href="/safety" className="btn-secondary">Safety tips</Link>
       </div>
 
@@ -42,7 +42,7 @@ export default function ClassifiedsIndex() {
         <p className="font-bold">Selling something? It takes 3 minutes</p>
         <p className="mt-1 text-sm text-ink-500">Free for individuals: daylight photos, honest condition, fair KES price, your county and town. Moderation usually clears listings within hours.</p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <Link href="/dashboard/listings/new?type=classified" className="btn-primary">Post a free ad</Link>
+          <Link href="/sell?type=classified" className="btn-primary">Post a free ad</Link>
           <Link href="/sellers" className="btn-secondary">Seller guidelines</Link>
         </div>
       </div>

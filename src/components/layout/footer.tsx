@@ -15,9 +15,9 @@ const COLS: { title: string; links: { href: string; label: string }[] }[] = [
   {
     title: "Selling",
     links: [
-      { href: "/sell", label: "Sell on Chap" },
+      { href: "/start-selling", label: "Sell on Chap" },
       { href: "/pricing", label: "Business Shop Plans" },
-      { href: "/dashboard/listings/new", label: "Create a Listing" },
+      { href: "/sell", label: "Create a Listing" },
       { href: "/advertising", label: "Advertising" },
     ],
   },

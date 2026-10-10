@@ -7,6 +7,7 @@ type Item = { id: string; kind: string; status: string; fileName?: string; creat
 export default function VerifyPage() {
   const [items, setItems] = useState<Item[]>([]);
   const [kind, setKind] = useState("id");
+  const [phone, setPhone] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,13 +20,22 @@ export default function VerifyPage() {
     load();
   }, []);
 
+  const approved = items.some((v) => v.status === "approved");
+
   return (
     <div className="container-bd max-w-xl py-8">
       <h1 className="section-title">Verification</h1>
       <p className="mt-1 text-sm text-ink-500">
-        Verified sellers get a ✓ badge buyers trust. Upload a national ID, passport, or business
-        permit — documents are stored privately and only visible to moderators.
+        Posting unlocks only after admin verification: national ID (or business permit), your
+        account email, and your phone number. The number you confirm here must match your
+        account — it becomes your public WhatsApp contact, so buyers always reach the
+        number we verified.
       </p>
+      {approved && (
+        <p className="card mt-4 border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-800">
+          ✓ Verified — you can post listings and open a shop.
+        </p>
+      )}
 
       <form
         className="card mt-4 space-y-3 p-5"
@@ -44,7 +54,7 @@ export default function VerifyPage() {
             const r = await fetch("/api/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ kind, docPath: uj.urls[0], fileName: file.name }),
+              body: JSON.stringify({ kind, phone, docPath: uj.urls[0], fileName: file.name }),
             });
             const j = await r.json();
             if (!r.ok) return setMsg(j.error || "Failed.");
@@ -64,7 +74,12 @@ export default function VerifyPage() {
           </select>
         </div>
         <div>
-          <label className="label-bd" htmlFor="v-file">Document photo (JPG/PNG/WebP, ≤5MB)</label>
+          <label className="label-bd" htmlFor="v-phone">Phone number (must match your account — this is your WhatsApp contact)</label>
+          <input id="v-phone" className="input-bd" placeholder="0712345678" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+          <p className="mt-1 text-xs text-ink-400">Same number on your profile and WhatsApp. Update it in Profile first if it changed.</p>
+        </div>
+        <div>
+          <label className="label-bd" htmlFor="v-file">National ID / permit photo (JPG/PNG/WebP, ≤5MB)</label>
           <input id="v-file" type="file" accept="image/jpeg,image/png,image/webp" className="text-sm"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         </div>

@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listingSchema } from "@/lib/validators";
 import { currentUser } from "@/lib/auth";
+import { requireVerifiedSeller } from "@/lib/gate";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 
-/** Listing intake: validates, spam-checks, queues for moderation. Never auto-publishes high-risk categories. */
+/** Listing intake: verified sellers only; validates, spam-checks, queues for moderation. */
 export async function POST(req: NextRequest) {
-  const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "Sign in to list an item." }, { status: 401 });
+  const gate = await requireVerifiedSeller();
+  if (!gate.ok) return gate.response;
+  const user = gate.seller;
   const rl = rateLimit(clientKey(req, `list:${user.id}`), { limit: 10, windowMs: 3600_000 });
   if (!rl.ok) return NextResponse.json({ error: "Listing limit reached for now. Try again later." }, { status: 429 });
 
@@ -42,6 +44,8 @@ export async function POST(req: NextRequest) {
     attributes: d.attributes ?? {},
     ownerId: user.id,
     sellerName: user.name,
+    // Snapshot of the verified number — WhatsApp ordering always uses this.
+    sellerPhone: user.phone,
     categorySlug: d.categorySlug,
   });
   return NextResponse.json({ ok: true, id: rec.id, status: "pending", message: "Saved and queued for moderation." });

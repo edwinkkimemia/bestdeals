@@ -4,9 +4,9 @@ import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 
 /**
- * Verification requests. ID/business documents are uploaded via /api/upload
- * with private=1 (stored outside public/, never linkable). Request stores only
- * the private pointer; admins view docs through the admin-only doc endpoint.
+ * Verification requests: national ID (or business permit) + confirmed phone.
+ * The phone must MATCH the account phone — it becomes the seller's public
+ * WhatsApp contact, so the number buyers reach is the number we verified.
  */
 export async function POST(req: NextRequest) {
   const user = await currentUser();
@@ -15,16 +15,29 @@ export async function POST(req: NextRequest) {
   if (!rl.ok) return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
 
   const body = await req.json().catch(() => ({}));
-  const { kind, docPath, fileName } = body as { kind?: string; docPath?: string; fileName?: string };
+  const { kind, docPath, fileName, phone } = body as { kind?: string; docPath?: string; fileName?: string; phone?: string };
   if (!["id", "business"].includes(kind ?? "")) {
     return NextResponse.json({ error: "Choose verification type: ID or business." }, { status: 400 });
+  }
+  const store = getStore();
+  const fresh = await store.findUserById(user.id).catch(() => null);
+  const accountPhone = fresh?.phone ?? user.phone;
+  if (!phone || !/^(\+254|0)[17]\d{8}$/.test(phone)) {
+    return NextResponse.json({ error: "Confirm a valid Kenyan phone number." }, { status: 400 });
+  }
+  if (phone !== accountPhone) {
+    return NextResponse.json(
+      { error: "That number doesn't match your account phone. Update it in Profile first, so listings and WhatsApp use one verified number." },
+      { status: 400 }
+    );
   }
   if (!docPath || !docPath.startsWith("private:")) {
     return NextResponse.json({ error: "Upload your document first (JPG/PNG/WebP, ≤5MB)." }, { status: 400 });
   }
-  const rec = await getStore().createVerification({
+  const rec = await store.createVerification({
     userId: user.id,
     kind: kind!,
+    phone,
     docPath,
     fileName: (fileName ?? "document").slice(0, 120),
   });

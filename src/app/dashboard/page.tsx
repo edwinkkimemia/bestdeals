@@ -18,7 +18,7 @@ export default async function DashboardPage() {
       <p className="text-sm text-ink-500">Role: {user.role} · {verified ? "Verified ✓" : "Verification pending — complete it in Verification"}</p>
       <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          { href: "/dashboard/listings/new", t: "Create listing", d: "Post in minutes" },
+          { href: "/sell", t: "Create listing", d: "Post in minutes" },
           { href: "/dashboard/listings", t: "My listings", d: `${mine.length} listings` },
           { href: "/dashboard/messages", t: "Enquiries", d: "Buyer messages" },
           { href: "/dashboard/verify", t: "Verification", d: verified ? "Verified ✓" : "Get the ✓ badge" },

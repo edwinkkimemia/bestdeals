@@ -43,7 +43,7 @@ export default function HomePage() {
             </form>
             <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
               <Link href="/shop" className="btn-primary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base">Explore <ArrowRight className="h-4 w-4" /></Link>
-              <Link href="/sell" className="btn-secondary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base"><Store className="h-4 w-4" /> Sell on Chap</Link>
+              <Link href="/start-selling" className="btn-secondary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base"><Store className="h-4 w-4" /> Sell on Chap</Link>
             </div>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
               <span className="self-center text-ink-400">Popular:</span>
@@ -131,12 +131,12 @@ export default function HomePage() {
       {/* D: departments */}
       <section className="container-bd py-10" aria-labelledby="dept">
         <h2 id="dept" className="section-title">Shop by department</h2>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {CATEGORIES.slice(0, 8).map((c) => (
             <Link key={c.slug} href={`/shop/${c.slug}`} className="card group overflow-hidden transition hover:shadow-lg">
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={c.image} alt="" loading="lazy" className="h-32 w-full object-cover transition duration-300 group-hover:scale-105" />
+                <img src={c.image} alt="" loading="lazy" className="h-24 w-full object-cover transition duration-300 group-hover:scale-105 sm:h-32" />
                 <span className="absolute bottom-2.5 left-2.5 flex h-9 w-9 items-center justify-center rounded-xl bg-white/95 text-brand-700 shadow">
                   <CategoryIcon name={c.icon} className="h-[18px] w-[18px]" />
                 </span>

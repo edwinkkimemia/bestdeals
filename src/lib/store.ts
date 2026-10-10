@@ -40,6 +40,7 @@ export type ListingRecord = {
   attributes: Record<string, string>;
   ownerId?: string;
   sellerName: string;
+  sellerPhone?: string;
   shopSlug?: string;
   categorySlug?: string;
   createdAt: string;
@@ -109,6 +110,7 @@ export type VerificationRecord = {
   id: string;
   userId: string;
   kind: string;
+  phone?: string;
   status: string;
   docPath?: string;
   fileName?: string;
@@ -542,6 +544,7 @@ class PrismaStore implements Store {
         county: l.county,
         town: l.town,
         sellerName: l.sellerName,
+        sellerPhone: l.sellerPhone ?? null,
         sellerProfileId: sellerProfileId ?? null,
         subcategory: undefined,
         attributes: l.attributes ?? {},
@@ -572,6 +575,7 @@ class PrismaStore implements Store {
       attributes: (rec.attributes as Record<string, string>) ?? {},
       ownerId: rec.sellerProfileId ?? undefined,
       sellerName: rec.sellerName ?? "Seller",
+      sellerPhone: rec.sellerPhone ?? undefined,
       shopSlug: undefined, categorySlug: undefined, createdAt: rec.createdAt.toISOString(),
     };
   }
@@ -590,6 +594,7 @@ class PrismaStore implements Store {
       images: rec.images.map((i: { url: string }) => i.url),
       attributes: {}, ownerId,
       sellerName: rec.sellerName ?? "Seller",
+      sellerPhone: rec.sellerPhone ?? undefined,
       shopSlug: undefined, categorySlug: undefined, createdAt: rec.createdAt.toISOString(),
     }));
   }
@@ -608,6 +613,7 @@ class PrismaStore implements Store {
       images: rec.images.map((i: { url: string }) => i.url),
       attributes: {}, ownerId: rec.sellerProfileId ?? undefined,
       sellerName: rec.sellerName ?? "Seller",
+      sellerPhone: rec.sellerPhone ?? undefined,
       shopSlug: undefined, categorySlug: undefined, createdAt: rec.createdAt.toISOString(),
     }));
   }
@@ -774,10 +780,11 @@ class PrismaStore implements Store {
 
   async createVerification(v: Omit<VerificationRecord, "id" | "status" | "createdAt">) {
     const rec = await this.p.verification.create({
-      data: { userId: v.userId, kind: v.kind, status: "pending", docUrl: v.docPath ?? null, fileName: v.fileName ?? null },
+      data: { userId: v.userId, kind: v.kind, status: "pending", phone: v.phone ?? null, docUrl: v.docPath ?? null, fileName: v.fileName ?? null },
     });
     return {
       id: rec.id, userId: rec.userId, kind: rec.kind, status: rec.status,
+      phone: rec.phone ?? undefined,
       docPath: rec.docUrl ?? undefined, fileName: rec.fileName ?? undefined,
       createdAt: rec.createdAt.toISOString(),
     };
@@ -787,8 +794,9 @@ class PrismaStore implements Store {
       where: status ? { status } : undefined,
       orderBy: { createdAt: "desc" }, take: 200,
     });
-    return recs.map((r: { id: string; userId: string; kind: string; status: string; docUrl: string | null; fileName: string | null; decidedBy: string | null; decidedAt: Date | null; createdAt: Date }) => ({
+    return recs.map((r: { id: string; userId: string; kind: string; phone: string | null; status: string; docUrl: string | null; fileName: string | null; decidedBy: string | null; decidedAt: Date | null; createdAt: Date }) => ({
       id: r.id, userId: r.userId, kind: r.kind, status: r.status,
+      phone: r.phone ?? undefined,
       docPath: r.docUrl ?? undefined, fileName: r.fileName ?? undefined,
       decidedBy: r.decidedBy ?? undefined, decidedAt: r.decidedAt?.toISOString(),
       createdAt: r.createdAt.toISOString(),

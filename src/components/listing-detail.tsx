@@ -105,7 +105,13 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
   const [recent, setRecent] = useState<Listing[]>([]);
 
   const shop = listing.shopSlug ? getShop(listing.shopSlug) : undefined;
-  const waPhone = shop?.phone ? toWhatsApp(shop.phone) : null;
+  // WhatsApp ordering always uses the verified number: the snapshot taken at
+  // posting time first, then the shop's approved contact. No number, no button.
+  const waPhone = listing.sellerPhone
+    ? toWhatsApp(listing.sellerPhone)
+    : shop?.phone
+      ? toWhatsApp(shop.phone)
+      : null;
   const waOrderHref = waPhone
     ? `https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${listing.sellerName}! I'd like to order "${listing.title}" (${formatKES(listing.price)}) I saw on Chap. Is it available?`)}`
     : null;
@@ -148,8 +154,8 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
         </div>
       </nav>
       <div className="container-bd">
-      <div className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-        <div className="min-w-0">
+      <div className="mt-6 flex flex-col gap-6 lg:grid lg:grid-cols-[1.2fr_1fr]">
+        <div className="order-1 min-w-0 lg:order-1">
           <div className="card overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={listing.images[img]} alt={listing.title} className="aspect-[4/3] w-full object-cover" />
@@ -164,42 +170,10 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
               ))}
             </div>
           )}
-          <div className="card mt-4 p-5">
-            <h2 className="font-bold">Description</h2>
-            <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-ink-700">{listing.description}</p>
-            {Object.keys(listing.attributes).length > 0 && (
-              <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                {Object.entries(listing.attributes).map(([k, v]) => (
-                  <div key={k} className="min-w-0 rounded-lg bg-sand-50 px-3 py-2">
-                    <dt className="text-xs capitalize text-ink-400">{k}</dt>
-                    <dd className="break-words font-semibold">{v}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-            <p className="mt-4 text-xs text-ink-400">Listed {timeAgo(listing.createdAt)} · Listing ID: {listing.id.toUpperCase()}</p>
-          </div>
-
-          {/* Delivery & payments */}
-          <div className="card mt-4 space-y-2 p-5 text-sm">
-            <h2 className="flex items-center gap-2 font-bold"><Truck className="h-4 w-4 text-brand-600" /> Delivery & payments</h2>
-            <p className="text-ink-700">{shop?.deliveryInfo ?? "Delivery arranged with the seller — confirm fee and timeline before paying."}</p>
-            <p className="text-ink-500">Shop checkout supports M-Pesa STK push, card where enabled, and cash on delivery on eligible orders. Totals are always computed on our servers.</p>
-          </div>
-
-          {/* Safety */}
-          <div className="card mt-4 space-y-2 p-5 text-sm">
-            <h2 className="flex items-center gap-2 font-bold"><ShieldCheck className="h-4 w-4 text-brand-600" /> Stay safe</h2>
-            <ul className="list-disc space-y-1 pl-5 text-ink-700">
-              <li>Meet in public, inspect before paying, never share your M-Pesa PIN.</li>
-              <li>Keep chats on Chap until you&apos;re confident in the seller.</li>
-              <li>Too good to be true? Compare with related sellers below.</li>
-            </ul>
-            <Link href="/safety" className="link-bd">Full buyer-safety guide →</Link>
-          </div>
         </div>
 
-        <div className="min-w-0 space-y-3 lg:sticky lg:top-36 lg:self-start">
+        {/* Buy card — right after gallery on mobile, sticky rail on desktop */}
+        <div className="order-2 min-w-0 lg:order-2 lg:sticky lg:top-36 lg:self-start">
           <div className="card space-y-3 p-5">
             <div className="flex flex-wrap items-center gap-2">
               <Badge>{listing.listingType}</Badge>
@@ -260,7 +234,45 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
               <Link href={`/shops/${listing.shopSlug}`} className="link-bd flex items-center gap-1 text-sm"><Store className="h-4 w-4" /> Visit seller&apos;s shop →</Link>
             )}
           </div>
+        </div>
 
+        <div className="order-3 min-w-0 lg:order-3">
+          <div className="card mt-4 p-5 lg:mt-0">
+            <h2 className="font-bold">Description</h2>
+            <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-ink-700">{listing.description}</p>
+            {Object.keys(listing.attributes).length > 0 && (
+              <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                {Object.entries(listing.attributes).map(([k, v]) => (
+                  <div key={k} className="min-w-0 rounded-lg bg-sand-50 px-3 py-2">
+                    <dt className="text-xs capitalize text-ink-400">{k}</dt>
+                    <dd className="break-words font-semibold">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            <p className="mt-4 text-xs text-ink-400">Listed {timeAgo(listing.createdAt)} · Listing ID: {listing.id.toUpperCase()}</p>
+          </div>
+
+          {/* Delivery & payments */}
+          <div className="card mt-4 space-y-2 p-5 text-sm">
+            <h2 className="flex items-center gap-2 font-bold"><Truck className="h-4 w-4 text-brand-600" /> Delivery & payments</h2>
+            <p className="text-ink-700">{shop?.deliveryInfo ?? "Delivery arranged with the seller — confirm fee and timeline before paying."}</p>
+            <p className="text-ink-500">Shop checkout supports M-Pesa STK push, card where enabled, and cash on delivery on eligible orders. Totals are always computed on our servers.</p>
+          </div>
+
+          {/* Safety */}
+          <div className="card mt-4 space-y-2 p-5 text-sm">
+            <h2 className="flex items-center gap-2 font-bold"><ShieldCheck className="h-4 w-4 text-brand-600" /> Stay safe</h2>
+            <ul className="list-disc space-y-1 pl-5 text-ink-700">
+              <li>Meet in public, inspect before paying, never share your M-Pesa PIN.</li>
+              <li>Keep chats on Chap until you&apos;re confident in the seller.</li>
+              <li>Too good to be true? Compare with related sellers below.</li>
+            </ul>
+            <Link href="/safety" className="link-bd">Full buyer-safety guide →</Link>
+          </div>
+        </div>
+
+        <div className="order-4 min-w-0 space-y-3 lg:order-4">
           {/* Seller card */}
           <div className="card flex items-center gap-3 p-5">
             <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-lg font-black text-white">

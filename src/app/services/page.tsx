@@ -30,7 +30,7 @@ export default function ServicesIndex() {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link href="/dashboard/listings/new?type=service" className="btn-primary">Offer a service</Link>
+        <Link href="/sell?type=service" className="btn-primary">Offer a service</Link>
         <Link href="/safety" className="btn-secondary">Hiring safely</Link>
       </div>
 
@@ -39,7 +39,7 @@ export default function ServicesIndex() {
         <div className="card p-8 text-center">
           <p className="font-bold">No services listed yet in this view</p>
           <p className="mt-1 text-sm text-ink-500">Be the first pro here — listing a service is free.</p>
-          <Link href="/dashboard/listings/new?type=service" className="btn-primary mt-4">Offer a service</Link>
+          <Link href="/sell?type=service" className="btn-primary mt-4">Offer a service</Link>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

@@ -62,7 +62,7 @@ export default async function DashPage({ params }: { params: { page: string } })
         {mine.length === 0 ? (
           <div className="card mt-2 p-6 text-center text-sm">
             <p className="font-bold">Nothing to promote yet</p>
-            <Link href="/dashboard/listings/new" className="btn-primary mt-3">Create a listing</Link>
+            <Link href="/sell" className="btn-primary mt-3">Create a listing</Link>
           </div>
         ) : (
           <ul className="mt-2 space-y-2">

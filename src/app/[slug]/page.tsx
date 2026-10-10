@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { INFO_PAGES } from "@/content/info-pages";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
+import { InfoSidebar } from "@/components/info-sidebar";
 import { slugify } from "@/lib/utils";
 
 export function generateStaticParams() {
@@ -24,8 +25,11 @@ export default function InfoPage({ params }: { params: { slug: string } }) {
   if (!d) notFound();
 
   return (
-    <div className="container-bd max-w-3xl py-8">
+    <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: d.title }]} />
+      <div className="mt-6 grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <InfoSidebar current={`/${params.slug}`} />
+        <div className="min-w-0 max-w-3xl">
       <h1 className="section-title mt-2">{d.title}</h1>
       <p className="mt-1 text-xs text-ink-400">Last updated: {d.updated}</p>
       <p className="mt-3 leading-relaxed text-ink-700">{d.intro}</p>
@@ -104,6 +108,8 @@ export default function InfoPage({ params }: { params: { slug: string } }) {
       </section>
 
       <Link href="/" className="link-bd mt-6 inline-block text-sm">← Back home</Link>
+        </div>
+      </div>
     </div>
   );
 }

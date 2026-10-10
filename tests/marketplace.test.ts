@@ -119,10 +119,22 @@ describe("store", () => {
   it("verifies users through document decisions", async () => {
     const s = freshDemoStore();
     const u = await s.createUser({ name: "Caro", email: "caro@example.co.ke", phone: "0733000000", role: "SELLER", verified: false, passwordHash: "x" });
-    const v = await s.createVerification({ userId: u.id, kind: "id", docPath: "private:2024/f.png", fileName: "id.png" });
+    const v = await s.createVerification({ userId: u.id, kind: "id", phone: "0733000000", docPath: "private:2024/f.png", fileName: "id.png" });
     assert.equal(v.status, "pending");
+    assert.equal(v.phone, "0733000000");
     await s.decideVerification(v.id, true, "admin1");
     assert.equal((await s.listVerifications("pending")).length, 0);
+  });
+
+  it("snapshots the verified seller phone onto listings", async () => {
+    const s = freshDemoStore();
+    const l = await s.createListing({
+      title: "Snapshotted phone listing here", description: "A sufficiently long description here.",
+      type: "product", price: 5000, compareAt: null, condition: "new", txMethod: "buy_online",
+      negotiable: false, stock: 2, county: "Nairobi", town: "CBD", images: [], attributes: {},
+      ownerId: "u9", sellerName: "Caro", sellerPhone: "0733000000", categorySlug: "other",
+    });
+    assert.equal((await s.getListing(l.id))?.sellerPhone, "0733000000");
   });
 
   it("tracks reports open → closed", async () => {

@@ -30,6 +30,7 @@ export type Listing = {
   images: string[];
   sellerName: string;
   sellerType: "individual" | "business";
+  sellerPhone?: string; // verified snapshot — WhatsApp ordering always uses this first
   shopSlug?: string;
   verified: boolean;
   featured?: boolean;

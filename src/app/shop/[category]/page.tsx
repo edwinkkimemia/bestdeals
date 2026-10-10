@@ -39,7 +39,7 @@ export default function CategoryPage({ params }: { params: { category: string } 
       {items.length === 0 ? (
         <div className="card mt-6 p-8 text-center">
           <p className="font-bold">No listings in this category yet</p>
-          <p className="text-sm text-ink-500">Be the first to <Link href="/dashboard/listings/new" className="link-bd">list an item here</Link>.</p>
+          <p className="text-sm text-ink-500">Be the first to <Link href="/sell" className="link-bd">list an item here</Link>.</p>
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">

@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { currentUser } from "@/lib/auth";
+import { requireVerifiedSeller } from "@/lib/gate";
 import { getStore } from "@/lib/store";
 import { slugify } from "@/lib/utils";
 import { SHOPS } from "@/data/catalog";
 
-/** Shop creation with slug availability check (demo catalogue + store). */
+/** Shop creation: verified sellers only, with slug availability check. */
 export async function POST(req: NextRequest) {
-  const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  const gate = await requireVerifiedSeller();
+  if (!gate.ok) return gate.response;
+  const user = gate.seller;
   const form = await req.formData().catch(() => null);
   const name = String(form?.get("name") || (await req.json().catch(() => ({} as Record<string, unknown>))).name || "").trim();
   if (name.length < 3) return NextResponse.json({ error: "Business name too short." }, { status: 400 });

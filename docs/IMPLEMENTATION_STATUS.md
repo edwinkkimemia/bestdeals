@@ -10,9 +10,8 @@ cart/checkout with server-side totals + multi-seller suborders, **server-persist
 with phone/signed-in lookup, enquiries/messaging intake, reports, wishlist, SEO, tests.
 
 **Trust & safety (new):**
-- **Verification**: sellers upload ID/business docs (stored privately under `.data/private`,
-  never linkable) at `/dashboard/verify`; admins review docs + approve/reject, approval
-  flips the ✓ badge everywhere.
+- **Verification (mandatory before posting)**: sellers submit national ID/business permit + confirm the phone matching their account; admins review doc + number and approve. `/api/listings` and `/api/shops` reject unverified sellers (403 `NOT_VERIFIED`, fresh flag — never the sign-in token). Approval flips the ✓ badge and unlocks posting.
+- **One verified number everywhere**: the confirmed phone snapshots onto every listing at posting time; WhatsApp ordering always uses the snapshot first, then the shop's approved contact — no number, no button.
 - **Reviews**: order-linked reviews with server-computed ✓ Verified purchase badge
   (paid/delivered only), moderation before display, shown on listing + shop pages.
 - **Disputes**: buyer opens with checkout-phone check, seller responds, admin resolves

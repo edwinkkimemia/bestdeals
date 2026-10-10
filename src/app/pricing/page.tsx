@@ -2,6 +2,8 @@ import Link from "next/link";
 import { SHOP_PLANS } from "@/data/catalog";
 import { formatKES } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
+import { PageBreadcrumb } from "@/components/page-breadcrumb";
+import { InfoSidebar } from "@/components/info-sidebar";
 
 export const metadata = {
   title: "Business Shop Plans & Pricing",
@@ -10,10 +12,14 @@ export const metadata = {
 
 export default function PricingPage() {
   return (
-    <div className="container-bd py-10">
+    <div className="container-bd pb-10">
+      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Business Shop Plans" }]} />
+      <div className="mt-6 grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <InfoSidebar current="/pricing" />
+        <div className="min-w-0">
       <h1 className="section-title">Business shop plans</h1>
       <p className="mt-1 max-w-2xl text-sm text-ink-500">Start free, upgrade when growth pays for itself. Prices in KES, limits published, and every charge shows plan, price, billing period, and renewal before you confirm.</p>
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {SHOP_PLANS.map((p) => (
           <div key={p.id} className={`card flex flex-col p-6 ${p.id === "growth" ? "border-2 border-brand-600" : ""}`}>
             {p.id === "growth" && <Badge tone="blue">Most popular</Badge>}
@@ -54,6 +60,8 @@ export default function PricingPage() {
       <div className="mt-6 flex flex-wrap gap-2">
         <Link href="/dashboard/shop" className="btn-primary">Open my shop</Link>
         <Link href="/advertising" className="btn-secondary">Advertising options</Link>
+      </div>
+        </div>
       </div>
     </div>
   );

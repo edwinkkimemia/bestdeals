@@ -47,7 +47,7 @@ export default function DealsPage() {
       <div className="card mt-8 bg-sand-50 p-5">
         <p className="font-bold">Selling? Put your price drop here</p>
         <p className="mt-1 text-sm text-ink-500">Genuine reductions on active listings surface automatically in this rail after moderation. No fees, no tricks.</p>
-        <Link href="/dashboard/listings/new" className="btn-primary mt-3">List an item</Link>
+        <Link href="/sell" className="btn-primary mt-3">List an item</Link>
       </div>
     </div>
   );

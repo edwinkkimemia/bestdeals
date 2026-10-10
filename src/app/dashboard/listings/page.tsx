@@ -18,7 +18,7 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
     <div className="container-bd py-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="section-title">My listings ({mine.length})</h1>
-        <Link href="/dashboard/listings/new" className="btn-primary">+ New listing</Link>
+        <Link href="/sell" className="btn-primary">+ New listing</Link>
       </div>
       <div className="mt-4 flex flex-wrap gap-2" role="tablist" aria-label="Listing states">
         {TABS.map((t) => (
@@ -29,7 +29,7 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
         <div className="card mt-4 p-8 text-center">
           <p className="font-bold">{mine.length === 0 ? "You haven't listed anything yet" : `Nothing in “${tab}”`}</p>
           <p className="mt-1 text-sm text-ink-500">Listings go live after moderation. Photos upload straight from your phone.</p>
-          <Link href="/dashboard/listings/new" className="btn-primary mt-4">Create your first listing →</Link>
+          <Link href="/sell" className="btn-primary mt-4">Create your first listing →</Link>
         </div>
       ) : (
         <ul className="mt-4 space-y-2">

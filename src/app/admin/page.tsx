@@ -62,7 +62,7 @@ export default async function AdminPage() {
         <ul className="mt-2 space-y-2">
           {verifications.map((v) => (
             <li key={v.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
-              <span className="flex-1"><strong>{v.kind}</strong> · user {v.userId} · {v.fileName ?? "document"}</span>
+              <span className="flex-1"><strong>{v.kind}</strong> · user {v.userId} · ☎ {v.phone ?? "no phone"} · {v.fileName ?? "document"}</span>
               {v.docPath && <Link href={`/api/admin/verifications/${v.id}/doc`} target="_blank" className="link-bd">View doc</Link>}
               <AdminButtons kind="verify" id={v.id} />
             </li>

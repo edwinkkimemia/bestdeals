@@ -11,6 +11,7 @@ export default function sitemap() {
     "/services",
     "/deals",
     "/sell",
+    "/start-selling",
     "/pricing",
     "/help",
   ].map((p) => ({ url: `${base}${p || "/"}`, lastModified: now }));

@@ -145,8 +145,9 @@ model Verification {
   id        String    @id @default(cuid())
   userId    String
   shopId    String?
-  kind      String // id | business | employer
-  status    String    @default("pending")
+  kind      String   // id | business | employer
+  phone     String?  // confirmed WhatsApp-capable number, must match account
+  status    String   @default("pending")
   docUrl    String? // private bucket, never public
   fileName  String?
   decidedBy String?
@@ -201,8 +202,9 @@ model Listing {
   shop            Shop?            @relation(fields: [shopId], references: [id])
   categoryId      String?
   category        Category?        @relation(fields: [categoryId], references: [id])
-  subcategory     String?
-  sellerName      String?
+  subcategory       String?
+  sellerName        String?
+  sellerPhone       String? // verified snapshot taken at posting time
   featured        Boolean          @default(false)
   sponsored       Boolean          @default(false)
   attributes      Json?
