@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, LayoutGrid, ShoppingCart, Store, User } from "lucide-react";
+import { Home, LayoutGrid, Plus, ShoppingCart, User } from "lucide-react";
 import { useCart } from "../cart-provider";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +15,7 @@ export function BottomNav() {
   const tabs = [
     { href: "/", label: "Home", Icon: Home },
     { href: "/shop", label: "Shop", Icon: LayoutGrid },
-    { href: "/sell", label: "Sell", Icon: Store, fab: true },
+    { href: "/sell", label: "Sell", Icon: Plus, fab: true },
     { href: "/cart", label: "Cart", Icon: ShoppingCart, badge: count },
     { href: "/dashboard", label: "Account", Icon: User },
   ];

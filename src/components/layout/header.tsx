@@ -28,32 +28,6 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
   const [showSearch, setShowSearch] = useState(false);
   const [unread, setUnread] = useState(0);
   const box = useRef<HTMLDivElement>(null);
-  const [hideStrip, setHideStrip] = useState(false);
-  const lastY = useRef(0);
-  const ticking = useRef(false);
-
-  useEffect(() => {
-    // Collapse the utility strip on scroll down; reveal on scroll up.
-    // Hysteresis (hide past 140px, re-show only after a real upward move or
-    // near the top) stops rapid toggling that makes the header shake.
-    const update = () => {
-      ticking.current = false;
-      const y = window.scrollY;
-      const last = lastY.current;
-      if (y > 140 && y > last + 4) setHideStrip(true);
-      else if (y < last - 4 || y <= 80) setHideStrip(false);
-      lastY.current = y;
-    };
-    const onScroll = () => {
-      if (!ticking.current) {
-        ticking.current = true;
-        requestAnimationFrame(update);
-      }
-    };
-    update();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   useEffect(() => {
     // Lock background scroll while the mobile drawer is open.
@@ -113,20 +87,20 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
 
   return (
     <>
-    <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/95 backdrop-blur">
-      {/* top utility strip — collapses on scroll down, returns on scroll up */}
-      <div className={`grid bg-brand-700 text-white transition-all duration-300 ${hideStrip ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"}`}>
-        <div className="overflow-hidden">
-          <div className="container-bd flex h-8 items-center justify-between text-xs">
-            <p className="truncate">Kenya&apos;s marketplace for everything · Find it. Sell it. Get the best deal.</p>
-            <div className="hidden items-center gap-4 sm:flex">
-              <Link href="/help" className="hover:underline">Help Centre</Link>
-              <Link href="/pricing" className="hover:underline">Business Plans</Link>
-              <Link href="/safety" className="hover:underline">Buyer Safety</Link>
-            </div>
-          </div>
+    {/* top utility strip — static, scrolls away naturally. Kept outside the
+        sticky header so collapsing it never changes the sticky element's
+        height (which caused the shake via scroll <-> layout feedback). */}
+    <div className="bg-brand-700 text-white">
+      <div className="container-bd flex h-8 items-center justify-between text-xs">
+        <p className="truncate">Kenya&apos;s marketplace for everything · Find it. Sell it. Get the best deal.</p>
+        <div className="hidden items-center gap-4 sm:flex">
+          <Link href="/help" className="hover:underline">Help Centre</Link>
+          <Link href="/pricing" className="hover:underline">Business Plans</Link>
+          <Link href="/safety" className="hover:underline">Buyer Safety</Link>
         </div>
       </div>
+    </div>
+    <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/95 backdrop-blur">
 
       <div className="container-bd flex items-center gap-3 py-3">
         <button className="rounded-lg p-2 hover:bg-sand-100 lg:hidden" aria-label="Open menu" onClick={() => setOpen(true)}>
