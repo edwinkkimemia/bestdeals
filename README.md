@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# chap.co.ke — Kenya's Marketplace for Everything
 
-## Getting Started
+**Find it. Sell it. Get the best deal.** Shopping, classifieds, business shops and local services in one mobile-first marketplace.
 
-First, run the development server:
+## Quick start (demo mode — no database needed)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Demo mode uses the curated catalogue in `src/data/catalog.ts`. Auth uses an in-memory store (dev only).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Demo accounts:** sign up with any email. Use `admin@chap.co.ke` (or `ADMIN_EMAILS`) to get the ADMIN role and open `/admin`.
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## Production (PostgreSQL)
 
-## Learn More
+```bash
+docker compose up -d db redis
+cp .env.example .env   # fill DATABASE_URL + AUTH_SECRET
+npx prisma migrate dev --name init
+npx prisma db seed
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Command | What it does |
+|---|---|
+| `npm run dev` | Local dev server |
+| `npm run build` / `npm start` | Production build + serve |
+| `npm run lint` / `npm run typecheck` | Lint + strict type check |
+| `npm test` | Unit/integration tests (node:test) |
+| `npx prisma migrate dev` | Apply schema migrations |
+| `npx prisma db seed` | Seed counties, categories, plans, coupons |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+## Key routes
 
-## Deploy on Vercel
+`/`, `/shop`, `/shop/[category]`, `/product/[slug]`, `/classifieds`, `/classifieds/[slug]`, `/shops`, `/shops/[slug]`, `/services`, `/services/[slug]`, `/deals`, `/sell`, `/pricing`, `/search`, `/cart`, `/checkout`, `/orders`, `/wishlist`, `/messages/new`, `/dashboard`, `/admin`, `/help`… (plus SEO `sitemap.xml`, `robots.txt`)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Docs
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+- `docs/DEPLOY.md` — hosting, env, migrations
+- `docs/providers.md` — M-Pesa Daraja, email/SMS, storage wiring
+- `docs/BACKUP.md` — backup & recovery
+- `docs/PRODUCTION_CHECKLIST.md` — launch gates
+- `docs/IMPLEMENTATION_STATUS.md` — what works, what needs credentials
+
+## Principles
+
+Trust before scale · Mobile before desktop · Free entry, paid growth · Real data only · Security by design.

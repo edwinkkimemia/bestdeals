@@ -27,6 +27,11 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
+
+# uploads + private verification docs (never commit user files)
+public/uploads/
+.data/
 
 # vercel
 .vercel

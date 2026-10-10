@@ -2,32 +2,69 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  Chap (chap.co.ke) design tokens — sampled from public/chaplogo.png
+  Primary brand: royal blue            #0043D2 (brand-600)
+  Accent: signal red                   #F81124 (accent-500) — used sparingly
+  Backgrounds: white / warm neutral #FAF7F2 (sand-50)
+  Text: ink-900 headings, ink-700 body, ink-500 muted
+*/
+
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --bd-brand: #0043d2;
+  --bd-brand-dark: #0033a6;
+  --bd-accent: #f81124;
+  --bd-bg: #ffffff;
+  --bd-bg-warm: #faf7f2;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  background: var(--bd-bg);
+  color: #101812;
+  font-feature-settings: "ss01";
+  -webkit-font-smoothing: antialiased;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+@layer components {
+  .container-bd {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
   }
+  .card {
+    @apply rounded-card border border-neutral-200 bg-white shadow-card;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-5 py-2.5 text-sm font-semibold text-ink-900 transition hover:bg-sand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2;
+  }
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-accent-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2;
+  }
+  .input-bd {
+    @apply w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20;
+  }
+  .label-bd {
+    @apply mb-1.5 block text-sm font-medium text-ink-900;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-sand-50 px-2.5 py-1 text-xs font-medium text-ink-700;
+  }
+  .section-title {
+    @apply text-xl font-bold tracking-tight text-ink-900 sm:text-2xl;
+  }
+  .link-bd {
+    @apply text-sm font-medium text-brand-700 hover:text-brand-600 hover:underline;
+  }
+}
+
+.clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
