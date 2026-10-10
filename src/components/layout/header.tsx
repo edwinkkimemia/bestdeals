@@ -26,6 +26,40 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
   const [county, setCounty] = useState("All Kenya");
   const [sugs, setSugs] = useState<string[]>([]);
   const box = useRef<HTMLDivElement>(null);
+  const [hideStrip, setHideStrip] = useState(false);
+  const lastY = useRef(0);
+  const ticking = useRef(false);
+
+  useEffect(() => {
+    // Collapse the utility strip on scroll down; reveal on scroll up.
+    // Hysteresis (hide past 140px, re-show only after a real upward move or
+    // near the top) stops rapid toggling that makes the header shake.
+    const update = () => {
+      ticking.current = false;
+      const y = window.scrollY;
+      const last = lastY.current;
+      if (y > 140 && y > last + 4) setHideStrip(true);
+      else if (y < last - 4 || y <= 80) setHideStrip(false);
+      lastY.current = y;
+    };
+    const onScroll = () => {
+      if (!ticking.current) {
+        ticking.current = true;
+        requestAnimationFrame(update);
+      }
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    // Lock background scroll while the mobile drawer is open.
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
 
   useEffect(() => {
     const t = setTimeout(async () => {
@@ -48,15 +82,18 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
   }, []);
 
   return (
+    <>
     <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/95 backdrop-blur">
-      {/* top strip */}
-      <div className="bg-brand-700 text-white">
-        <div className="container-bd flex h-8 items-center justify-between text-xs">
-          <p className="truncate">Kenya&apos;s marketplace for everything · Find it. Sell it. Get the best deal.</p>
-          <div className="hidden items-center gap-4 sm:flex">
-            <Link href="/help" className="hover:underline">Help Centre</Link>
-            <Link href="/pricing" className="hover:underline">Business Plans</Link>
-            <Link href="/safety" className="hover:underline">Buyer Safety</Link>
+      {/* top utility strip — collapses on scroll down, returns on scroll up */}
+      <div className={`grid bg-brand-700 text-white transition-all duration-300 ${hideStrip ? "grid-rows-[0fr] opacity-0" : "grid-rows-[1fr] opacity-100"}`}>
+        <div className="overflow-hidden">
+          <div className="container-bd flex h-8 items-center justify-between text-xs">
+            <p className="truncate">Kenya&apos;s marketplace for everything · Find it. Sell it. Get the best deal.</p>
+            <div className="hidden items-center gap-4 sm:flex">
+              <Link href="/help" className="hover:underline">Help Centre</Link>
+              <Link href="/pricing" className="hover:underline">Business Plans</Link>
+              <Link href="/safety" className="hover:underline">Buyer Safety</Link>
+            </div>
           </div>
         </div>
       </div>
@@ -161,12 +198,14 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
           ))}
         </div>
       </nav>
+    </header>
 
-      {/* mobile drawer */}
+      {/* mobile drawer — sibling of <header>, not inside it: backdrop-blur creates a
+          containing block that would trap fixed positioning to header height */}
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menu">
           <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-0 h-full w-80 max-w-[85vw] overflow-y-auto bg-white p-4 shadow-xl">
+          <div className="absolute left-0 top-0 h-dvh w-80 max-w-[85vw] overflow-y-auto bg-white p-4 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
               <Image src="/chaplogo.png" alt="chap.co.ke" width={1147} height={287} className="h-8 w-auto" />
               <button aria-label="Close menu" className="rounded-lg p-2 hover:bg-sand-100" onClick={() => setOpen(false)}><X className="h-5 w-5" /></button>
@@ -186,6 +225,6 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }
