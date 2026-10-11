@@ -2,14 +2,18 @@ import Link from "next/link";
 import { LISTINGS } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
+import { shuffleFeaturedFirst } from "@/lib/search";
 
 export const metadata = {
   title: "Services across Kenya",
   description: "Find fundis, cleaners, tutors and professional services across Kenya. Compare coverage areas and request quotes.",
 };
 
+// Fresh order every visit: featured/promoted lead, the rest shuffle.
+export const dynamic = "force-dynamic";
+
 export default function ServicesIndex() {
-  const items = LISTINGS.filter((l) => l.listingType === "service");
+  const items = shuffleFeaturedFirst(LISTINGS.filter((l) => l.listingType === "service"));
   return (
     <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Services" }]} />

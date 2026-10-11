@@ -2,14 +2,18 @@ import Link from "next/link";
 import { LISTINGS } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
+import { shuffleFeaturedFirst } from "@/lib/search";
 
 export const metadata = {
   title: "Classifieds — New & Pre-owned in Kenya",
   description: "Buy and sell new and second-hand goods person-to-person across Kenya. Enquire, negotiate, meet safely.",
 };
 
+// Fresh order every visit: featured/promoted lead, the rest shuffle.
+export const dynamic = "force-dynamic";
+
 export default function ClassifiedsIndex() {
-  const items = LISTINGS.filter((l) => l.listingType === "classified");
+  const items = shuffleFeaturedFirst(LISTINGS.filter((l) => l.listingType === "classified"));
   return (
     <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Classifieds" }]} />

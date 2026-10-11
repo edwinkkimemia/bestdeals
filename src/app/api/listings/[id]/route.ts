@@ -62,6 +62,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     images,
     attributes: d.attributes ?? {},
     categorySlug: d.categorySlug,
+    subcategory: (d.subcategory ?? "").trim() || undefined,
   });
   if (!updated) return NextResponse.json({ error: "Listing not found." }, { status: 404 });
   // Content changed → back to moderation, unless seller had parked it as sold/hidden/draft.

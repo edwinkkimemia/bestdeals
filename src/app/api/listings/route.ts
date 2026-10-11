@@ -47,6 +47,7 @@ export async function POST(req: NextRequest) {
     // Snapshot of the verified number — WhatsApp ordering always uses this.
     sellerPhone: user.phone,
     categorySlug: d.categorySlug,
+    subcategory: (d.subcategory ?? "").trim() || undefined,
   });
   return NextResponse.json({ ok: true, id: rec.id, status: "pending", message: "Saved and queued for moderation." });
 }

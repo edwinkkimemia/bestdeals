@@ -2,14 +2,18 @@ import Link from "next/link";
 import { LISTINGS } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
+import { shuffleFeaturedFirst } from "@/lib/search";
 
 export const metadata = {
   title: "Today's Best Deals",
   description: "Genuine price drops from verified prices across Kenya — no fake countdowns or invented discounts.",
 };
 
+// Fresh order every visit: featured/promoted lead, the rest shuffle.
+export const dynamic = "force-dynamic";
+
 export default function DealsPage() {
-  const deals = LISTINGS.filter((l) => l.compareAt && l.compareAt > l.price);
+  const deals = shuffleFeaturedFirst(LISTINGS.filter((l) => l.compareAt && l.compareAt > l.price));
   return (
     <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Best Deals" }]} />

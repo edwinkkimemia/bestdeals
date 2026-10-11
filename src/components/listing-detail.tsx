@@ -22,6 +22,8 @@ import { getListing, getShop, type Listing } from "@/data/catalog";
 import { listingHref } from "@/lib/related";
 import type { ReviewRecord } from "@/lib/store";
 import { ReviewsBlock } from "./reviews-block";
+import { ViewTracker } from "./view-tracker";
+import { ViewCount } from "./view-count";
 import { Badge, ConditionBadge, VerifiedBadge } from "@/components/ui/badge";
 import { Price } from "@/components/ui/listing-card";
 import { useCart } from "@/components/cart-provider";
@@ -142,6 +144,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
 
   return (
     <div className="overflow-x-clip pb-8">
+      <ViewTracker listingId={listing.id} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <nav className="border-b border-neutral-200 bg-sand-50" aria-label="Breadcrumb">
         <div className="container-bd flex flex-wrap items-center gap-1.5 py-2.5 text-xs text-ink-400">
@@ -180,6 +183,11 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
               <Badge>{listing.listingType}</Badge>
               <ConditionBadge condition={listing.condition} />
               {listing.negotiable && <Badge tone="red">Negotiable</Badge>}
+              {listing.subcategory && (
+                <Link href={`/search?category=${listing.categorySlug}&subcategory=${encodeURIComponent(listing.subcategory)}`} className="chip hover:border-brand-600 hover:text-brand-700">
+                  {listing.subcategory}
+                </Link>
+              )}
             </div>
             <h1 className="break-words text-xl font-bold leading-snug sm:text-2xl">{listing.title}</h1>
             <Price value={listing.price} compareAt={listing.compareAt} />
@@ -187,6 +195,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
               <MapPin className="h-3.5 w-3.5" /> {listing.town}, {listing.county} ·{" "}
               {listing.stock > 0 ? `In stock (${listing.stock})` : "Out of stock"}
             </p>
+            <ViewCount listingId={listing.id} />
             {lowStock && <p className="text-sm font-semibold text-accent-600">Only {listing.stock} left — order soon.</p>}
 
             {listing.transactionMethod === "buy_online" ? (
@@ -209,6 +218,9 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
                   </button>
                   <WishlistButton id={listing.id} title={listing.title} />
                 </div>
+                <Link href={`/messages/new?listing=${listing.id}`} className="btn-secondary w-full">
+                  <MessageCircle className="h-4 w-4" /> Message seller
+                </Link>
                 {waPhone && waOrderHref && (
                   <div className="grid grid-cols-2 gap-2">
                     <a href={`tel:+${waPhone}`} className="btn-secondary !px-3" title={`Call ${listing.sellerName}`}>
@@ -285,15 +297,31 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
 
         <div className="order-4 min-w-0 space-y-3 lg:order-4">
           {/* Seller card */}
-          <div className="card flex items-center gap-3 p-5">
-            <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-lg font-black text-white">
-              {listing.sellerName.charAt(0).toUpperCase()}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <VerifiedBadge verified={listing.verified} /></p>
-              <p className="truncate text-xs text-ink-500">
-                {listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}, {listing.county} · Enquiries go straight to their inbox
-              </p>
+          <div className="card space-y-3 p-5">
+            <div className="flex items-center gap-3">
+              <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-lg font-black text-white">
+                {listing.sellerName.charAt(0).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <VerifiedBadge verified={listing.verified} /></p>
+                <p className="truncate text-xs text-ink-500">
+                  {listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}, {listing.county} · Enquiries go straight to their inbox
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Link href={`/messages/new?listing=${listing.id}`} className="btn-primary !px-3">
+                <MessageCircle className="h-4 w-4" /> Message
+              </Link>
+              {listing.shopSlug ? (
+                <Link href={`/shops/${listing.shopSlug}`} className="btn-secondary !px-3">
+                  <Store className="h-4 w-4" /> Visit shop
+                </Link>
+              ) : (
+                <a href="#more-from-seller" className="btn-secondary !px-3">
+                  <Store className="h-4 w-4" /> More items
+                </a>
+              )}
             </div>
           </div>
 
@@ -312,7 +340,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
       </div>
 
       {moreFromSeller && moreFromSeller.length > 0 && (
-        <section className="mt-10">
+        <section className="mt-10 scroll-mt-36" id="more-from-seller">
           <h2 className="section-title">More from {listing.sellerName}</h2>
           <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {moreFromSeller.map((r) => (

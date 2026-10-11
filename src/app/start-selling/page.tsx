@@ -25,7 +25,7 @@ export default function StartSellingPage() {
       </div>
       <div className="mt-6 flex flex-wrap gap-2">
         <Link href="/sell" className="btn-primary !h-12 !px-7">Post a listing</Link>
-        <Link href="/auth/signup" className="btn-secondary !h-12 !px-7">Create free account</Link>
+        <Link href="/auth/signup?kind=individual" className="btn-secondary !h-12 !px-7">Create free account</Link>
         <Link href="/pricing" className="btn-secondary !h-12 !px-7">Compare shop plans</Link>
       </div>
 
@@ -39,7 +39,7 @@ export default function StartSellingPage() {
             <li>Appear in combined search, related rails, and deal feeds</li>
             <li>Optional paid boosting for eligible listings</li>
           </ul>
-          <Link href="/auth/signup" className="btn-secondary mt-4">Start free</Link>
+          <Link href="/auth/signup?kind=individual" className="btn-secondary mt-4">Start free</Link>
         </div>
         <div className="card border-brand-600 p-5">
           <p className="font-bold">Business shops — from {formatKES(SHOP_PLANS[1].monthly)}/mo</p>
@@ -49,7 +49,10 @@ export default function StartSellingPage() {
             <li>Per-seller suborders, wholesale enquiry inbox, analytics</li>
             <li>Verified-business badge after permit review</li>
           </ul>
-          <Link href="/pricing" className="btn-primary mt-4">See plans →</Link>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Link href="/auth/signup?kind=business" className="btn-primary">Register business</Link>
+            <Link href="/pricing" className="btn-secondary">See plans →</Link>
+          </div>
         </div>
       </div>
 

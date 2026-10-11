@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { getStore } from "@/lib/store";
 import { formatKES } from "@/lib/format";
+import { getPlatformAnalytics } from "@/lib/analytics";
 
 export default async function AdminPage() {
   const store = getStore();
-  const [pending, reports, disputes, reviews, verifications, orders, promos, users] = await Promise.all([
+  const [pending, reports, disputes, reviews, verifications, orders, promos, users, views] = await Promise.all([
     store.listListingsByStatus("pending"),
     store.listReports("open"),
     store.listDisputes(),
@@ -13,6 +14,7 @@ export default async function AdminPage() {
     store.listOrders(),
     store.listPromotions("pending_payment"),
     store.listUsers(),
+    getPlatformAnalytics(30, 1).catch(() => ({ totalViews: 0, uniqueViewers: 0 })),
   ]);
   const openDisputes = disputes.filter((d) => !["resolved_refund", "resolved_reject", "cancelled"].includes(d.status));
   const revenue = orders
@@ -20,6 +22,8 @@ export default async function AdminPage() {
     .reduce((s, o) => s + (o.total || 0), 0);
 
   const stats = [
+    { t: "Product views · 30 days", v: views.totalViews.toLocaleString(), href: "/admin/analytics" },
+    { t: "Unique viewers · 30 days", v: views.uniqueViewers.toLocaleString(), href: "/admin/analytics" },
     { t: "Listings awaiting review", v: String(pending.length), href: "/admin/listings" },
     { t: "Pending verifications", v: String(verifications.length), href: "/admin/verifications" },
     { t: "Open disputes", v: String(openDisputes.length), href: "/admin/disputes" },

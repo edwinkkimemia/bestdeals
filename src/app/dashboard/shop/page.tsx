@@ -3,16 +3,40 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { SHOP_PLANS } from "@/data/catalog";
 import { formatKES } from "@/lib/format";
+import { getStore } from "@/lib/store";
 
 export const metadata = { title: "My Shop" };
 
-export default async function ShopDash({ searchParams }: { searchParams: { plan?: string } }) {
+export default async function ShopDash({ searchParams }: { searchParams: { plan?: string; new?: string } }) {
   const user = await currentUser();
   if (!user) redirect("/auth/signin?next=/dashboard/shop");
+  const fresh = await getStore().findUserById(user.id).catch(() => null);
+  const kind = fresh?.sellerKind ?? "individual";
+  const verified = fresh?.verified ?? user.verified;
   const plan = SHOP_PLANS.find((p) => p.id === (searchParams.plan ?? "starter")) ?? SHOP_PLANS[0];
   return (
     <div className="container-bd py-8">
       <h1 className="section-title">My shop</h1>
+      {searchParams.new === "business" && (
+        <p className="mt-3 rounded-xl bg-brand-50 p-3 text-sm text-brand-700">
+          Welcome aboard ✓ — two steps to open your shop: 1) verify your business below, 2) create your storefront.
+        </p>
+      )}
+      {!verified && (
+        <div className="card mt-4 border-amber-300 bg-amber-50 p-4 text-sm">
+          <p className="font-bold text-amber-900">
+            {kind === "business" ? "Verify your business to open your shop" : "Verify before you open a shop"}
+          </p>
+          <p className="mt-1 text-amber-800">
+            {kind === "business"
+              ? "Submit your business permit or KRA PIN — it becomes your verified-business ✓ badge."
+              : "Every seller is verified (national ID + email + phone) before posting or opening a shop."}
+          </p>
+          <Link href={kind === "business" ? "/dashboard/verify?kind=business" : "/dashboard/verify"} className="btn-primary mt-3">
+            {kind === "business" ? "Verify business" : "Get verified"}
+          </Link>
+        </div>
+      )}
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         <div className="card p-5">
           <p className="font-bold">Storefront</p>

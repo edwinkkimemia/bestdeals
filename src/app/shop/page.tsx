@@ -4,14 +4,18 @@ import { LISTINGS } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
 import { CategoryIcon } from "@/components/category-icon";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
+import { shuffleFeaturedFirst } from "@/lib/search";
 
 export const metadata = {
   title: "Shop Products",
   description: "New products from verified retailers, wholesalers and independents across Kenya — cart, M-Pesa checkout, countrywide delivery.",
 };
 
+// Fresh order every visit: featured/promoted lead, the rest shuffle.
+export const dynamic = "force-dynamic";
+
 export default function ShopIndex() {
-  const products = LISTINGS.filter((l) => l.listingType === "product");
+  const products = shuffleFeaturedFirst(LISTINGS.filter((l) => l.listingType === "product"));
   return (
     <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Shop" }]} />
@@ -45,6 +49,13 @@ export default function ShopIndex() {
             <div className="p-3">
               <p className="text-sm font-semibold leading-tight group-hover:text-brand-700">{c.name}</p>
               <p className="clamp-2 mt-0.5 text-xs text-ink-400">{c.blurb}</p>
+              {c.subcategories.length > 0 && (
+                <p className="mt-1.5 flex flex-wrap gap-1">
+                  {c.subcategories.slice(0, 4).map((s) => (
+                    <Link key={s} href={`/search?category=${c.slug}&subcategory=${encodeURIComponent(s)}`} className="rounded-full bg-sand-50 px-2 py-0.5 text-[11px] font-medium text-ink-700 hover:bg-brand-50 hover:text-brand-700">{s}</Link>
+                  ))}
+                </p>
+              )}
             </div>
           </Link>
         ))}

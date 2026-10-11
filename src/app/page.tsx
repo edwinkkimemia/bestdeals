@@ -3,34 +3,45 @@ import type { Metadata } from "next";
 import { ArrowRight, BadgeCheck, MapPin, Search, ShieldCheck, Store, Truck } from "lucide-react";
 import { CATEGORIES, LISTINGS, SHOPS, POPULAR_SEARCHES } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
-import { Badge } from "@/components/ui/badge";
-import { CategoryIcon } from "@/components/category-icon";
-import { COUNTY_NAMES } from "@/lib/kenya";
+import { HeroCategories } from "@/components/hero-categories";
+import { COUNTY_NAMES, KENYA_COUNTIES } from "@/lib/kenya";
+import { shuffleFeaturedFirst } from "@/lib/search";
 
 export const metadata: Metadata = {
   title: "chap.co.ke — Kenya's Marketplace for Everything",
   description: "Discover great deals, shop trusted businesses, buy and sell new or pre-owned items, and find services across Kenya.",
 };
 
+// Fresh rails on every visit: shuffle runs per request (below), featured/promoted always lead.
+export const dynamic = "force-dynamic";
+
 const ICONS: Record<string, string> = {};
 
 export default function HomePage() {
-  const deals = LISTINGS.filter((l) => l.compareAt && l.compareAt > l.price).slice(0, 4);
-  const featured = LISTINGS.filter((l) => l.featured).slice(0, 4);
-  const fresh = [...LISTINGS].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 8);
-  const freshClassifieds = LISTINGS.filter((l) => l.listingType === "classified")
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 4);
-  const fromShops = LISTINGS.filter((l) => l.shopSlug)
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 4);
+  const deals = shuffleFeaturedFirst(LISTINGS.filter((l) => l.compareAt && l.compareAt > l.price)).slice(0, 4);
+  const featured = shuffleFeaturedFirst(LISTINGS.filter((l) => l.featured)).slice(0, 8);
+  const fresh = shuffleFeaturedFirst([...LISTINGS].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 24)).slice(0, 8);
+  const freshClassifieds = shuffleFeaturedFirst(LISTINGS.filter((l) => l.listingType === "classified")
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 12)).slice(0, 4);
+  const fromShops = shuffleFeaturedFirst(LISTINGS.filter((l) => l.shopSlug)
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 12)).slice(0, 4);
+  const countiesByListings = [...KENYA_COUNTIES]
+    .map((c) => ({
+      ...c,
+      count: LISTINGS.filter((l) => l.county.trim().toLowerCase() === c.county.toLowerCase()).length,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12);
 
   return (
     <div>
       {/* A: Hero + search — mobile-first: headline, search, swipeable categories */}
       <section className="bg-gradient-to-b from-brand-50 via-white to-white">
-        <div className="container-bd grid items-center gap-6 py-8 md:py-10 lg:grid-cols-[1.1fr_1fr] lg:gap-10">
+        <div className="container-bd grid items-center gap-6 py-8 md:py-10 lg:grid-cols-[240px_minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-8">
+          {/* Categories column — desktop (hover/tap reveals subcategories) */}
+          <HeroCategories />
           <div className="min-w-0">
-            <Badge tone="green">🇰🇪 Made for Kenya · KES · M-Pesa ready</Badge>
-            <h1 className="mt-3 text-[28px] font-extrabold leading-[1.08] tracking-tight text-ink-900 sm:text-4xl xl:text-5xl">
+            <h1 className="text-[28px] font-extrabold leading-[1.08] tracking-tight text-ink-900 sm:text-4xl xl:text-5xl">
               Everything You Need. <span className="text-brand-600">All in One Place.</span>
             </h1>
             <p className="mt-2 max-w-xl text-[15px] text-ink-500 sm:text-base">
@@ -96,6 +107,22 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Featured products — paid boosts, always labelled, shuffled fresh each visit */}
+      {featured.length > 0 && (
+        <section className="container-bd py-10" aria-labelledby="featured">
+          <div className="mb-5 flex items-end justify-between">
+            <div>
+              <h2 id="featured" className="section-title">Featured products</h2>
+              <p className="text-sm text-ink-500">Promoted by sellers · always labelled Featured · never overrides safety.</p>
+            </div>
+            <Link href="/dashboard/promotion" className="link-bd">Promote yours →</Link>
+          </div>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {featured.map((l) => <ListingCard key={l.id} listing={l} />)}
+          </div>
+        </section>
+      )}
+
       {/* B: categories */}
       <section className="container-bd py-10" aria-labelledby="cats">
         <div className="mb-5 flex items-end justify-between">
@@ -104,11 +131,20 @@ export default function HomePage() {
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {CATEGORIES.slice(0, 12).map((c) => (
-            <Link key={c.slug} href={`/shop/${c.slug}`} className="card group overflow-hidden">
+            <div key={c.slug} className="card group overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={c.image} alt={c.name} loading="lazy" className="h-24 w-full object-cover transition group-hover:scale-105" />
-              <p className="p-2.5 text-sm font-semibold leading-tight">{c.name}</p>
-            </Link>
+              <Link href={`/shop/${c.slug}`}><img src={c.image} alt={c.name} loading="lazy" className="h-24 w-full object-cover transition group-hover:scale-105" /></Link>
+              <div className="p-2.5">
+                <Link href={`/shop/${c.slug}`} className="text-sm font-semibold leading-tight hover:text-brand-700">{c.name}</Link>
+                {c.subcategories.length > 0 && (
+                  <p className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
+                    {c.subcategories.slice(0, 3).map((s) => (
+                      <Link key={s} href={`/search?category=${c.slug}&subcategory=${encodeURIComponent(s)}`} className="text-[11px] text-ink-500 hover:text-brand-700 hover:underline">{s}</Link>
+                    ))}
+                  </p>
+                )}
+              </div>
+            </div>
           ))}
         </div>
       </section>
@@ -129,23 +165,20 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* D: departments */}
-      <section className="container-bd py-10" aria-labelledby="dept">
-        <h2 id="dept" className="section-title">Shop by department</h2>
-        <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {CATEGORIES.slice(0, 8).map((c) => (
-            <Link key={c.slug} href={`/shop/${c.slug}`} className="card group overflow-hidden transition hover:shadow-lg">
-              <div className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={c.image} alt="" loading="lazy" className="h-24 w-full object-cover transition duration-300 group-hover:scale-105 sm:h-32" />
-                <span className="absolute bottom-2.5 left-2.5 flex h-9 w-9 items-center justify-center rounded-xl bg-white/95 text-brand-700 shadow">
-                  <CategoryIcon name={c.icon} className="h-[18px] w-[18px]" />
-                </span>
-              </div>
-              <div className="p-4">
-                <p className="text-base font-bold leading-tight group-hover:text-brand-700">{c.name}</p>
-                <p className="clamp-2 mt-1 text-sm text-ink-500">{c.blurb}</p>
-                <p className="mt-2 text-sm font-semibold text-brand-700">Shop now →</p>
+      {/* D: locations */}
+      <section className="container-bd py-10" aria-labelledby="loc">
+        <div className="mb-5 flex items-end justify-between">
+          <h2 id="loc" className="section-title">Shop by location</h2>
+          <Link href="/location" className="link-bd">View all →</Link>
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {countiesByListings.map((c) => (
+            <Link key={c.county} href={`/location/${encodeURIComponent(c.county)}`} className="card group overflow-hidden transition hover:shadow-lg">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={c.image} alt={c.county} loading="lazy" className="h-20 w-full object-cover transition duration-300 group-hover:scale-105 sm:h-24" />
+              <div className="p-2.5">
+                <p className="truncate text-sm font-bold leading-tight group-hover:text-brand-700">{c.county}</p>
+                <p className="mt-0.5 text-xs text-ink-500">{c.count > 0 ? `${c.count} listing${c.count === 1 ? "" : "s"}` : "Explore →"}</p>
               </div>
             </Link>
           ))}

@@ -15,6 +15,7 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
   const params = {
     q: searchParams.q ?? "",
     category: searchParams.category ?? "all",
+    subcategory: searchParams.subcategory ?? "all",
     county,
     min: searchParams.min ? Number(searchParams.min) : undefined,
     max: searchParams.max ? Number(searchParams.max) : undefined,
@@ -37,6 +38,7 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
   const keep = new URLSearchParams();
   if (params.q) keep.set("q", params.q);
   if (params.category && params.category !== "all") keep.set("category", params.category);
+  if (params.subcategory && params.subcategory !== "all") keep.set("subcategory", params.subcategory);
   if (params.county && params.county !== "all") keep.set("county", params.county);
   if (searchParams.min) keep.set("min", searchParams.min);
   if (searchParams.max) keep.set("max", searchParams.max);
@@ -51,6 +53,13 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
   const clearCountyHref = (() => {
     const s = new URLSearchParams(keep);
     s.delete("county");
+    if (params.type !== "all") s.set("type", params.type);
+    const qs = s.toString();
+    return `/search${qs ? `?${qs}` : ""}`;
+  })();
+  const clearSubHref = (() => {
+    const s = new URLSearchParams(keep);
+    s.delete("subcategory");
     if (params.type !== "all") s.set("type", params.type);
     const qs = s.toString();
     return `/search${qs ? `?${qs}` : ""}`;
@@ -76,6 +85,9 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
       {county !== "all" && (
         <p className="mt-2 text-sm text-ink-500">Showing results in <strong>{county}</strong> · <Link href={clearCountyHref} className="link-bd">clear</Link></p>
       )}
+      {params.subcategory !== "all" && (
+        <p className="mt-1 text-sm text-ink-500">Subcategory <strong>{params.subcategory}</strong> · <Link href={clearSubHref} className="link-bd">clear</Link></p>
+      )}
 
       <div className="mt-5 grid gap-6 lg:grid-cols-[240px_1fr]">
         <form action="/search" method="get" className="card h-fit space-y-3 p-4">
@@ -87,6 +99,15 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
               {CATEGORIES.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
             </select>
           </div>
+          {cat && cat.subcategories.length > 0 && (
+            <div>
+              <label className="label-bd" htmlFor="f-sub">Subcategory</label>
+              <select id="f-sub" name="subcategory" defaultValue={params.subcategory} className="input-bd">
+                <option value="all">All {cat.name}</option>
+                {cat.subcategories.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          )}
           <div>
             <label className="label-bd" htmlFor="f-county">Location</label>
             <select id="f-county" name="county" defaultValue={params.county} className="input-bd">

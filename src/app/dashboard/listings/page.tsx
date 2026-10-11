@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getStore } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
 import { formatKES } from "@/lib/format";
+import { getListingsStats } from "@/lib/analytics";
 
 const TABS = ["all", "active", "pending", "rejected", "sold", "hidden", "draft", "expired"];
 
@@ -13,6 +14,9 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
   const tab = TABS.includes(searchParams.tab ?? "") ? (searchParams.tab as string) : "all";
   const mine = await getStore().listListingsByOwner(user.id);
   const items = mine.filter((l) => tab === "all" || l.status === tab);
+  const viewMap = new Map(
+    (await getListingsStats(mine.map((l) => l.id), 30).catch(() => ({ perListing: [] as { listingId: string; views: number }[] }))).perListing.map((p) => [p.listingId, p.views])
+  );
 
   return (
     <div className="container-bd py-8">
@@ -39,7 +43,7 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
               <img src={l.images[0] ?? "/chaplogo.png"} alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{l.title}</p>
-                <p className="text-xs text-ink-400">{l.type} · {formatKES(l.price)} · {l.town}, {l.county}</p>
+                <p className="text-xs text-ink-400">{l.type} · {formatKES(l.price)} · {l.town}, {l.county} · {(viewMap.get(l.id) ?? 0).toLocaleString()} views</p>
               </div>
               <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
               <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">Manage</Link>

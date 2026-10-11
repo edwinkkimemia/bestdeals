@@ -10,16 +10,6 @@ import { useCart } from "../cart-provider";
 import { COUNTY_NAMES } from "@/lib/kenya";
 import { CATEGORIES, POPULAR_SEARCHES } from "@/data/catalog";
 
-const NAV = [
-  { href: "/", label: "Home" },
-  { href: "/shop", label: "Shop Products" },
-  { href: "/classifieds", label: "Classifieds" },
-  { href: "/shops", label: "Business Shops" },
-  { href: "/services", label: "Services" },
-  { href: "/deals", label: "Best Deals" },
-  { href: "/sell", label: "Sell on Chap" },
-];
-
 export function Header({ user }: { user?: { name: string; role: string } | null }) {
   const router = useRouter();
   const { count } = useCart();
@@ -288,17 +278,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
         </div>
       )}
 
-      {/* desktop nav */}
-      <nav className="hidden border-t border-neutral-100 lg:block" aria-label="Main">
-        <div className="container-bd flex items-center gap-1 py-1.5">
-          {NAV.map((n) => (
-            <Link key={n.href} href={n.href} className="rounded-lg px-3 py-1.5 text-sm font-medium text-ink-700 hover:bg-sand-100 hover:text-ink-900">
-              {n.label}
-            </Link>
-          ))}
-        </div>
-      </nav>
-    </header>
+      </header>
 
       {/* mobile drawer — sibling of <header>, not inside it: backdrop-blur creates a
           containing block that would trap fixed positioning to header height */}
@@ -310,14 +290,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
               <Image src="/chaplogo.png" alt="chap.co.ke" width={1147} height={287} className="h-8 w-auto" />
               <button aria-label="Close menu" className="rounded-lg p-2 hover:bg-sand-100" onClick={() => setOpen(false)}><X className="h-5 w-5" /></button>
             </div>
-            <div className="space-y-1">
-              {NAV.map((n) => (
-                <Link key={n.href} href={n.href} onClick={() => setOpen(false)} className="block rounded-lg px-3 py-2.5 text-sm font-medium hover:bg-sand-100">
-                  {n.label}
-                </Link>
-              ))}
-            </div>
-            <div className="mt-4 grid gap-2 border-t border-neutral-200 pt-4">
+            <div className="grid gap-2 border-t border-neutral-200 pt-4">
               {!user && <Link href="/auth/signin" onClick={() => setOpen(false)} className="btn-primary">Sign in / Register</Link>}
               {user && <Link href={user.role === "ADMIN" ? "/admin" : "/dashboard"} onClick={() => setOpen(false)} className="btn-secondary">My dashboard</Link>}
               <Link href="/cart" onClick={() => setOpen(false)} className="btn-secondary">Cart ({count})</Link>

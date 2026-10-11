@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { categoryBySlug } from "@/data/catalog";
 
 export const signupSchema = z.object({
   name: z.string().min(2, "Enter your name").max(80),
@@ -29,6 +30,7 @@ export const listingSchema = z.object({
   title: z.string().min(8, "Title needs at least 8 characters").max(120),
   description: z.string().min(20, "Describe the item (min 20 chars)").max(5000),
   categorySlug: z.string().min(1, "Choose a category"),
+  subcategory: z.string().max(60).optional().default(""),
   price: z.coerce.number().int().min(1, "Enter a price in KES").max(500_000_000),
   compareAt: z.coerce.number().int().min(0).max(500_000_000).optional().nullable(),
   condition: z.enum(["new", "like_new", "used_good", "used_fair", "refurbished"]),
@@ -41,7 +43,15 @@ export const listingSchema = z.object({
   // Absolute URLs or server-issued /uploads/* paths (relative refs can't use .url()).
   images: z.array(z.string().min(1).max(500)).max(8).default([]),
   attributes: z.record(z.string(), z.string()).default({}),
-});
+}).refine(
+  (d) => {
+    const sub = (d.subcategory ?? "").trim();
+    if (!sub) return true;
+    const cat = categoryBySlug(d.categorySlug);
+    return !!cat && cat.subcategories.some((s) => s.toLowerCase() === sub.toLowerCase());
+  },
+  { message: "Pick a subcategory from the list", path: ["subcategory"] }
+);
 
 export const shopSchema = z.object({
   name: z.string().min(3).max(80),

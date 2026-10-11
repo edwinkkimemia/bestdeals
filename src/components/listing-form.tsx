@@ -45,6 +45,7 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
       title: initialValues?.title ?? "",
       description: initialValues?.description ?? "",
       categorySlug: initialValues?.categorySlug ?? "",
+      subcategory: initialValues?.subcategory ?? "",
       price: initialValues?.price ?? undefined,
       compareAt: initialValues?.compareAt ?? undefined,
       county: initialValues?.county ?? "",
@@ -115,6 +116,12 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
             <option value="new">New</option><option value="like_new">Like new</option><option value="used_good">Used · good</option><option value="used_fair">Used · fair</option><option value="refurbished">Refurbished</option>
           </select></div>
       </div>
+      {cat && cat.subcategories.length > 0 && (
+        <div><label className="label-bd" htmlFor="l-sub">Subcategory (optional)</label>
+          <select id="l-sub" className="input-bd" {...register("subcategory")}>
+            <option value="">Select…</option>{cat.subcategories.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>{errors.subcategory && <p className="text-xs text-red-600">{String(errors.subcategory.message)}</p>}</div>
+      )}
       {cat && cat.attributes.length > 0 && (
         <fieldset className="rounded-xl bg-sand-50 p-3">
           <legend className="px-1 text-sm font-semibold">{cat.name} details</legend>

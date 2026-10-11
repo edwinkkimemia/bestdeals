@@ -4,6 +4,7 @@ import { countyMatches } from "@/lib/kenya";
 export type SearchParams = {
   q?: string;
   category?: string;
+  subcategory?: string;
   min?: number;
   max?: number;
   condition?: string;
@@ -62,8 +63,10 @@ export function searchListings(p: SearchParams): {
   perPage: number;
 } {
   const tokens = expandQuery(p.q ?? "");
+  const sub = (p.subcategory ?? "").trim().toLowerCase();
   let items = LISTINGS.filter((l) => {
     if (p.category && p.category !== "all" && l.categorySlug !== p.category) return false;
+    if (sub && sub !== "all" && (l.subcategory ?? "").trim().toLowerCase() !== sub) return false;
     if (p.type && p.type !== "all" && l.listingType !== p.type) return false;
     if (p.seller && p.seller !== "all" && l.sellerType !== p.seller) return false;
     if (p.condition && p.condition !== "all" && l.condition !== p.condition) return false;
@@ -87,6 +90,22 @@ export function searchListings(p: SearchParams): {
   const page = Math.max(p.page ?? 1, 1);
   const total = items.length;
   return { items: items.slice((page - 1) * perPage, page * perPage), total, page, perPage };
+}
+
+/** Per-request shuffle for rails: Featured/promoted items always lead, everything else mixes freshly on every refresh. */
+export function shuffleFeaturedFirst<T extends { featured?: boolean }>(items: T[]): T[] {
+  const feat = items.filter((l) => l.featured);
+  const rest = items.filter((l) => !l.featured);
+  shuffleInPlace(feat);
+  shuffleInPlace(rest);
+  return [...feat, ...rest];
+}
+
+function shuffleInPlace<T>(arr: T[]): void {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
 }
 
 export function suggestions(q: string, limit = 7): string[] {

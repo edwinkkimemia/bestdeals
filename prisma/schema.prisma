@@ -205,6 +205,7 @@ model Listing {
   categoryId      String?
   category        Category?        @relation(fields: [categoryId], references: [id])
   subcategory       String?
+  categorySlug      String? // denormalised catalogue slug for filtering (subcategory holds the real sub name)
   sellerName        String?
   sellerPhone       String? // verified snapshot taken at posting time
   featured        Boolean          @default(false)
@@ -508,6 +509,19 @@ model AuditLog {
   entityId  String?
   reason    String?
   createdAt DateTime @default(now())
+}
+
+model ListingView {
+  id        String   @id @default(cuid())
+  listingId String
+  viewerId  String?
+  sessionId String?
+  referrer  String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([listingId, createdAt])
+  @@index([createdAt])
 }
 
 model Setting {

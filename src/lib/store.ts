@@ -45,6 +45,7 @@ export type ListingRecord = {
   sellerPhone?: string;
   shopSlug?: string;
   categorySlug?: string;
+  subcategory?: string;
   featured?: boolean;
   createdAt: string;
 };
@@ -225,7 +226,7 @@ export interface Store {
   listListingsByStatus(status: string): Promise<ListingRecord[]>;
   setListingStatus(id: string, status: string, adminId?: string, reason?: string): Promise<void>;
   setListingFeatured(id: string, featured: boolean): Promise<void>;
-  updateListing(id: string, patch: Partial<Pick<ListingRecord, "title" | "description" | "type" | "price" | "compareAt" | "condition" | "txMethod" | "negotiable" | "stock" | "county" | "town" | "images" | "attributes" | "categorySlug" | "shopSlug">>): Promise<ListingRecord | null>;
+  updateListing(id: string, patch: Partial<Pick<ListingRecord, "title" | "description" | "type" | "price" | "compareAt" | "condition" | "txMethod" | "negotiable" | "stock" | "county" | "town" | "images" | "attributes" | "categorySlug" | "subcategory" | "shopSlug">>): Promise<ListingRecord | null>;
   deleteListing(id: string): Promise<void>;
   // orders + payments
   createOrder(o: Omit<OrderRecord, "id" | "createdAt" | "status" | "paymentStatus"> & { id?: string; status?: string; paymentStatus?: string }): Promise<OrderRecord>;
@@ -412,7 +413,7 @@ class DemoStore implements Store {
     const l = this.listings.get(id);
     if (!l) return null;
     const next: ListingRecord = { ...l };
-    for (const k of ["title", "description", "type", "price", "compareAt", "condition", "txMethod", "negotiable", "stock", "county", "town", "images", "attributes", "categorySlug", "shopSlug"] as const) {
+    for (const k of ["title", "description", "type", "price", "compareAt", "condition", "txMethod", "negotiable", "stock", "county", "town", "images", "attributes", "categorySlug", "subcategory", "shopSlug"] as const) {
       if (patch[k] !== undefined) (next as Record<string, unknown>)[k] = patch[k];
     }
     this.listings.set(id, next);
@@ -819,7 +820,8 @@ class PrismaStore implements Store {
         sellerName: l.sellerName,
         sellerPhone: l.sellerPhone ?? null,
         sellerProfileId: sellerProfileId ?? null,
-        subcategory: l.categorySlug ?? undefined,
+        subcategory: l.subcategory?.trim() || undefined,
+        categorySlug: l.categorySlug ?? undefined,
         attributes: l.attributes ?? {},
         images: l.images?.length
           ? { create: l.images.map((url, i) => ({ url, position: i })) }
@@ -850,7 +852,7 @@ class PrismaStore implements Store {
       ownerId: (rec.seller as { userId?: string } | null)?.userId ?? rec.sellerProfileId ?? undefined,
       sellerName: rec.sellerName ?? "Seller",
       sellerPhone: rec.sellerPhone ?? undefined,
-      shopSlug: undefined, categorySlug: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(id), createdAt: rec.createdAt.toISOString(),
+      shopSlug: undefined, categorySlug: (rec as { categorySlug?: string | null }).categorySlug ?? undefined, subcategory: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(id), createdAt: rec.createdAt.toISOString(),
     };
   }
   /** Listing ids with a live (active + unexpired) boost — backing the effective Featured flag. */
@@ -882,7 +884,7 @@ class PrismaStore implements Store {
       attributes: (rec as { attributes?: Record<string, string> }).attributes ?? {}, ownerId,
       sellerName: rec.sellerName ?? "Seller",
       sellerPhone: rec.sellerPhone ?? undefined,
-      shopSlug: undefined, categorySlug: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(rec.id), createdAt: rec.createdAt.toISOString(),
+      shopSlug: undefined, categorySlug: (rec as { categorySlug?: string | null }).categorySlug ?? undefined, subcategory: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(rec.id), createdAt: rec.createdAt.toISOString(),
     }));
   }
   async listListingsByStatus(status: string) {
@@ -903,7 +905,7 @@ class PrismaStore implements Store {
       ownerId: ((rec as { seller?: { userId?: string } | null }).seller)?.userId ?? rec.sellerProfileId ?? undefined,
       sellerName: rec.sellerName ?? "Seller",
       sellerPhone: rec.sellerPhone ?? undefined,
-      shopSlug: undefined, categorySlug: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(rec.id), createdAt: rec.createdAt.toISOString(),
+      shopSlug: undefined, categorySlug: (rec as { categorySlug?: string | null }).categorySlug ?? undefined, subcategory: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(rec.id), createdAt: rec.createdAt.toISOString(),
     }));
   }
   async updateListing(id: string, patch: Partial<ListingRecord>) {
@@ -922,7 +924,8 @@ class PrismaStore implements Store {
     if (patch.county !== undefined) data.county = patch.county;
     if (patch.town !== undefined) data.town = patch.town;
     if (patch.attributes !== undefined) data.attributes = patch.attributes;
-    if (patch.categorySlug !== undefined) data.subcategory = patch.categorySlug;
+    if (patch.categorySlug !== undefined) data.categorySlug = patch.categorySlug;
+    if (patch.subcategory !== undefined) data.subcategory = patch.subcategory?.trim() || null;
     await this.p.listing.update({ where: { id }, data: data as never });
     if (patch.images !== undefined) {
       await this.p.listingImage.deleteMany({ where: { listingId: id } });

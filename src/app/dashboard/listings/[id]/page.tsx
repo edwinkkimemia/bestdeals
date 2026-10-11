@@ -62,6 +62,7 @@ export default async function ManageListing({ params }: { params: { id: string }
           title: stored!.title,
           description: stored!.description,
           categorySlug: stored!.categorySlug ?? "",
+          subcategory: stored!.subcategory ?? "",
           price: stored!.price,
           compareAt: stored!.compareAt ?? undefined,
           condition: stored!.condition as never,

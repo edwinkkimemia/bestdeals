@@ -52,14 +52,16 @@ async function VerificationGate({ userId }: { userId: string }) {
   const { getStore } = await import("@/lib/store");
   const fresh = await getStore().findUserById(userId).catch(() => null);
   if (fresh?.verified) return null;
+  const business = fresh?.sellerKind === "business";
   return (
     <div className="card mt-4 border-amber-300 bg-amber-50 p-4 text-sm">
       <p className="font-bold text-amber-900">Verify before you post</p>
       <p className="mt-1 text-amber-800">
-        Every seller is verified by our team (national ID + email + phone) before their first
-        listing. It keeps buyers safe — and unlocks your ✓ badge.
+        {business
+          ? "Businesses verify with a permit or KRA PIN before the first listing. It unlocks your verified-business ✓ badge."
+          : "Every seller is verified by our team (national ID + email + phone) before their first listing. It keeps buyers safe — and unlocks your ✓ badge."}
       </p>
-      <Link href="/dashboard/verify" className="btn-primary mt-3">Get verified</Link>
+      <Link href={business ? "/dashboard/verify?kind=business" : "/dashboard/verify"} className="btn-primary mt-3">Get verified</Link>
     </div>
   );
 }
