@@ -1,6 +1,7 @@
 import { currentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { Store } from "lucide-react";
 import { normalizePlan } from "@/lib/plans";
 import { getStore } from "@/lib/store";
 import { PlanPanel, BulkPanel, StaffPanel } from "./panels";
@@ -24,8 +25,8 @@ export default async function ShopDash({ searchParams }: { searchParams: { plan?
     active?.ownerId === user.id ||
     members.some((m) => m.userId === user.id && m.role === "owner");
   return (
-    <div className="container-bd py-8">
-      <h1 className="section-title">My shop</h1>
+    <div>
+      <h1 className="section-title flex items-center gap-2"><Store className="h-6 w-6 text-brand-600" /> My shop</h1>
       {searchParams.new === "business" && (
         <p className="mt-3 rounded-xl bg-brand-50 p-3 text-sm text-brand-700">
           Welcome aboard ✓ — two steps to open your shop: 1) verify your business below, 2) create your storefront.

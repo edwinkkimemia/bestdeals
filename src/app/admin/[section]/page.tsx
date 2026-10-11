@@ -1,9 +1,22 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BadgeCheck, Flag, Megaphone, Package, Receipt, Scale, Star, Ticket, Users } from "lucide-react";
 import { getStore } from "@/lib/store";
 import { formatKES } from "@/lib/format";
 import { AdminButtons, PromoButtons } from "../actions";
 import { CouponForm } from "../coupon-form";
+
+const SECTION_ICONS: Record<string, typeof Package> = {
+  listings: Package,
+  verifications: BadgeCheck,
+  users: Users,
+  orders: Receipt,
+  disputes: Scale,
+  reports: Flag,
+  reviews: Star,
+  promotions: Megaphone,
+  coupons: Ticket,
+};
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +38,15 @@ const TITLES: Record<string, string> = {
 };
 
 export const metadata = { title: "Admin section", robots: { index: false, follow: false } };
+
+function SectionTitle({ section, children }: { section: string; children: React.ReactNode }) {
+  const Icon = SECTION_ICONS[section] ?? Package;
+  return (
+    <h1 className="section-title flex items-center gap-2">
+      <Icon className="h-6 w-6 text-brand-600" /> {children}
+    </h1>
+  );
+}
 
 function Tabs({ base, tabs, current }: { base: string; tabs: string[]; current: string }) {
   return (
@@ -53,7 +75,7 @@ export default async function AdminSection({
     const items = await store.listListingsByStatus(status);
     return (
       <div>
-        <h1 className="section-title">{TITLES.listings} ({items.length})</h1>
+        <SectionTitle section="listings">{TITLES.listings} ({items.length}))</SectionTitle>
         <Tabs base="/admin/listings" tabs={statuses} current={status} />
         {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">Nothing {status} ✓</p> : (
           <ul className="mt-4 space-y-2">
@@ -75,7 +97,7 @@ export default async function AdminSection({
     const items = await store.listVerifications(status === "all" ? undefined : status);
     return (
       <div>
-        <h1 className="section-title">{TITLES.verifications} ({items.length})</h1>
+        <SectionTitle section="verifications">{TITLES.verifications} ({items.length}))</SectionTitle>
         <Tabs base="/admin/verifications" tabs={tabs} current={status} />
         {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">None {status}.</p> : (
           <ul className="mt-4 space-y-2">
@@ -96,7 +118,7 @@ export default async function AdminSection({
     const users = await store.listUsers();
     return (
       <div>
-        <h1 className="section-title">{TITLES.users} ({users.length})</h1>
+        <SectionTitle section="users">{TITLES.users} ({users.length}))</SectionTitle>
         <p className="mt-1 text-sm text-ink-500">Grant or revoke the seller ✓ (ID verification). Email verification is self-serve and can&apos;t be granted here.</p>
         <ul className="mt-4 space-y-2">
           {users.map((u) => (
@@ -120,7 +142,7 @@ export default async function AdminSection({
     const paid = orders.filter((o) => o.paymentStatus === "paid").length;
     return (
       <div>
-        <h1 className="section-title">{TITLES.orders} ({orders.length} · {paid} paid)</h1>
+        <SectionTitle section="orders">{TITLES.orders} ({orders.length} · {paid} paid))</SectionTitle>
         <ul className="mt-4 space-y-2">
           {orders.map((o) => (
             <li key={o.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
@@ -142,7 +164,7 @@ export default async function AdminSection({
     const done = all.filter((d) => ["resolved_refund", "resolved_reject", "cancelled"].includes(d.status));
     return (
       <div>
-        <h1 className="section-title">{TITLES.disputes} ({open.length} open)</h1>
+        <SectionTitle section="disputes">{TITLES.disputes} ({open.length} open))</SectionTitle>
         {open.length === 0 ? <p className="mt-4 text-sm text-ink-500">None open.</p> : (
           <ul className="mt-4 space-y-2">
             {open.map((d) => (
@@ -175,7 +197,7 @@ export default async function AdminSection({
     const items = await store.listReports(status === "all" ? undefined : status);
     return (
       <div>
-        <h1 className="section-title">{TITLES.reports} ({items.length})</h1>
+        <SectionTitle section="reports">{TITLES.reports} ({items.length}))</SectionTitle>
         <Tabs base="/admin/reports" tabs={tabs} current={status} />
         {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">None {status}.</p> : (
           <ul className="mt-4 space-y-2">
@@ -195,7 +217,7 @@ export default async function AdminSection({
     const items = await store.listPendingReviews();
     return (
       <div>
-        <h1 className="section-title">{TITLES.reviews} ({items.length})</h1>
+        <SectionTitle section="reviews">{TITLES.reviews} ({items.length}))</SectionTitle>
         {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">None pending.</p> : (
           <ul className="mt-4 space-y-2">
             {items.map((r) => (
@@ -218,7 +240,7 @@ export default async function AdminSection({
     const items = await store.listPromotions(status === "all" ? undefined : status);
     return (
       <div>
-        <h1 className="section-title">{TITLES.promotions} ({items.length})</h1>
+        <SectionTitle section="promotions">{TITLES.promotions} ({items.length}))</SectionTitle>
         <p className="mt-1 text-sm text-ink-500">Confirm M-Pesa payment to activate a boost; the listing gets its Featured badge.</p>
         <Tabs base="/admin/promotions" tabs={tabs} current={status} />
         {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">None {status}.</p> : (
@@ -242,7 +264,7 @@ export default async function AdminSection({
   const coupons = await store.listCoupons();
   return (
     <div>
-      <h1 className="section-title">{TITLES.coupons} ({coupons.length})</h1>
+      <SectionTitle section="coupons">{TITLES.coupons} ({coupons.length}))</SectionTitle>
       <p className="mt-1 text-sm text-ink-500">Codes apply at cart + checkout (server-verified). Active codes are advertised on the homepage banner.</p>
       <CouponForm />
       <ul className="mt-4 space-y-2">

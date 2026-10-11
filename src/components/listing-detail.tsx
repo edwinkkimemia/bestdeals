@@ -159,7 +159,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
         </div>
       </nav>
       <div className="container-bd">
-      <div className="mt-6 flex flex-col gap-6 lg:grid lg:grid-cols-[1.2fr_1fr]">
+      <div className="mt-6 flex flex-col gap-6 lg:grid lg:grid-cols-[1.2fr_1fr] lg:items-start">
         <div className="order-1 min-w-0 lg:order-1">
           <div className="card overflow-hidden">
             <WmImage src={listing.images[img]} alt={listing.title} className="aspect-[4/3] w-full object-cover" />
@@ -176,9 +176,11 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
           )}
         </div>
 
-        {/* Buy card — right after gallery on mobile, sticky rail on desktop */}
-        <div className="order-2 min-w-0 lg:order-2 lg:sticky lg:top-36 lg:self-start">
-          <div className="card space-y-3 p-5">
+        {/* Buy card — right after gallery on mobile, sticky rail on desktop.
+            Capped to the viewport so a tall rail never covers content scrolling
+            beneath it; extra buttons stay reachable via inner scroll. */}
+        <div className="order-2 min-w-0 lg:order-2 lg:sticky lg:top-36 lg:z-10 lg:self-start">
+          <div className="card space-y-3 p-5 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto">
             <div className="flex flex-wrap items-center gap-2">
               <Badge>{listing.listingType}</Badge>
               <ConditionBadge condition={listing.condition} />
@@ -218,7 +220,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
                   </button>
                   <WishlistButton id={listing.id} title={listing.title} />
                 </div>
-                <Link href={`/messages/new?listing=${listing.id}`} className="btn-secondary w-full">
+                <Link href={`/dashboard/messages/new?listing=${listing.id}`} className="btn-secondary w-full">
                   <MessageCircle className="h-4 w-4" /> Message seller
                 </Link>
                 {waPhone && waOrderHref && (
@@ -234,7 +236,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
               </div>
             ) : (
               <div className="grid gap-2">
-                <Link href={`/messages/new?listing=${listing.id}`} className="btn-primary"><MessageCircle className="h-4 w-4" /> {listing.transactionMethod === "request_quote" ? "Request a quote" : "Message seller"}</Link>
+                <Link href={`/dashboard/messages/new?listing=${listing.id}`} className="btn-primary"><MessageCircle className="h-4 w-4" /> {listing.transactionMethod === "request_quote" ? "Request a quote" : "Message seller"}</Link>
                 {waPhone && waOrderHref ? (
                   <div className="grid grid-cols-2 gap-2">
                     <a href={`tel:+${waPhone}`} className="btn-secondary !px-3" title={`Call ${listing.sellerName}`}>
@@ -252,10 +254,6 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
             )}
 
             <ShareButtons title={listing.title} />
-
-            {listing.shopSlug && (
-              <Link href={`/shops/${listing.shopSlug}`} className="link-bd flex items-center gap-1 text-sm"><Store className="h-4 w-4" /> Visit seller&apos;s shop →</Link>
-            )}
           </div>
         </div>
 
@@ -295,49 +293,52 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
           </div>
         </div>
 
-        <div className="order-4 min-w-0 space-y-3 lg:order-4">
-          {/* Seller card */}
-          <div className="card space-y-3 p-5">
-            <div className="flex items-center gap-3">
-              <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-lg font-black text-white">
-                {listing.sellerName.charAt(0).toUpperCase()}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <VerifiedBadge verified={listing.verified} /></p>
-                <p className="truncate text-xs text-ink-500">
-                  {listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}, {listing.county} · Enquiries go straight to their inbox
-                </p>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <Link href={`/messages/new?listing=${listing.id}`} className="btn-primary !px-3">
-                <MessageCircle className="h-4 w-4" /> Message
-              </Link>
-              {listing.shopSlug ? (
-                <Link href={`/shops/${listing.shopSlug}`} className="btn-secondary !px-3">
-                  <Store className="h-4 w-4" /> Visit shop
-                </Link>
-              ) : (
-                <a href="#more-from-seller" className="btn-secondary !px-3">
-                  <Store className="h-4 w-4" /> More items
-                </a>
-              )}
+      </div>
+
+      {/* Seller + report — full width BELOW the grid. Anything sharing the
+          sticky buy rail's column would scroll up underneath it while pinned;
+          down here nothing can pass under the rail. */}
+      <section className="mt-6 grid gap-3 lg:grid-cols-2" aria-label="Seller and report">
+        <div className="card space-y-3 p-5">
+          <div className="flex items-center gap-3">
+            <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-lg font-black text-white">
+              {listing.sellerName.charAt(0).toUpperCase()}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <VerifiedBadge verified={listing.verified} /></p>
+              <p className="truncate text-xs text-ink-500">
+                {listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}, {listing.county} · Enquiries go straight to their inbox
+              </p>
             </div>
           </div>
-
-          <div className="card p-5">
-            <h2 className="flex items-center gap-2 text-sm font-bold"><Flag className="h-4 w-4" /> Report this listing</h2>
-            {reportDone ? (
-              <p className="mt-2 text-sm text-green-700">Thanks — our moderators will review with a recorded reason.</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Link href={`/dashboard/messages/new?listing=${listing.id}`} className="btn-primary !px-3">
+              <MessageCircle className="h-4 w-4" /> Message
+            </Link>
+            {listing.shopSlug ? (
+              <Link href={`/shops/${listing.shopSlug}`} className="btn-secondary !px-3">
+                <Store className="h-4 w-4" /> Visit shop
+              </Link>
             ) : (
-              <div className="mt-2 flex gap-2">
-                <input value={report} onChange={(e) => setReport(e.target.value)} placeholder="e.g. suspected fraud, wrong price…" className="input-bd" aria-label="Report reason" />
-                <button onClick={submitReport} className="btn-secondary shrink-0">Send</button>
-              </div>
+              <a href="#more-from-seller" className="btn-secondary !px-3">
+                <Store className="h-4 w-4" /> More items
+              </a>
             )}
           </div>
         </div>
-      </div>
+
+        <div className="card p-5">
+          <h2 className="flex items-center gap-2 text-sm font-bold"><Flag className="h-4 w-4" /> Report this listing</h2>
+          {reportDone ? (
+            <p className="mt-2 text-sm text-green-700">Thanks — our moderators will review with a recorded reason.</p>
+          ) : (
+            <div className="mt-2 flex gap-2">
+              <input value={report} onChange={(e) => setReport(e.target.value)} placeholder="e.g. suspected fraud, wrong price…" className="input-bd" aria-label="Report reason" />
+              <button onClick={submitReport} className="btn-secondary shrink-0">Send</button>
+            </div>
+          )}
+        </div>
+      </section>
 
       {moreFromSeller && moreFromSeller.length > 0 && (
         <section className="mt-10 scroll-mt-36" id="more-from-seller">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Eye, PackagePlus, Plus, Store } from "lucide-react";
 import { currentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getStore } from "@/lib/store";
@@ -33,26 +34,35 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
   }
 
   return (
-    <div className="container-bd py-8">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="section-title">My listings ({mine.length})</h1>
-        <Link href="/sell" className="btn-primary">+ New listing</Link>
+    <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="section-title">My listings ({mine.length})</h1>
+          <p className="mt-1 text-sm text-ink-500">Track moderation, views and stock — manage any listing below.</p>
+        </div>
+        <Link href="/sell" className="btn-primary !py-2 text-sm"><Plus className="h-4 w-4" /> New listing</Link>
       </div>
       <div className="mt-4 flex flex-wrap gap-2" role="tablist" aria-label="Listing states">
-        {TABS.map((t) => (
-          <Link key={t} href={`/dashboard/listings?tab=${t}`} className={`chip ${tab === t ? "!border-brand-600 !text-brand-700" : ""}`}>{t}</Link>
-        ))}
+        {TABS.map((t) => {
+          const n = t === "all" ? mine.length : mine.filter((l) => l.status === t).length;
+          return (
+            <Link key={t} href={`/dashboard/listings?tab=${t}`} className={`chip ${tab === t ? "!border-brand-600 !text-brand-700" : ""}`}>
+              {t} · {n}
+            </Link>
+          );
+        })}
       </div>
       {items.length === 0 ? (
         <div className="card mt-4 p-8 text-center">
-          <p className="font-bold">{mine.length === 0 ? "You haven't listed anything yet" : `Nothing in “${tab}”`}</p>
+          <PackagePlus className="mx-auto h-10 w-10 text-brand-600" />
+          <p className="mt-2 font-bold">{mine.length === 0 ? "You haven't listed anything yet" : `Nothing in “${tab}”`}</p>
           <p className="mt-1 text-sm text-ink-500">Listings go live after moderation. Photos upload straight from your phone.</p>
           <Link href="/sell" className="btn-primary mt-4">Create your first listing →</Link>
         </div>
       ) : (
         <ul className="mt-4 space-y-2">
           {items.map((l) => (
-            <li key={l.id} className="card flex items-center gap-3 p-3">
+            <li key={l.id} className="card flex items-center gap-3 p-3 transition hover:border-brand-600">
               {l.images[0] ? (
                 <WmImage src={l.images[0]} alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
               ) : (
@@ -61,7 +71,11 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{l.title}</p>
-                <p className="text-xs text-ink-400">{l.type} · {formatKES(l.price)} · {l.town}, {l.county} · {(viewMap.get(l.id) ?? 0).toLocaleString()} views · {formatDay(l.createdAt)}</p>
+                <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-ink-400">
+                  <span>{l.type} · {formatKES(l.price)} · {l.town}, {l.county}</span>
+                  <span className="inline-flex items-center gap-0.5"><Eye className="h-3 w-3" />{(viewMap.get(l.id) ?? 0).toLocaleString()}</span>
+                  <span>{formatDay(l.createdAt)}</span>
+                </p>
               </div>
               <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
               <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">Manage</Link>
@@ -71,7 +85,7 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
       )}
       {staffItems.length > 0 && (
         <>
-          <h2 className="mt-8 font-bold">Shop catalogues you staff ({staffItems.length})</h2>
+          <h2 className="mt-8 flex items-center gap-2 font-bold"><Store className="h-4 w-4 text-brand-600" /> Shop catalogues you staff ({staffItems.length})</h2>
           <p className="mt-1 text-sm text-ink-500">Listings from shops where you&apos;re a staff member — you can manage these too.</p>
           <ul className="mt-3 space-y-2">
             {staffItems.map(({ shopName, listing: l }) => (

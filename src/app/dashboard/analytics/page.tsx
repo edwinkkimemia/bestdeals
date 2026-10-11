@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BarChart3, Globe } from "lucide-react";
 import { currentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getStore } from "@/lib/store";
@@ -25,9 +26,8 @@ export default async function SellerAnalyticsPage({ searchParams }: { searchPara
     report.funnel.views > 0 ? ((report.funnel.orders / report.funnel.views) * 100).toFixed(1) : "—";
 
   return (
-    <div className="container-bd py-8">
-      <Link href="/dashboard" className="link-bd text-sm">← Dashboard</Link>
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="section-title">Listing analytics</h1>
           <p className="mt-1 text-sm text-ink-500">
@@ -64,7 +64,7 @@ export default async function SellerAnalyticsPage({ searchParams }: { searchPara
             <DailyChart daily={report.daily} label={`Daily views · last ${days} days`} />
           </div>
 
-          <h2 className="mt-8 font-bold">Views per product ({report.perListing.length})</h2>
+          <h2 className="mt-8 flex items-center gap-2 font-bold"><BarChart3 className="h-4 w-4 text-brand-600" /> Views per product ({report.perListing.length})</h2>
           <ul className="mt-3 space-y-2">
             {report.perListing.map((p) => (
               <li key={p.listingId} className="card space-y-2 p-4">
@@ -89,7 +89,7 @@ export default async function SellerAnalyticsPage({ searchParams }: { searchPara
 
           {report.topReferrers.length > 0 && (
             <>
-              <h2 className="mt-8 font-bold">Where viewers came from</h2>
+              <h2 className="mt-8 flex items-center gap-2 font-bold"><Globe className="h-4 w-4 text-brand-600" /> Where viewers came from</h2>
               <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 {report.topReferrers.map((r) => (
                   <li key={r.source} className="card flex items-center justify-between p-3 text-sm">

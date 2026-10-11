@@ -66,7 +66,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
           </div>
           <div className="flex gap-2">
             <Link href={`/search?q=${encodeURIComponent(s.name)}`} className="btn-secondary">All products</Link>
-            <Link href={`/messages/new?shop=${s.slug}`} className="btn-primary">Bulk enquiry</Link>
+            <Link href={`/dashboard/messages/new?shop=${s.slug}`} className="btn-primary">Bulk enquiry</Link>
           </div>
         </div>
         <div className="mt-3"><ShareRow title={`${s.name} on Chap`} text={`${s.name} — ${s.businessCategory} in ${s.town}, ${s.county}`} /></div>

@@ -64,6 +64,16 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
-  const all = await getStore().listVerifications();
-  return NextResponse.json({ items: all.filter((v) => v.userId === user.id) });
+  const store = getStore();
+  const all = await store.listVerifications();
+  const fresh = await store.findUserById(user.id).catch(() => null);
+  return NextResponse.json({
+    items: all.filter((v) => v.userId === user.id),
+    user: {
+      verified: fresh?.verified ?? user.verified,
+      emailVerified: fresh?.emailVerified ?? false,
+      sellerKind: fresh?.sellerKind ?? "individual",
+      businessName: fresh?.businessName ?? undefined,
+    },
+  });
 }

@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { getListing } from "@/data/catalog";
 import { ChatComposer } from "@/components/chat-composer";
 
@@ -38,13 +39,14 @@ function NewMessageInner() {
     try {
       if (phone) localStorage.setItem("bd_phone", phone);
     } catch {}
-    router.push(`/messages/${j.id}`);
+    router.push(`/dashboard/messages/${j.id}`);
     return null;
   };
 
   return (
-    <div className="container-bd max-w-xl py-8">
-      <h1 className="section-title">Message seller</h1>
+    <div className="max-w-xl">
+      <Link href="/dashboard/messages" className="link-bd inline-flex items-center gap-1 text-sm"><ChevronLeft className="h-4 w-4" /> Inbox</Link>
+      <h1 className="section-title mt-1">Message seller</h1>
       {listing ? (
         <p className="mt-1 text-sm text-ink-500">About: <strong>{listing.title}</strong> — {listing.sellerName}</p>
       ) : (
@@ -59,7 +61,6 @@ function NewMessageInner() {
         <ChatComposer onSend={send} placeholder={`Hi! Is "${listing?.title ?? "this"}" still available?`} />
         <p className="text-xs text-ink-400">Spam-protected & rate-limited. Keep chats on Chap until you&apos;re confident.</p>
       </div>
-      <Link href="/messages" className="link-bd mt-4 inline-block text-sm">← My messages</Link>
     </div>
   );
 }

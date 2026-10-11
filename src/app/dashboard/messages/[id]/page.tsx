@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { timeAgo } from "@/lib/format";
 import { ChatComposer } from "@/components/chat-composer";
@@ -75,9 +76,9 @@ function ThreadInner({ id }: { id: string }) {
   };
 
   return (
-    <div className="container-bd max-w-2xl py-8">
-      <Link href="/messages" className="link-bd text-sm">← All messages</Link>
-      <h1 className="section-title mt-2">{convo?.listingTitle ?? "Chat"}</h1>
+    <div className="max-w-2xl">
+      <Link href="/dashboard/messages" className="link-bd inline-flex items-center gap-1 text-sm"><ChevronLeft className="h-4 w-4" /> Inbox</Link>
+      <h1 className="section-title mt-1">{convo?.listingTitle ?? "Chat"}</h1>
       {convo?.sellerName && <p className="text-sm text-ink-500">with {convo.sellerName}</p>}
 
       {!ready ? (
@@ -85,7 +86,7 @@ function ThreadInner({ id }: { id: string }) {
       ) : err ? (
         <div className="card mt-4 p-6 text-center">
           <p className="font-bold">{err}</p>
-          <Link href="/messages" className="btn-primary mt-4">Back to inbox</Link>
+          <Link href="/dashboard/messages" className="btn-primary mt-4">Back to inbox</Link>
         </div>
       ) : (
         <>

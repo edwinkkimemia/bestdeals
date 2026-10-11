@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { Megaphone } from "lucide-react";
 import { currentUser } from "@/lib/auth";
 import { canManageListing } from "@/lib/gate";
 import { redirect, notFound } from "next/navigation";
 import { getListing } from "@/data/catalog";
 import { getStore } from "@/lib/store";
 import { formatKES } from "@/lib/format";
+import { Badge } from "@/components/ui/badge";
 import { ListingForm } from "@/components/listing-form";
 import { ManageActions } from "./actions";
 
@@ -22,9 +24,8 @@ export default async function ManageListing({ params }: { params: { id: string }
 
   if (!stored && demo) {
     return (
-      <div className="container-bd max-w-2xl py-8">
-        <Link href="/dashboard/listings" className="link-bd text-sm">← My listings</Link>
-        <h1 className="section-title mt-2">Manage listing</h1>
+      <div className="max-w-2xl">
+        <h1 className="section-title">Manage listing</h1>
         <div className="card mt-4 p-5">
           <p className="font-bold">{demo.title}</p>
           <p className="text-sm text-ink-500">{demo.listingType} · {demo.town}, {demo.county}</p>
@@ -39,12 +40,14 @@ export default async function ManageListing({ params }: { params: { id: string }
   const meta = `${stored!.type} · ${formatKES(stored!.price)} · ${stored!.town}, ${stored!.county} · stock ${stored!.stock} · status: ${stored!.status}`;
 
   return (
-    <div className="container-bd max-w-2xl py-8">
-      <Link href="/dashboard/listings" className="link-bd text-sm">← My listings</Link>
-      <h1 className="section-title mt-2">Manage listing</h1>
+    <div className="max-w-2xl">
+      <h1 className="section-title">Manage listing</h1>
       <div className="card mt-4 p-5">
-        <p className="font-bold">{title}</p>
-        <p className="text-sm text-ink-500">{meta}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="flex-1 font-bold">{title}</p>
+          <Badge tone={stored!.status === "active" ? "green" : stored!.status === "pending" ? "amber" : stored!.status === "rejected" ? "red" : "neutral"}>{stored!.status}</Badge>
+        </div>
+        <p className="mt-1 text-sm text-ink-500">{meta}</p>
         {stored!.status === "pending" && (
           <p className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">In moderation queue — it goes live once approved. You can still edit details below (edits keep it in queue).</p>
         )}
@@ -53,7 +56,7 @@ export default async function ManageListing({ params }: { params: { id: string }
         )}
         <ManageActions id={stored!.id} status={stored!.status} />
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/dashboard/promotion" className="btn-primary">Promote</Link>
+          <Link href="/dashboard/promotion" className="btn-primary"><Megaphone className="h-4 w-4" /> Promote</Link>
         </div>
       </div>
       <h2 className="mt-8 font-bold">Edit details</h2>

@@ -1,7 +1,23 @@
 import Link from "next/link";
+import {
+  AlertTriangle,
+  BadgeCheck,
+  BarChart3,
+  Eye,
+  Flag,
+  Megaphone,
+  Package,
+  Receipt,
+  Scale,
+  ShieldCheck,
+  Star,
+  Ticket,
+  Users,
+} from "lucide-react";
 import { getStore } from "@/lib/store";
 import { formatKES } from "@/lib/format";
 import { getPlatformAnalytics } from "@/lib/analytics";
+import { cn } from "@/lib/utils";
 
 export default async function AdminPage() {
   const store = getStore();
@@ -23,36 +39,41 @@ export default async function AdminPage() {
     .reduce((s, o) => s + (o.total || 0), 0);
 
   const stats = [
-    { t: "Product views · 30 days", v: views.totalViews.toLocaleString(), href: "/admin/analytics" },
-    { t: "Unique viewers · 30 days", v: views.uniqueViewers.toLocaleString(), href: "/admin/analytics" },
-    { t: "Listings awaiting review", v: String(pending.length), href: "/admin/listings" },
-    { t: "Pending verifications", v: String(verifications.length), href: "/admin/verifications" },
-    { t: "Open disputes", v: String(openDisputes.length), href: "/admin/disputes" },
-    { t: "Open reports", v: String(reports.length), href: "/admin/reports" },
-    { t: "Pending reviews", v: String(reviews.length), href: "/admin/reviews" },
-    { t: "Boosts awaiting payment", v: String(promos.length), href: "/admin/promotions" },
-    { t: "Active coupons", v: String(coupons.filter((c) => c.active).length), href: "/admin/coupons" },
-    { t: "Total orders", v: String(orders.length), href: "/admin/orders" },
-    { t: "Registered users", v: String(users.length), href: "/admin/users" },
-    { t: "Paid revenue (KES)", v: formatKES(revenue), href: "/admin/orders" },
+    { t: "Product views · 30 days", v: views.totalViews.toLocaleString(), href: "/admin/analytics", Icon: Eye, tile: "bg-brand-50 text-brand-700" },
+    { t: "Unique viewers · 30 days", v: views.uniqueViewers.toLocaleString(), href: "/admin/analytics", Icon: BarChart3, tile: "bg-brand-50 text-brand-700" },
+    { t: "Listings awaiting review", v: String(pending.length), href: "/admin/listings", Icon: Package, tile: "bg-amber-50 text-amber-700" },
+    { t: "Pending verifications", v: String(verifications.length), href: "/admin/verifications", Icon: BadgeCheck, tile: "bg-amber-50 text-amber-700" },
+    { t: "Open disputes", v: String(openDisputes.length), href: "/admin/disputes", Icon: Scale, tile: "bg-red-50 text-red-700" },
+    { t: "Open reports", v: String(reports.length), href: "/admin/reports", Icon: Flag, tile: "bg-red-50 text-red-700" },
+    { t: "Pending reviews", v: String(reviews.length), href: "/admin/reviews", Icon: Star, tile: "bg-amber-50 text-amber-700" },
+    { t: "Boosts awaiting payment", v: String(promos.length), href: "/admin/promotions", Icon: Megaphone, tile: "bg-brand-50 text-brand-700" },
+    { t: "Active coupons", v: String(coupons.filter((c) => c.active).length), href: "/admin/coupons", Icon: Ticket, tile: "bg-green-50 text-green-700" },
+    { t: "Total orders", v: String(orders.length), href: "/admin/orders", Icon: Receipt, tile: "bg-green-50 text-green-700" },
+    { t: "Registered users", v: String(users.length), href: "/admin/users", Icon: Users, tile: "bg-green-50 text-green-700" },
+    { t: "Paid revenue (KES)", v: formatKES(revenue), href: "/admin/orders", Icon: BarChart3, tile: "bg-green-50 text-green-700" },
   ];
 
   return (
     <div>
-      <h1 className="section-title">Platform control</h1>
-      <p className="text-sm text-ink-500">
+      <h1 className="section-title flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-brand-600" /> Platform control</h1>
+      <p className="mt-1 text-sm text-ink-500">
         Live queues · every action records a reason + audit trail.
       </p>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {stats.map((s) => (
-          <Link key={s.t} href={s.href} className="card p-5 hover:border-brand-600">
-            <p className="text-3xl font-extrabold">{s.v}</p>
-            <p className="text-sm text-ink-500">{s.t} →</p>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {stats.map(({ t, v, href, Icon, tile }) => (
+          <Link key={t} href={href} className="card group flex items-center gap-3 p-4 hover:border-brand-600">
+            <span className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-xl", tile)}>
+              <Icon className="h-5 w-5" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-2xl font-extrabold leading-tight">{v}</span>
+              <span className="block text-xs text-ink-500">{t} →</span>
+            </span>
           </Link>
         ))}
       </div>
 
-      <h2 className="mt-8 font-bold">Needs attention</h2>
+      <h2 className="mt-8 flex items-center gap-2 font-bold"><AlertTriangle className="h-4 w-4 text-amber-600" /> Needs attention</h2>
       <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
         {pending.slice(0, 3).map((l) => (
           <li key={l.id}><strong>{l.title}</strong> <span className="text-ink-400">· {l.sellerName}</span> — <Link href="/admin/listings" className="link-bd">review</Link></li>

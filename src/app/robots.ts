@@ -4,7 +4,7 @@ export default function robots() {
       {
         userAgent: "*",
         allow: ["/", "/shop", "/product/", "/classifieds", "/shops", "/services", "/deals"],
-        disallow: ["/dashboard", "/admin", "/api/", "/cart", "/checkout", "/orders", "/messages", "/wishlist", "/auth/"],
+        disallow: ["/dashboard", "/admin", "/api/", "/cart", "/checkout", "/orders", "/wishlist", "/auth/"],
       },
     ],
     sitemap: "https://chap.co.ke/sitemap.xml",
