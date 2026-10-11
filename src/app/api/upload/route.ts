@@ -5,7 +5,7 @@ import { currentUser } from "@/lib/auth";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { uid, slugify } from "@/lib/utils";
 import { uploadsBaseDir, privateBaseDir, uploadPublicUrl, isServerlessUploads } from "@/lib/storage";
-import { watermarkBuffer } from "@/lib/watermark";
+import { watermarkBuffer } from "@/lib/watermark-server";
 
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX = 5 * 1024 * 1024;

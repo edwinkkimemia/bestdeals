@@ -1,7 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
-import { watermarkBuffer, sniffContentType, wmImageSrc, wmCacheKey, WATERMARK_VERSION } from "../src/lib/watermark.ts";
+import { watermarkBuffer, sniffContentType, wmCacheKey, WATERMARK_VERSION } from "../src/lib/watermark-server.ts";
+import { wmImageSrc } from "../src/lib/watermark.ts";
 
 describe("watermark", () => {
   it("bakes a visible pill into jpeg and png photos", async () => {

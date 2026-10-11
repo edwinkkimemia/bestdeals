@@ -3,7 +3,7 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import { join, basename } from "path";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { uploadsBaseDir, wmCacheDir } from "@/lib/storage";
-import { watermarkBuffer, sniffContentType, wmCacheKey } from "@/lib/watermark";
+import { watermarkBuffer, sniffContentType, wmCacheKey } from "@/lib/watermark-server";
 
 const MAX_FETCH = 8 * 1024 * 1024;
 
