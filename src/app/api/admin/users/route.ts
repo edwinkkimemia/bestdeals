@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
+import { qualifyReferralsFor } from "@/lib/referrals";
 
 const schema = z.object({ id: z.string().min(1), verified: z.boolean() });
 
@@ -16,5 +17,8 @@ export async function POST(req: NextRequest) {
   const target = await getStore().findUserById(parsed.data.id);
   if (!target) return NextResponse.json({ error: "User not found." }, { status: 404 });
   await getStore().setUserVerified(parsed.data.id, parsed.data.verified);
+  if (parsed.data.verified) {
+    await qualifyReferralsFor(parsed.data.id).catch(() => null);
+  }
   return NextResponse.json({ ok: true });
 }

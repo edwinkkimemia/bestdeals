@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 
 // Force the in-memory backend (no DATABASE_URL in test env).
 delete process.env.DATABASE_URL;
-
 import {
   aggregateDaily,
   summarizeListing,
@@ -19,6 +18,7 @@ import {
   resetAnalyticsMemory,
   type ViewEvent,
 } from "../src/lib/analytics.ts";
+import { avgRatingOf, ratingLabel } from "../src/lib/ratings.ts";
 
 const NOW = new Date("2026-10-11T12:00:00Z").getTime();
 
@@ -120,5 +120,15 @@ describe("analytics recording (in-memory)", () => {
     resetAnalyticsMemory();
     assert.deepEqual(await recordListingView({ listingId: "" }), { deduped: true });
     assert.deepEqual(await getListingViewCount("missing"), { views: 0, uniques: 0 });
+  });
+});
+
+describe("shop ratings (real reviews only)", () => {
+  it("averages approved reviews, never invents a score", () => {
+    assert.equal(avgRatingOf([]), null);
+    assert.equal(ratingLabel([]), "No reviews yet");
+    assert.deepEqual(avgRatingOf([{ rating: 5 }, { rating: 4 }, { rating: 5 }]), { avg: 4.7, count: 3 });
+    assert.equal(ratingLabel([{ rating: 5 }, { rating: 4 }, { rating: 5 }]), "★ 4.7 (3)");
+    assert.equal(ratingLabel([{ rating: 3 }]), "★ 3.0 (1)");
   });
 });

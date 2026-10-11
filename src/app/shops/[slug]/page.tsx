@@ -7,6 +7,8 @@ import { ReviewsBlock } from "@/components/reviews-block";
 import { ListingCard } from "@/components/ui/listing-card";
 import { Badge } from "@/components/ui/badge";
 import { localBusinessJsonLd, breadcrumbJsonLd } from "@/lib/seo";
+import { ratingLabel } from "@/lib/ratings";
+import { ShareRow } from "@/components/share-row";
 
 export function generateStaticParams() {
   return SHOPS.map((s) => ({ slug: s.slug }));
@@ -34,6 +36,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
         <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{stored.name} {stored.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</h1>
         <p className="text-sm text-ink-500">{stored.businessCategory} · {stored.town}, {stored.county}</p>
         <p className="mt-1 text-sm">{stored.description}</p>
+        <div className="mt-3"><ShareRow title={`${stored.name} on Chap`} /></div>
         <ReviewsBlock reviews={storedReviews} title={`Reviews for ${stored.name}`} />
       </div>
     );
@@ -58,7 +61,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
           <img src={s.logo} alt={`${s.name} logo`} className="h-16 w-16 rounded-xl object-cover" />
           <div className="flex-1">
             <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{s.name} {s.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</h1>
-            <p className="text-sm text-ink-500">{s.businessCategory} · {s.town}, {s.county} · ★ {s.rating} · 🕒 {s.hours}</p>
+            <p className="text-sm text-ink-500">{s.businessCategory} · {s.town}, {s.county} · {ratingLabel(reviews)} · 🕒 {s.hours}</p>
             <p className="mt-1 text-sm">{s.description}</p>
           </div>
           <div className="flex gap-2">
@@ -66,6 +69,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
             <Link href={`/messages/new?shop=${s.slug}`} className="btn-primary">Bulk enquiry</Link>
           </div>
         </div>
+        <div className="mt-3"><ShareRow title={`${s.name} on Chap`} text={`${s.name} — ${s.businessCategory} in ${s.town}, ${s.county}`} /></div>
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
           <div className="card p-4 text-sm"><p className="font-bold">Delivery</p><p className="text-ink-500">{s.deliveryInfo}</p></div>
           <div className="card p-4 text-sm"><p className="font-bold">Contact</p><p className="text-ink-500">{s.phone} · {s.town}, {s.county}</p></div>

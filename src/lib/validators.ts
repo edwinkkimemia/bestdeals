@@ -10,6 +10,7 @@ export const signupSchema = z.object({
   password: z.string().min(8, "Minimum 8 characters").max(72),
   acceptTerms: z.literal(true, { error: "You must accept the Terms" }),
   sellerKind: z.enum(["individual", "business"]).default("individual"),
+  ref: z.string().max(64).optional().default(""),
 });
 
 export const signinSchema = z.object({

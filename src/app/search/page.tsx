@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CATEGORIES, categoryBySlug } from "@/data/catalog";
 import { searchListings } from "@/lib/search";
 import { ListingCard } from "@/components/ui/listing-card";
-import { COUNTY_NAMES, resolveCounty } from "@/lib/kenya";
+import { COUNTY_NAMES, resolveCounty, townsFor } from "@/lib/kenya";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 export const metadata = { title: "Search" };
@@ -17,6 +17,7 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
     category: searchParams.category ?? "all",
     subcategory: searchParams.subcategory ?? "all",
     county,
+    town: (searchParams.town ?? "all").trim() || "all",
     min: searchParams.min ? Number(searchParams.min) : undefined,
     max: searchParams.max ? Number(searchParams.max) : undefined,
     condition: searchParams.condition ?? "all",
@@ -40,6 +41,7 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
   if (params.category && params.category !== "all") keep.set("category", params.category);
   if (params.subcategory && params.subcategory !== "all") keep.set("subcategory", params.subcategory);
   if (params.county && params.county !== "all") keep.set("county", params.county);
+  if (params.town && params.town !== "all") keep.set("town", params.town);
   if (searchParams.min) keep.set("min", searchParams.min);
   if (searchParams.max) keep.set("max", searchParams.max);
   if (params.condition && params.condition !== "all") keep.set("condition", params.condition);
@@ -53,6 +55,14 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
   const clearCountyHref = (() => {
     const s = new URLSearchParams(keep);
     s.delete("county");
+    s.delete("town");
+    if (params.type !== "all") s.set("type", params.type);
+    const qs = s.toString();
+    return `/search${qs ? `?${qs}` : ""}`;
+  })();
+  const clearTownHref = (() => {
+    const s = new URLSearchParams(keep);
+    s.delete("town");
     if (params.type !== "all") s.set("type", params.type);
     const qs = s.toString();
     return `/search${qs ? `?${qs}` : ""}`;
@@ -83,7 +93,7 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
         </p>
       )}
       {county !== "all" && (
-        <p className="mt-2 text-sm text-ink-500">Showing results in <strong>{county}</strong> · <Link href={clearCountyHref} className="link-bd">clear</Link></p>
+        <p className="mt-2 text-sm text-ink-500">Showing results in <strong>{county}</strong>{params.town !== "all" && <> · <strong>{params.town}</strong> · <Link href={clearTownHref} className="link-bd">clear town</Link></>} · <Link href={clearCountyHref} className="link-bd">clear</Link></p>
       )}
       {params.subcategory !== "all" && (
         <p className="mt-1 text-sm text-ink-500">Subcategory <strong>{params.subcategory}</strong> · <Link href={clearSubHref} className="link-bd">clear</Link></p>
@@ -115,6 +125,15 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
               {COUNTY_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+          {county !== "all" && (
+            <div>
+              <label className="label-bd" htmlFor="f-town">Town</label>
+              <select id="f-town" name="town" defaultValue={params.town} className="input-bd">
+                <option value="all">All {county}</option>
+                {townsFor(county).map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <div><label className="label-bd" htmlFor="f-min">Min KES</label><input id="f-min" name="min" inputMode="numeric" defaultValue={searchParams.min ?? ""} className="input-bd" placeholder="0" /></div>
             <div><label className="label-bd" htmlFor="f-max">Max KES</label><input id="f-max" name="max" inputMode="numeric" defaultValue={searchParams.max ?? ""} className="input-bd" placeholder="Any" /></div>

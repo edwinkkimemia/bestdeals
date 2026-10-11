@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { SHOPS } from "@/data/catalog";
 import { storeRead } from "@/lib/store";
+import { ratingLabel } from "@/lib/ratings";
 import { Badge } from "@/components/ui/badge";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
@@ -11,6 +12,12 @@ export const metadata = {
 
 export default async function ShopsIndex() {
   const community = await storeRead((s) => s.listShops(), []);
+  const withRatings = await Promise.all(
+    SHOPS.map(async (s) => ({
+      shop: s,
+      rating: ratingLabel(await storeRead((st) => st.listApprovedReviewsForShop(s.slug), [])),
+    }))
+  );
   return (
     <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Business Shops" }]} />
@@ -32,13 +39,13 @@ export default async function ShopsIndex() {
 
       <h2 className="mb-2 mt-8 font-bold">Featured shops ({SHOPS.length})</h2>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {SHOPS.map((s) => (
-          <Link key={s.slug} href={`/shops/${s.slug}`} className="card overflow-hidden hover:shadow-lg">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={s.cover} alt={s.name} loading="lazy" className="h-28 w-full object-cover" />
-            <div className="p-4">
-              <p className="font-bold">{s.name} {s.verified ? <Badge tone="green">✓ Verified</Badge> : <Badge>Unverified</Badge>}</p>
-              <p className="text-xs text-ink-500">{s.businessCategory} · {s.town}, {s.county} · ★ {s.rating}</p>
+          {withRatings.map(({ shop: s, rating }) => (
+            <Link key={s.slug} href={`/shops/${s.slug}`} className="card overflow-hidden hover:shadow-lg">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={s.cover} alt={`${s.name} cover`} loading="lazy" className="h-28 w-full object-cover" />
+              <div className="p-4">
+                <p className="font-bold">{s.name} {s.verified ? <Badge tone="green">✓ Verified</Badge> : <Badge>Unverified</Badge>}</p>
+                <p className="text-xs text-ink-500">{s.businessCategory} · {s.town}, {s.county} · {rating}</p>
               <p className="clamp-2 mt-1 text-sm text-ink-500">{s.description}</p>
             </div>
           </Link>
@@ -62,7 +69,7 @@ export default async function ShopsIndex() {
 
       <div className="card mt-8 bg-brand-700 p-6 text-white">
         <h2 className="text-xl font-bold">Run a business? Open your shop free</h2>
-        <p className="mt-1 max-w-2xl text-sm opacity-90">Starter storefronts are free forever: your brand, your catalogue, your chap.co.ke address. Upgrade to Growth or Professional when bulk tools and promotions pay for themselves.</p>
+        <p className="mt-1 max-w-2xl text-sm opacity-90">Free storefronts forever: your brand, your catalogue, your chap.co.ke address. Upgrade to Silver or Gold when bulk tools and promotions pay for themselves.</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <Link href="/dashboard/shop" className="btn-accent">Open my shop</Link>
           <Link href="/pricing" className="rounded-xl border border-white/40 px-5 py-2.5 text-sm font-semibold hover:bg-white/10">Compare plans</Link>

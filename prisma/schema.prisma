@@ -451,6 +451,17 @@ model Coupon {
   active   Boolean @default(true)
 }
 
+model Referral {
+  id             String   @id @default(cuid())
+  referrerUserId String
+  referredUserId String   @unique
+  status         String   @default("pending") // pending | qualified | rewarded
+  rewardPromoId  String?
+  createdAt      DateTime @default(now())
+
+  @@index([referrerUserId])
+}
+
 model CommissionRule {
   id         String  @id @default(cuid())
   categoryId String?

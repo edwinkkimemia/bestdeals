@@ -3,15 +3,35 @@ import { SHOP_PLANS } from "@/data/catalog";
 import { formatKES } from "@/lib/format";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { InfoSidebar } from "@/components/info-sidebar";
+import { breadcrumbJsonLd, faqJsonLd } from "@/lib/seo";
 
 export const metadata = {
   title: "Sell on Chap",
   description: "List free as an individual or open a branded business shop. Photos from your phone, M-Pesa payouts, buyers across all 47 counties.",
+  alternates: { canonical: "https://chap.co.ke/start-selling" },
 };
 
+const FAQS = [
+  { q: "How fast do listings go live?", a: "Moderation usually clears listings within hours. You'll see pending / active / rejected with reasons in your dashboard." },
+  { q: "Do I need a shop to sell?", a: "No. Individuals sell free with full search visibility. Open a shop when you want branding, bulk tools, and wholesale enquiries." },
+  { q: "How do I get paid?", a: "Shop checkout pays via M-Pesa, card, or cash on delivery. Classifieds are person-to-person: inspect, then pay face-to-face — never in advance." },
+  { q: "What can't I sell?", a: "Weapons, drugs, counterfeits sold as genuine, stolen goods, scams, and the rest of the prohibited list. Violations mean removal or bans." },
+];
+
 export default function StartSellingPage() {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      breadcrumbJsonLd([
+        { name: "Home", url: "https://chap.co.ke/" },
+        { name: "Sell on Chap", url: "https://chap.co.ke/start-selling" },
+      ]),
+      faqJsonLd(FAQS),
+    ],
+  };
   return (
     <div className="container-bd pb-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Sell on Chap" }]} />
       <div className="mt-6 grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
         <InfoSidebar current="/start-selling" />
@@ -60,9 +80,9 @@ export default function StartSellingPage() {
       <div className="card mt-4 overflow-x-auto">
         <table className="w-full min-w-[520px] text-left text-sm">
           <thead>
-            <tr className="border-b border-neutral-200 text-xs text-ink-400">
-              <th className="p-3">Action</th><th className="p-3">Individual</th><th className="p-3">Starter shop</th><th className="p-3">Growth / Pro</th>
-            </tr>
+              <tr className="border-b border-neutral-200 text-xs text-ink-400">
+                <th className="p-3">Action</th><th className="p-3">Individual</th><th className="p-3">Free shop</th><th className="p-3">Silver / Gold</th>
+              </tr>
           </thead>
           <tbody className="text-ink-700">
             <tr className="border-b border-neutral-100"><td className="p-3 font-semibold">List an item</td><td className="p-3">Free</td><td className="p-3">Free</td><td className="p-3">Free</td></tr>
@@ -91,12 +111,7 @@ export default function StartSellingPage() {
 
       <h2 className="section-title mt-10">Seller FAQs</h2>
       <div className="mt-4 space-y-2">
-        {[
-          { q: "How fast do listings go live?", a: "Moderation usually clears listings within hours. You'll see pending / active / rejected with reasons in your dashboard." },
-          { q: "Do I need a shop to sell?", a: "No. Individuals sell free with full search visibility. Open a shop when you want branding, bulk tools, and wholesale enquiries." },
-          { q: "How do I get paid?", a: "Shop checkout pays via M-Pesa, card, or cash on delivery. Classifieds are person-to-person: inspect, then pay face-to-face — never in advance." },
-          { q: "What can't I sell?", a: "Weapons, drugs, counterfeits sold as genuine, stolen goods, scams, and the rest of the prohibited list. Violations mean removal or bans." },
-        ].map((f) => (
+        {FAQS.map((f) => (
           <details key={f.q} className="card group px-4 py-3">
             <summary className="cursor-pointer text-[15px] font-semibold marker:text-brand-600">{f.q}</summary>
             <p className="mt-2 text-sm leading-relaxed text-ink-700">{f.a}</p>

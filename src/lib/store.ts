@@ -164,6 +164,23 @@ export type PromotionRecord = {
   createdAt: string;
 };
 
+export type ReferralRecord = {
+  id: string;
+  referrerUserId: string;
+  referredUserId: string;
+  status: string; // pending | qualified | rewarded
+  rewardPromoId?: string;
+  createdAt: string;
+};
+
+export type CouponRecord = {
+  id: string;
+  code: string;
+  value: number;
+  minSpend: number;
+  active: boolean;
+};
+
 export type ConversationRecord = {
   id: string;
   listingId?: string;
@@ -274,6 +291,15 @@ export interface Store {
   activatePromotion(id: string, now?: number): Promise<PromotionRecord | null>;
   /** Persist lazy expiry: flip past-window `active` promos to `expired`, unfeature bare listings. Returns count flipped. */
   sweepExpiredPromotions(now?: number): Promise<number>;
+  // referrals (invite attribution + milestone rewards)
+  createReferral(r: { referrerUserId: string; referredUserId: string }): Promise<ReferralRecord>;
+  findReferralByReferred(referredUserId: string): Promise<ReferralRecord | null>;
+  listReferralsByReferrer(referrerUserId: string): Promise<ReferralRecord[]>;
+  setReferralStatus(id: string, status: string, rewardPromoId?: string): Promise<void>;
+  // coupons (admin-managed checkout discounts)
+  getCoupon(code: string): Promise<CouponRecord | null>;
+  listCoupons(): Promise<CouponRecord[]>;
+  upsertCoupon(c: { code: string; value: number; minSpend: number; active: boolean }): Promise<CouponRecord>;
   // conversations (in-app messaging)
   createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }): Promise<ConversationRecord>;
   getConversation(id: string): Promise<ConversationRecord | null>;
@@ -301,6 +327,9 @@ class DemoStore implements Store {
   conversations = new Map<string, ConversationRecord>();
   messages = new Map<string, MessageRecord[]>();
   promotions = new Map<string, PromotionRecord>();
+  referrals = new Map<string, ReferralRecord>();
+  coupons = new Map<string, CouponRecord>();
+  private couponsSeeded = false;
 
   async findUserByEmail(email: string) {
     return [...this.users.values()].find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
@@ -622,6 +651,57 @@ class DemoStore implements Store {
       p.endsAt = new Date(now + p.days * 86400_000).toISOString();
     }
     return { ...p, status: promoDisplayStatus(p, now) };
+  }
+
+  async createReferral(r: { referrerUserId: string; referredUserId: string }) {
+    if (r.referrerUserId === r.referredUserId) throw new Error("Self-referral is not allowed.");
+    const dup = [...this.referrals.values()].find((x) => x.referredUserId === r.referredUserId);
+    if (dup) return dup;
+    const rec: ReferralRecord = { ...r, id: uid("ref"), status: "pending", createdAt: now() };
+    this.referrals.set(rec.id, rec);
+    return rec;
+  }
+  async findReferralByReferred(referredUserId: string) {
+    return [...this.referrals.values()].find((x) => x.referredUserId === referredUserId) ?? null;
+  }
+  async listReferralsByReferrer(referrerUserId: string) {
+    return [...this.referrals.values()]
+      .filter((x) => x.referrerUserId === referrerUserId)
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  }
+  async setReferralStatus(id: string, status: string, rewardPromoId?: string) {
+    const r = this.referrals.get(id);
+    if (r) {
+      r.status = status;
+      if (rewardPromoId !== undefined) r.rewardPromoId = rewardPromoId;
+    }
+  }
+
+  private seedCoupons() {
+    if (this.couponsSeeded) return;
+    this.couponsSeeded = true;
+    // Launch codes (mirrors the catalogue fallback; admin edits live here).
+    const seed: CouponRecord[] = [
+      { id: uid("cpn"), code: "KARIBU500", value: 500, minSpend: 5000, active: true },
+      { id: uid("cpn"), code: "SHOPNAIROBI", value: 300, minSpend: 2500, active: true },
+    ];
+    for (const c of seed) this.coupons.set(c.code, c);
+  }
+  async getCoupon(code: string) {
+    this.seedCoupons();
+    return this.coupons.get(code.trim().toUpperCase()) ?? null;
+  }
+  async listCoupons() {
+    this.seedCoupons();
+    return [...this.coupons.values()].sort((a, b) => a.code.localeCompare(b.code));
+  }
+  async upsertCoupon(c: { code: string; value: number; minSpend: number; active: boolean }) {
+    this.seedCoupons();
+    const code = c.code.trim().toUpperCase();
+    const existing = this.coupons.get(code);
+    const rec: CouponRecord = { id: existing?.id ?? uid("cpn"), code, value: c.value, minSpend: c.minSpend, active: c.active };
+    this.coupons.set(code, rec);
+    return rec;
   }
 
   async createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }) {
@@ -1315,6 +1395,49 @@ class PrismaStore implements Store {
       }
     }
     return dead.length;
+  }
+
+  async createReferral(r: { referrerUserId: string; referredUserId: string }) {
+    if (r.referrerUserId === r.referredUserId) throw new Error("Self-referral is not allowed.");
+    const dup = await this.p.referral.findUnique({ where: { referredUserId: r.referredUserId } }).catch(() => null);
+    if (dup) return this.mapReferral(dup);
+    const rec = await this.p.referral.create({ data: { referrerUserId: r.referrerUserId, referredUserId: r.referredUserId, status: "pending" } });
+    return this.mapReferral(rec);
+  }
+  private mapReferral(r: { id: string; referrerUserId: string; referredUserId: string; status: string; rewardPromoId: string | null; createdAt: Date }): ReferralRecord {
+    return { id: r.id, referrerUserId: r.referrerUserId, referredUserId: r.referredUserId, status: r.status, rewardPromoId: r.rewardPromoId ?? undefined, createdAt: r.createdAt.toISOString() };
+  }
+  async findReferralByReferred(referredUserId: string) {
+    const r = await this.p.referral.findUnique({ where: { referredUserId } }).catch(() => null);
+    return r ? this.mapReferral(r) : null;
+  }
+  async listReferralsByReferrer(referrerUserId: string) {
+    const recs = await this.p.referral.findMany({ where: { referrerUserId }, orderBy: { createdAt: "desc" }, take: 200 });
+    return recs.map((r: { id: string; referrerUserId: string; referredUserId: string; status: string; rewardPromoId: string | null; createdAt: Date }) => this.mapReferral(r));
+  }
+  async setReferralStatus(id: string, status: string, rewardPromoId?: string) {
+    await this.p.referral.update({ where: { id }, data: { status, ...(rewardPromoId !== undefined ? { rewardPromoId } : {}) } });
+  }
+
+  private mapCoupon(r: { id: string; code: string; value: number; minSpend: number; active: boolean }): CouponRecord {
+    return { id: r.id, code: r.code, value: r.value, minSpend: r.minSpend, active: r.active };
+  }
+  async getCoupon(code: string) {
+    const r = await this.p.coupon.findUnique({ where: { code: code.trim().toUpperCase() } }).catch(() => null);
+    return r ? this.mapCoupon(r) : null;
+  }
+  async listCoupons() {
+    const recs = await this.p.coupon.findMany({ orderBy: { code: "asc" }, take: 100 });
+    return recs.map((r: { id: string; code: string; value: number; minSpend: number; active: boolean }) => this.mapCoupon(r));
+  }
+  async upsertCoupon(c: { code: string; value: number; minSpend: number; active: boolean }) {
+    const code = c.code.trim().toUpperCase();
+    const rec = await this.p.coupon.upsert({
+      where: { code },
+      update: { value: c.value, minSpend: c.minSpend, active: c.active },
+      create: { code, value: c.value, minSpend: c.minSpend, active: c.active },
+    });
+    return this.mapCoupon(rec);
   }
 
   async createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }) {

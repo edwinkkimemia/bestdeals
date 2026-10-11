@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff } from "lucide-react";
 import { signupSchema } from "@/lib/validators";
 
 function safeNext(raw: string | null): string | null {
@@ -17,8 +18,10 @@ function SignupForm() {
   const router = useRouter();
   const sp = useSearchParams();
   const next = safeNext(sp.get("next"));
+  const ref = (sp.get("ref") ?? "").trim();
   const initialKind = sp.get("kind") === "business" ? "business" : "individual";
   const [err, setErr] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(signupSchema),
     defaultValues: { sellerKind: initialKind } as never,
@@ -29,6 +32,11 @@ function SignupForm() {
     <div className="container-bd max-w-md py-12">
       <h1 className="text-2xl font-bold">Create your account</h1>
       <p className="text-sm text-ink-500">Free for individuals. Businesses open a shop after verifying. Only necessary details collected.</p>
+      {ref && (
+        <p className="mt-3 rounded-xl bg-brand-50 p-3 text-sm text-brand-700">
+          🎉 You were invited by a friend — verify your account and you both earn rewards (they get a free Featured boost).
+        </p>
+      )}
       <form
         className="card mt-5 space-y-3 p-5"
         onSubmit={handleSubmit(async (data) => {
@@ -38,6 +46,7 @@ function SignupForm() {
             name: data.name.trim(),
             email: data.email.trim().toLowerCase(),
             phone: data.phone.trim(),
+            ref,
           };
           const r = await fetch("/api/auth/signup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
           const j = await r.json();
@@ -71,7 +80,22 @@ function SignupForm() {
         <div><label className="label-bd" htmlFor="name">Full name</label><input id="name" className="input-bd" autoComplete="name" {...register("name")} />{errors.name && <p className="text-xs text-red-600">{String(errors.name.message)}</p>}</div>
         <div><label className="label-bd" htmlFor="email">Email</label><input id="email" className="input-bd" type="email" autoComplete="email" {...register("email")} />{errors.email && <p className="text-xs text-red-600">{String(errors.email.message)}</p>}</div>
         <div><label className="label-bd" htmlFor="phone">Phone (M-Pesa)</label><input id="phone" className="input-bd" placeholder="0712345678" autoComplete="tel" {...register("phone")} />{errors.phone && <p className="text-xs text-red-600">{String(errors.phone.message)}</p>}</div>
-        <div><label className="label-bd" htmlFor="pw">Password (min 8 chars)</label><input id="pw" className="input-bd" type="password" autoComplete="new-password" {...register("password")} />{errors.password && <p className="text-xs text-red-600">{String(errors.password.message)}</p>}</div>
+        <div>
+          <label className="label-bd" htmlFor="pw">Password (min 8 chars)</label>
+          <div className="relative">
+            <input id="pw" className="input-bd pr-11" type={showPw ? "text" : "password"} autoComplete="new-password" {...register("password")} />
+            <button
+              type="button"
+              onClick={() => setShowPw((v) => !v)}
+              aria-label={showPw ? "Hide password" : "Show password"}
+              aria-pressed={showPw}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-ink-400 hover:bg-sand-100 hover:text-ink-700"
+            >
+              {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          {errors.password && <p className="text-xs text-red-600">{String(errors.password.message)}</p>}
+        </div>
         <label className="flex items-start gap-2 text-sm"><input type="checkbox" {...register("acceptTerms")} className="mt-1" /> I accept the <Link href="/terms" className="link-bd">Terms</Link> and <Link href="/privacy" className="link-bd">Privacy Policy</Link>.</label>
         {errors.acceptTerms && <p className="text-xs text-red-600">You must accept the Terms</p>}
         {err && <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{err}</p>}

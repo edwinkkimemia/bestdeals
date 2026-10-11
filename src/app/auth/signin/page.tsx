@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff } from "lucide-react";
 import { signinSchema } from "@/lib/validators";
 
 function safeNext(raw: string | null): string | null {
@@ -20,6 +21,7 @@ function SigninForm() {
   const next = safeNext(sp.get("next"));
   const justReset = sp.get("reset") === "1";
   const [err, setErr] = useState("");
+  const [showPw, setShowPw] = useState(false);
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(signinSchema),
   });
@@ -41,7 +43,22 @@ function SigninForm() {
         })}
       >
         <div><label className="label-bd" htmlFor="email">Email</label><input id="email" className="input-bd" type="email" autoComplete="email" {...register("email")} />{errors.email && <p className="text-xs text-red-600">{String(errors.email.message)}</p>}</div>
-        <div><label className="label-bd" htmlFor="pw">Password</label><input id="pw" className="input-bd" type="password" autoComplete="current-password" {...register("password")} />{errors.password && <p className="text-xs text-red-600">{String(errors.password.message)}</p>}</div>
+        <div>
+          <label className="label-bd" htmlFor="pw">Password</label>
+          <div className="relative">
+            <input id="pw" className="input-bd pr-11" type={showPw ? "text" : "password"} autoComplete="current-password" {...register("password")} />
+            <button
+              type="button"
+              onClick={() => setShowPw((v) => !v)}
+              aria-label={showPw ? "Hide password" : "Show password"}
+              aria-pressed={showPw}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-ink-400 hover:bg-sand-100 hover:text-ink-700"
+            >
+              {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          {errors.password && <p className="text-xs text-red-600">{String(errors.password.message)}</p>}
+        </div>
         {err && <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{err}</p>}
         <button className="btn-primary w-full" disabled={isSubmitting}>{isSubmitting ? "Signing in…" : "Sign in"}</button>
         <p className="text-center text-sm"><Link href="/auth/password/request" className="link-bd">Forgot password?</Link></p>

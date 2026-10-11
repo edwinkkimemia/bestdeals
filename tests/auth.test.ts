@@ -7,7 +7,7 @@ import {
   resetLoginGuard,
 } from "../src/lib/login-guard.ts";
 import { createPurposeToken, readPurposeToken, hashFingerprint } from "../src/lib/auth-tokens.ts";
-import { BOOST_PRODUCTS, boostProductById } from "../src/data/catalog.ts";
+import { BOOST_PRODUCTS, boostProductById, SHOP_PLANS, planListings } from "../src/data/catalog.ts";
 import { promoIsLive, promoDisplayStatus, freshDemoStore } from "../src/lib/store.ts";
 
 describe("login-guard", () => {
@@ -120,13 +120,27 @@ describe("promotion-expiry", () => {
 
 describe("boost-products", () => {
   it("lists fixed-price featured boosts", () => {
-    assert.equal(BOOST_PRODUCTS.length, 3);
-    for (const b of BOOST_PRODUCTS) {
+    assert.equal(BOOST_PRODUCTS.length, 3);    for (const b of BOOST_PRODUCTS) {
       assert.ok(b.price > 0 && b.days > 0 && b.kind === "featured");
     }
-    assert.equal(boostProductById("boost-7")?.price, 249);
-    assert.equal(boostProductById("boost-14")?.price, 399);
-    assert.equal(boostProductById("boost-30")?.price, 599);
+    assert.equal(boostProductById("boost-7")?.price, 199);
+    assert.equal(boostProductById("boost-14")?.price, 299);
+    assert.equal(boostProductById("boost-30")?.price, 499);
     assert.equal(boostProductById("nope"), null);
+  });
+});
+
+describe("shop-plans", () => {
+  it("offers Free 5, Silver 30 @499, Gold unlimited @999", () => {
+    const byId = Object.fromEntries(SHOP_PLANS.map((p) => [p.id, p]));
+    assert.equal(byId.free.monthly, 0);
+    assert.equal(byId.free.listings, 5);
+    assert.equal(byId.silver.monthly, 499);
+    assert.equal(byId.silver.listings, 30);
+    assert.equal(byId.gold.monthly, 999);
+    assert.ok(!Number.isFinite(byId.gold.listings));
+    assert.equal(planListings(byId.free), "5");
+    assert.equal(planListings(byId.silver), "30");
+    assert.equal(planListings(byId.gold), "Unlimited");
   });
 });

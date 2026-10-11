@@ -68,9 +68,16 @@ export async function POST(req: NextRequest) {
     lines.push({ id: s.id, qty: it.qty, price: s.price, title: s.title, seller: s.sellerName, stock: s.stock });
   }
 
-  const coupon = d.coupon ? COUPONS[d.coupon.toUpperCase()] : undefined;
+  const code = (d.coupon ?? "").trim().toUpperCase();
+  const stored = code ? await store.getCoupon(code).catch(() => null) : null;
+  const fallback = code ? COUPONS[code] : undefined;
+  const coupon = stored && stored.active
+    ? { value: stored.value, minSpend: stored.minSpend }
+    : fallback
+      ? { value: fallback.value, minSpend: fallback.minSpend }
+      : undefined;
   const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
-  const couponValue = coupon && subtotal >= coupon.minSpend ? coupon.value : 0;
+  const couponValue = coupon && subtotal >= coupon.minSpend ? Math.min(coupon.value, subtotal) : 0;
   const totals = cartTotals(lines.map((l) => ({ unitPrice: l.price, qty: l.qty })), {
     couponValue,
     deliveryFee: DELIVERY[d.deliveryMethod],

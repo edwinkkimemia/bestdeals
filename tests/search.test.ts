@@ -48,6 +48,19 @@ describe("location-filtering", () => {
     assert.ok(r.total > 0);
     assert.ok(r.items.every((l) => l.county === "Uasin Gishu"));
   });
+  it("filters listings by town within a county", () => {
+    const r = searchListings({ county: "Uasin Gishu", town: "Eldoret", perPage: 60 });
+    assert.ok(r.total > 0, "seed should hold Eldoret listings");
+    assert.ok(r.items.every((l) => l.town === "Eldoret"));
+    const lower = searchListings({ county: "Uasin Gishu", town: "eldoret", perPage: 60 });
+    assert.equal(lower.total, r.total);
+    const none = searchListings({ county: "Uasin Gishu", town: "Thika", perPage: 60 });
+    assert.equal(none.total, 0);
+  });
+  it("matches free-text town queries against listing towns", () => {
+    const r = searchListings({ q: "Eldoret", perPage: 60 });
+    assert.ok(r.items.some((l) => l.town === "Eldoret"));
+  });
 });
 
 describe("instant-suggestions", () => {

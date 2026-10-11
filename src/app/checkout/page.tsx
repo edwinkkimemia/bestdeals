@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,13 +35,30 @@ function CheckoutInner() {
   const county = watch("county");
   const deliveryMethod = watch("deliveryMethod");
   const couponCode = (watch("coupon") as string | undefined)?.toUpperCase() ?? "";
+  const [serverValue, setServerValue] = useState<number | null>(null);
+  const subtotal = detailed.reduce((s, l) => s + l.listing.price * l.qty, 0);
+  useEffect(() => {
+    setServerValue(null);
+    if (!couponCode) return;
+    let stop = false;
+    fetch(`/api/coupons/validate?code=${encodeURIComponent(couponCode)}&subtotal=${subtotal}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!stop && j) setServerValue(j.valid ? j.value : 0);
+      })
+      .catch(() => null);
+    return () => {
+      stop = true;
+    };
+  }, [couponCode, subtotal]);
   const couponValue = useMemo(() => {
+    if (!couponCode) return 0;
+    if (serverValue !== null) return serverValue;
     const c = COUPONS[couponCode];
     if (!c) return 0;
-    const sub = detailed.reduce((s, l) => s + l.listing.price * l.qty, 0);
-    return sub >= c.minSpend ? c.value : 0;
+    return subtotal >= c.minSpend ? c.value : 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [couponCode, lines]);
+  }, [couponCode, lines, serverValue]);
 
   const totals = cartTotals(detailed.map((l) => ({ unitPrice: l.listing.price, qty: l.qty })), {
     couponValue,

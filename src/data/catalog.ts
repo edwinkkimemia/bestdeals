@@ -139,18 +139,22 @@ export const COUPONS: Record<string, { code: string; value: number; minSpend: nu
 };
 
 export const SHOP_PLANS = [
-  { id: "starter", name: "Starter", monthly: 0, annual: 0, listings: 20, features: ["Basic storefront", "20 active listings", "Seller dashboard", "Basic stats"] },
-  { id: "growth", name: "Growth", monthly: 1499, annual: 14990, listings: 300, features: ["Everything in Starter", "300 listings", "Promotions & featured products", "Enhanced analytics"] },
-  { id: "professional", name: "Professional", monthly: 3999, annual: 39990, listings: 5000, features: ["Everything in Growth", "5,000 listings", "Bulk CSV upload", "Staff accounts", "Advanced analytics"] },
+  { id: "free", name: "Free", monthly: 0, annual: 0, listings: 5, features: ["Basic storefront", "5 active listings", "Seller dashboard", "Buyer enquiries"] },
+  { id: "silver", name: "Silver", monthly: 499, annual: 4990, listings: 30, features: ["Everything in Free", "30 active listings", "Promotions & featured products", "Enhanced analytics"] },
+  { id: "gold", name: "Gold", monthly: 999, annual: 9990, listings: Infinity, features: ["Everything in Silver", "Unlimited listings", "Bulk CSV upload", "Staff accounts", "Advanced analytics"] },
 ];
+
+/** Human-readable listing allowance ("5", "30", "Unlimited"). */
+export const planListings = (p: { listings: number }): string =>
+  Number.isFinite(p.listings) ? p.listings.toLocaleString() : "Unlimited";
 
 export const COMMISSION_BPS_DEFAULT = 500; // 5%
 
 /** Paid visibility products: clearly labelled Featured boosts, fixed KES prices. */
 export const BOOST_PRODUCTS = [
-  { id: "boost-7", name: "Featured · 7 days", kind: "featured", days: 7, price: 249 },
-  { id: "boost-14", name: "Featured · 14 days", kind: "featured", days: 14, price: 399 },
-  { id: "boost-30", name: "Featured · 30 days", kind: "featured", days: 30, price: 599 },
+  { id: "boost-7", name: "Featured · 7 days", kind: "featured", days: 7, price: 199 },
+  { id: "boost-14", name: "Featured · 14 days", kind: "featured", days: 14, price: 299 },
+  { id: "boost-30", name: "Featured · 30 days", kind: "featured", days: 30, price: 499 },
 ];
 
 export const boostProductById = (id: string) => BOOST_PRODUCTS.find((p) => p.id === id) ?? null;

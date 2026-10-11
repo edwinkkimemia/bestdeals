@@ -9,6 +9,7 @@ export type SearchParams = {
   max?: number;
   condition?: string;
   county?: string;
+  town?: string;
   type?: "product" | "classified" | "service" | "all";
   seller?: "individual" | "business" | "all";
   sort?: "relevance" | "newest" | "price_asc" | "price_desc";
@@ -43,7 +44,7 @@ function expandQuery(q: string): string[] {
 
 function score(l: Listing, tokens: string[]): number {
   if (tokens.length === 0) return 1;
-  const hay = `${l.title} ${l.description} ${l.subcategory ?? ""} ${Object.values(l.attributes).join(" ")}`.toLowerCase();
+  const hay = `${l.title} ${l.description} ${l.subcategory ?? ""} ${Object.values(l.attributes).join(" ")} ${l.town} ${l.county}`.toLowerCase();
   let s = 0;
   for (const t of tokens) {
     if (l.title.toLowerCase().includes(t)) s += 5;
@@ -64,6 +65,7 @@ export function searchListings(p: SearchParams): {
 } {
   const tokens = expandQuery(p.q ?? "");
   const sub = (p.subcategory ?? "").trim().toLowerCase();
+  const town = (p.town ?? "").trim().toLowerCase();
   let items = LISTINGS.filter((l) => {
     if (p.category && p.category !== "all" && l.categorySlug !== p.category) return false;
     if (sub && sub !== "all" && (l.subcategory ?? "").trim().toLowerCase() !== sub) return false;
@@ -72,6 +74,7 @@ export function searchListings(p: SearchParams): {
     if (p.condition && p.condition !== "all" && l.condition !== p.condition) return false;
     // Case-insensitive; towns resolve to their county ("Eldoret" → "Uasin Gishu").
     if (!countyMatches(l.county, p.county ?? "all")) return false;
+    if (town && town !== "all" && l.town.trim().toLowerCase() !== town) return false;
     if (p.min != null && l.price < p.min) return false;
     if (p.max != null && l.price > p.max) return false;
     if (tokens.length > 0 && score(l, tokens) <= 0) return false;

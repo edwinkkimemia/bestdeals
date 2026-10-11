@@ -5,6 +5,7 @@ import { INFO_PAGES } from "@/content/info-pages";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { InfoSidebar } from "@/components/info-sidebar";
 import { slugify } from "@/lib/utils";
+import { breadcrumbJsonLd, faqJsonLd } from "@/lib/seo";
 
 export function generateStaticParams() {
   return Object.keys(INFO_PAGES).map((slug) => ({ slug }));
@@ -23,9 +24,20 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 export default function InfoPage({ params }: { params: { slug: string } }) {
   const d = INFO_PAGES[params.slug];
   if (!d) notFound();
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      breadcrumbJsonLd([
+        { name: "Home", url: "https://chap.co.ke/" },
+        { name: d.title, url: `https://chap.co.ke/${params.slug}` },
+      ]),
+      ...(d.faqs && d.faqs.length > 0 ? [faqJsonLd(d.faqs)] : []),
+    ],
+  };
 
   return (
     <div className="container-bd py-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: d.title }]} />
       <div className="mt-6 grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
         <InfoSidebar current={`/${params.slug}`} />

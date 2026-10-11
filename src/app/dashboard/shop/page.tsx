@@ -13,7 +13,7 @@ export default async function ShopDash({ searchParams }: { searchParams: { plan?
   const fresh = await getStore().findUserById(user.id).catch(() => null);
   const kind = fresh?.sellerKind ?? "individual";
   const verified = fresh?.verified ?? user.verified;
-  const plan = SHOP_PLANS.find((p) => p.id === (searchParams.plan ?? "starter")) ?? SHOP_PLANS[0];
+  const plan = SHOP_PLANS.find((p) => p.id === (searchParams.plan ?? "free")) ?? SHOP_PLANS[0];
   return (
     <div className="container-bd py-8">
       <h1 className="section-title">My shop</h1>
@@ -47,7 +47,7 @@ export default async function ShopDash({ searchParams }: { searchParams: { plan?
             <button className="btn-primary w-full" formAction="/api/shops" type="submit">Check availability & create</button>
           </form>
           <div className="mt-3 rounded-xl bg-sand-50 p-3 text-sm">
-            <p className="font-semibold">Bulk upload (Growth+)</p>
+            <p className="font-semibold">Bulk upload (Gold)</p>
             <p className="text-ink-500">Download the <a className="link-bd" href="/api/shops">CSV template</a>, fill rows, then upload here. Tenant-isolated: you can only touch your own catalogue.</p>
             <input type="file" accept=".csv" className="mt-2 text-sm" aria-label="Upload catalogue CSV" />
           </div>

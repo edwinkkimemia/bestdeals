@@ -62,7 +62,14 @@ export default function CountyPage({ params }: { params: { county: string } }) {
         <div className="absolute bottom-0 p-5 text-white">
           <p className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide opacity-90"><MapPin className="h-3.5 w-3.5" /> {entry.county} County</p>
           <h1 className="section-title !text-white">Shop in {entry.county} ({items.length})</h1>
-          <p className="mt-1 max-w-2xl text-sm opacity-90">{entry.towns.join(" · ")}</p>
+          <p className="mt-1 max-w-2xl text-sm opacity-90">
+            {entry.towns.map((t, i) => (
+              <span key={t}>
+                {i > 0 && " · "}
+                <Link href={`/search?county=${encodeURIComponent(entry.county)}&town=${encodeURIComponent(t)}`} className="underline decoration-white/50 underline-offset-2 hover:decoration-white">{t}</Link>
+              </span>
+            ))}
+          </p>
         </div>
       </div>
 
@@ -88,7 +95,7 @@ export default function CountyPage({ params }: { params: { county: string } }) {
         <h2 className="font-bold">Towns in {entry.county}</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           {entry.towns.map((t) => (
-            <Link key={t} href={`/search?county=${encodeURIComponent(entry.county)}&q=${encodeURIComponent(t)}`} className="chip hover:border-brand-600 hover:text-brand-700">
+            <Link key={t} href={`/search?county=${encodeURIComponent(entry.county)}&town=${encodeURIComponent(t)}`} className="chip hover:border-brand-600 hover:text-brand-700">
               {t}
             </Link>
           ))}

@@ -5,23 +5,26 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Heart, LogOut, MapPin, Menu, MessageCircle, Search, ShoppingCart, Store, User, X } from "lucide-react";
+import { ChevronDown, Heart, LogOut, MapPin, Menu, MessageCircle, Search, ShoppingCart, Store, User, X } from "lucide-react";
 import { useCart } from "../cart-provider";
-import { COUNTY_NAMES } from "@/lib/kenya";
-import { CATEGORIES, POPULAR_SEARCHES } from "@/data/catalog";
+import { KENYA_COUNTIES } from "@/lib/kenya";
+import { POPULAR_SEARCHES } from "@/data/catalog";
 
 export function Header({ user }: { user?: { name: string; role: string } | null }) {
   const router = useRouter();
   const { count } = useCart();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
-  const [cat, setCat] = useState("all");
   const [county, setCounty] = useState("all");
   const [sugs, setSugs] = useState<string[]>([]);
   const [searchFocus, setSearchFocus] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [unread, setUnread] = useState(0);
   const box = useRef<HTMLDivElement>(null);
+  const [locOpen, setLocOpen] = useState(false);
+  const [locFilter, setLocFilter] = useState("");
+  const [hoveredCounty, setHoveredCounty] = useState<string | null>(null);
+  const locRef = useRef<HTMLDivElement>(null);
 
   const signOut = async () => {
     try {
@@ -34,10 +37,25 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
 
   const sugHref = (s: string) => {
     const p = new URLSearchParams({ q: s });
-    if (cat !== "all") p.set("category", cat);
     if (county !== "all") p.set("county", county);
     return `/search?${p.toString()}`;
   };
+
+  const pickCounty = (next: string) => {
+    setCounty(next);
+    try {
+      localStorage.setItem("bd_county", next);
+    } catch {}
+    setLocOpen(false);
+    setLocFilter("");
+    router.push(next === "all" ? "/location" : `/location/${encodeURIComponent(next)}`);
+  };
+
+  const locQuery = locFilter.trim().toLowerCase();
+  const locMatches = KENYA_COUNTIES.filter(
+    (c) => c.county.toLowerCase().includes(locQuery) || c.towns.some((t) => t.toLowerCase().includes(locQuery))
+  ).slice(0, 30);
+  const previewCounty = KENYA_COUNTIES.find((c) => c.county === (hoveredCounty ?? county));
   // Popular shortcuts when the box is focused but empty — typing filters live from the first keystroke.
   const showPopular = searchFocus && q.trim().length === 0;
   const dropItems = q.trim().length > 0 ? sugs : showPopular ? POPULAR_SEARCHES.slice(0, 6) : [];
@@ -76,6 +94,23 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, []);
+
+  useEffect(() => {
+    // Close the location picker on outside click or Escape.
+    if (!locOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (locRef.current && !locRef.current.contains(e.target as Node)) setLocOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLocOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [locOpen]);
 
   useEffect(() => {
     if (!user) {
@@ -147,17 +182,6 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
               } catch {}
             }}
           >
-            <select
-              aria-label="Search category"
-              value={cat}
-              onChange={(e) => setCat(e.target.value)}
-              className="hidden max-w-40 border-r border-neutral-200 bg-sand-50 px-2 text-xs font-medium lg:block"
-            >
-              <option value="all">All</option>
-              {CATEGORIES.map((c) => (
-                <option key={c.slug} value={c.slug}>{c.name}</option>
-              ))}
-            </select>
             <input
               name="q"
               value={q}
@@ -168,7 +192,6 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
               aria-label="Search Chap"
               autoComplete="off"
             />
-            <input type="hidden" name="category" value={cat} />
             <input type="hidden" name="county" value={county} />
             <button className="flex items-center gap-1.5 bg-brand-600 px-5 text-sm font-semibold text-white hover:bg-brand-700" type="submit">
               <Search className="h-4 w-4" /> <span className="hidden xl:inline">Search</span>
@@ -199,13 +222,95 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
           >
             {showSearch ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
           </button>
-          <label className="hidden items-center gap-1 rounded-lg border border-neutral-200 px-2 py-1.5 text-xs xl:flex">
-            <MapPin className="h-3.5 w-3.5 text-brand-600" />
-            <select aria-label="Location" value={county} onChange={(e) => { setCounty(e.target.value); try { localStorage.setItem("bd_county", e.target.value); } catch {} }} className="bg-transparent outline-none">
-              <option value="all">All Kenya</option>
-              {COUNTY_NAMES.map((c) => <option key={c}>{c}</option>)}
-            </select>
-          </label>
+          <div ref={locRef} className="relative hidden xl:block">
+            <button
+              type="button"
+              onClick={() => setLocOpen((v) => !v)}
+              aria-haspopup="dialog"
+              aria-expanded={locOpen}
+              aria-label="Choose location"
+              className="flex max-w-44 items-center gap-1 rounded-lg border border-neutral-200 px-2 py-1.5 text-xs hover:bg-sand-100"
+            >
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-brand-600" />
+              <span className="truncate font-medium">{county === "all" ? "All Kenya" : county}</span>
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-ink-400" />
+            </button>
+            {locOpen && (
+              <div className="absolute right-0 top-full z-50 mt-2 flex w-[26rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg" role="dialog" aria-label="Choose location">
+                <div className="w-1/2 border-r border-neutral-100">
+                  <div className="border-b border-neutral-100 p-2">
+                    <input
+                      autoFocus
+                      value={locFilter}
+                      onChange={(e) => setLocFilter(e.target.value)}
+                      placeholder="Find county or town…"
+                      aria-label="Filter counties"
+                      className="w-full rounded-lg bg-sand-50 px-2.5 py-1.5 text-xs outline-none focus:ring-1 focus:ring-brand-600/30"
+                    />
+                  </div>
+                  <ul className="max-h-72 overflow-y-auto p-1.5" role="listbox" aria-label="Counties">
+                    <li>
+                      <button
+                        type="button" role="option" aria-selected={county === "all"}
+                        onMouseEnter={() => setHoveredCounty(null)}
+                        onClick={() => pickCounty("all")}
+                        className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-xs font-semibold hover:bg-sand-100 ${county === "all" ? "text-brand-700" : ""}`}
+                      >
+                        All Kenya {county === "all" && <span aria-hidden>✓</span>}
+                      </button>
+                    </li>
+                    {locMatches.map((c) => (
+                      <li key={c.county}>
+                        <button
+                          type="button" role="option" aria-selected={county === c.county}
+                          onMouseEnter={() => setHoveredCounty(c.county)}
+                          onFocus={() => setHoveredCounty(c.county)}
+                          onClick={() => pickCounty(c.county)}
+                          className={`flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left text-xs hover:bg-sand-100 ${county === c.county ? "font-bold text-brand-700" : "font-medium"}`}
+                        >
+                          <span className="truncate">{c.county}</span>
+                          {county === c.county && <span aria-hidden>✓</span>}
+                        </button>
+                      </li>
+                    ))}
+                    {locMatches.length === 0 && <li className="px-2.5 py-3 text-xs text-ink-400">No match — try another spelling.</li>}
+                  </ul>
+                </div>
+                <div className="max-h-[22rem] w-1/2 overflow-y-auto bg-sand-50/60 p-3">
+                  {previewCounty ? (
+                    <>
+                      <p className="text-xs font-bold">{previewCounty.county}</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {previewCounty.towns.map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            title={`Search ${t}, ${previewCounty.county}`}
+                            onClick={() => {
+                              setLocOpen(false);
+                              setLocFilter("");
+                              router.push(`/search?county=${encodeURIComponent(previewCounty.county)}&town=${encodeURIComponent(t)}`);
+                            }}
+                            className="rounded-full bg-white px-2 py-0.5 text-[11px] font-medium text-ink-700 ring-1 ring-neutral-200 hover:text-brand-700 hover:ring-brand-600"
+                          >
+                            {t}
+                          </button>
+                        ))}
+                      </div>
+                      <button type="button" onClick={() => pickCounty(previewCounty.county)} className="link-bd mt-2 text-xs">
+                        View {previewCounty.county} →
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs font-bold">All Kenya</p>
+                      <p className="mt-1 text-[11px] leading-relaxed text-ink-500">All 47 counties. Hover any county to see its towns here.</p>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
           <Link href="/wishlist" className="rounded-lg p-2 hover:bg-sand-100" aria-label="Wishlist"><Heart className="h-5 w-5" /></Link>
           {user && (
             <Link href="/messages" className="relative rounded-lg p-2 hover:bg-sand-100" aria-label={unread > 0 ? `Messages, ${unread} unread` : "Messages"}>

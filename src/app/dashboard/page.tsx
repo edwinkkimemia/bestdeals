@@ -2,6 +2,7 @@ import { currentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getStore } from "@/lib/store";
+import { ReferralPanel } from "@/components/referral-panel";
 import { getSellerAnalyticsReport } from "@/lib/analytics";
 
 export const metadata = { title: "Seller Dashboard" };
@@ -72,6 +73,7 @@ export default async function DashboardPage() {
           </p>
           <Link href="/dashboard/analytics" className="link-bd text-sm">View product analytics →</Link>
         </div>
+        <ReferralPanel />
       </div>
     </div>
   );

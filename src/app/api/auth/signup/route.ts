@@ -23,6 +23,16 @@ export async function POST(req: NextRequest) {
   if (await store.findUserByEmail(email)) return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
   const role = (isAdminEmail(email) ? "ADMIN" : "SELLER") as "SELLER" | "ADMIN";
   const user = await store.createUser({ name, email, phone, role, verified: false, emailVerified: false, sellerKind, passwordHash: await hashPassword(password) });
+  // Referral attribution (best-effort — never fails signup; self/dup codes ignored).
+  const ref = (parsed.data.ref ?? "").trim();
+  if (ref) {
+    try {
+      const referrer = await store.findUserById(ref);
+      if (referrer && referrer.id !== user.id) {
+        await store.createReferral({ referrerUserId: referrer.id, referredUserId: user.id });
+      }
+    } catch {}
+  }
   const token = await createSessionToken({ id: user.id, name, email, phone, role, verified: false });
   // Welcome email-verification link (best-effort — never fails signup).
   try {

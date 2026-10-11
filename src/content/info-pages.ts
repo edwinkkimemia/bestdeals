@@ -58,7 +58,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
           {
             type: "list",
             items: [
-              "Individuals list classifieds and products free; businesses can open a branded shop (Starter is free).",
+              "Individuals list classifieds and products free; businesses can open a branded shop (free forever).",
               "Write honest titles, real photos, accurate condition, and genuine prices — misleading discounts get listings removed.",
               "Answer enquiries fast: response speed is the single biggest driver of sales on marketplaces.",
               "Get verified (national ID, passport, or business permit) to earn the ✓ badge buyers filter for.",
@@ -175,7 +175,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
             items: [
               "Do I need an account to browse? No — search, categories, shops, and listings are all public. You only sign in to list, message, check out, or track orders.",
               "What do I need to register? A name, valid email, and Kenyan mobile number (07xx/01xx or +254). Verification codes confirm it's really you.",
-              "Is Chap free? Browsing, buying enquiries, individual listings, and Starter shops are free. We earn from Growth/Professional plans, featured visibility, and configured commissions — never hidden fees.",
+              "Is Chap free? Browsing, buying enquiries, individual listings, and Free shops are free. We earn from Silver/Gold plans, featured visibility, and configured commissions — never hidden fees.",
             ],
           },
         ],
@@ -203,7 +203,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "How fast do listings go live? After moderation review — usually within hours. You'll see pending / active / rejected states in your dashboard with reasons.",
               "What photos work best? Daylight, 4–8 sharp photos, flaws shown honestly, no stock photos for used items. Blurry or misleading photos get rejected.",
               "How do I get the ✓ badge? Submit an ID or business document at Dashboard → Verification. Approval flips the badge on all your listings and shop.",
-              "Can I sell wholesale? Yes — Growth and Professional shops support bulk catalogues, CSV upload, and bulk-buyer enquiries.",
+              "Can I sell wholesale? Yes — Gold shops support bulk catalogues, CSV upload, and bulk-buyer enquiries.",
             ],
           },
           { type: "links", links: [{ href: "/start-selling", label: "Sell on Chap" }, { href: "/sellers", label: "Seller Guidelines" }] },
@@ -336,7 +336,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
         blocks: [
           {
             type: "p",
-            text: "Individual listings are free. Shops run on Starter (free), Growth, and Professional plans with published listing limits — plan, price, billing period, and renewal are always shown before you're charged. Verification (ID or business permit) unlocks the ✓ badge, higher limits, and buyer filters.",
+            text: "Individual listings are free. Shops run on Free, Silver, and Gold plans with published listing limits — plan, price, billing period, and renewal are always shown before you're charged. Verification (ID or business permit) unlocks the ✓ badge, higher limits, and buyer filters.",
           },
         ],
       },
@@ -731,6 +731,22 @@ export const INFO_PAGES: Record<string, InfoPage> = {
       "Reach buyers at the moment they're comparing options: featured listings, sponsored placements, and campaigns for brands, suppliers, and local businesses. Paid visibility is always labelled — and never overrides safety.",
     sections: [
       {
+        heading: "Boost rates & how to buy",
+        blocks: [
+          {
+            type: "list",
+            items: [
+              "Featured · 7 days — KES 199 one-time. Featured badge on homepage, search and related rails for a full week.",
+              "Featured · 14 days — KES 299 one-time. Two full weeks of Featured visibility.",
+              "Featured · 30 days — KES 499 one-time. A full month up top — best value per day.",
+              "How to buy: Dashboard → Promotion → pick a boost on any active listing with a photo → confirm the M-Pesa STK push. No plan needed; Silver/Gold shops can also use plan credits.",
+              "Boosts start when payment is confirmed and stop automatically at expiry — cancel anytime from Promotion.",
+            ],
+          },
+          { type: "links", links: [{ href: "/dashboard/promotion", label: "Boost a listing" }, { href: "/pricing", label: "Plans & pricing" }] },
+        ],
+      },
+      {
         heading: "What you can run",
         blocks: [
           {
@@ -739,7 +755,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "Featured listings: your classified or product pinned into deal rails and category tops, badged 'Featured'.",
               "Sponsored placements: clearly-labelled slots in search and 'Related from other sellers' rails — marked 'Sponsored', ranked below safety and relevance guards.",
               "Business campaigns: homepage merchandising, category takeovers, and collection pages for launches and seasons (Back to School, Black November, harvest inputs).",
-              "Shop subscriptions (Growth/Professional) bundle promotion credits, analytics, and bulk tools — start with the plan, add campaigns as you grow.",
+              "Shop subscriptions (Silver/Gold) bundle promotion credits, analytics, and bulk tools — start with the plan, add campaigns as you grow.",
             ],
           },
         ],

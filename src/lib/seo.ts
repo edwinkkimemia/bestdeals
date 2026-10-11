@@ -54,3 +54,44 @@ export function localBusinessJsonLd(input: {
     priceRange: "KES",
   };
 }
+
+export function faqJsonLd(faqs: { q: string; a: string }[]): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((f) => ({
+      "@type": "Question",
+      name: f.q,
+      acceptedAnswer: { "@type": "Answer", text: f.a },
+    })),
+  };
+}
+
+/** Site identity + sitelinks searchbox (drives the Google search box + brand panel). */
+export function websiteJsonLd(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        name: "chap.co.ke",
+        alternateName: "Chap",
+        url: "https://chap.co.ke/",
+        inLanguage: "en-KE",
+        potentialAction: {
+          "@type": "SearchAction",
+          target: "https://chap.co.ke/search?q={search_term_string}",
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "Organization",
+        name: "chap.co.ke",
+        url: "https://chap.co.ke/",
+        logo: "https://chap.co.ke/chaplogo.png",
+        areaServed: "Kenya",
+        sameAs: [] as string[],
+      },
+    ],
+  };
+}

@@ -3,10 +3,11 @@ import { notFound } from "next/navigation";
 import { getStore } from "@/lib/store";
 import { formatKES } from "@/lib/format";
 import { AdminButtons, PromoButtons } from "../actions";
+import { CouponForm } from "../coupon-form";
 
 export const dynamic = "force-dynamic";
 
-const SECTIONS = ["listings", "verifications", "users", "orders", "disputes", "reports", "reviews", "promotions"] as const;
+const SECTIONS = ["listings", "verifications", "users", "orders", "disputes", "reports", "reviews", "promotions", "coupons"] as const;
 export function generateStaticParams() {
   return SECTIONS.map((section) => ({ section }));
 }
@@ -20,6 +21,7 @@ const TITLES: Record<string, string> = {
   reports: "Reports",
   reviews: "Review moderation",
   promotions: "Promotions & boosts",
+  coupons: "Coupons & campaigns",
 };
 
 export const metadata = { title: "Admin section", robots: { index: false, follow: false } };
@@ -211,26 +213,50 @@ export default async function AdminSection({
   // promotions
   const tabs = ["pending_payment", "active", "cancelled", "expired", "all"];
   const status = tabs.includes(searchParams.status ?? "") ? searchParams.status! : "pending_payment";
-  await store.sweepExpiredPromotions().catch(() => null);
-  const items = await store.listPromotions(status === "all" ? undefined : status);
+  if (section === "promotions") {
+    await store.sweepExpiredPromotions().catch(() => null);
+    const items = await store.listPromotions(status === "all" ? undefined : status);
+    return (
+      <div>
+        <h1 className="section-title">{TITLES.promotions} ({items.length})</h1>
+        <p className="mt-1 text-sm text-ink-500">Confirm M-Pesa payment to activate a boost; the listing gets its Featured badge.</p>
+        <Tabs base="/admin/promotions" tabs={tabs} current={status} />
+        {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">None {status}.</p> : (
+          <ul className="mt-4 space-y-2">
+            {items.map((p) => (
+              <li key={p.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
+                <span className="flex-1">
+                  <strong>{p.kind}</strong> · listing {p.listingId} · {p.days}d · {formatKES(p.amount)} · <span className="chip">{p.status}</span>
+                  <span className="text-ink-400"> · till {p.endsAt.slice(0, 10)}</span>
+                </span>
+                <PromoButtons id={p.id} status={p.status} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
+  // coupons
+  const coupons = await store.listCoupons();
   return (
     <div>
-      <h1 className="section-title">{TITLES.promotions} ({items.length})</h1>
-      <p className="mt-1 text-sm text-ink-500">Confirm M-Pesa payment to activate a boost; the listing gets its Featured badge.</p>
-      <Tabs base="/admin/promotions" tabs={tabs} current={status} />
-      {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">None {status}.</p> : (
-        <ul className="mt-4 space-y-2">
-          {items.map((p) => (
-            <li key={p.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
-              <span className="flex-1">
-                <strong>{p.kind}</strong> · listing {p.listingId} · {p.days}d · {formatKES(p.amount)} · <span className="chip">{p.status}</span>
-                <span className="text-ink-400"> · till {p.endsAt.slice(0, 10)}</span>
-              </span>
-              <PromoButtons id={p.id} status={p.status} />
-            </li>
-          ))}
-        </ul>
-      )}
+      <h1 className="section-title">{TITLES.coupons} ({coupons.length})</h1>
+      <p className="mt-1 text-sm text-ink-500">Codes apply at cart + checkout (server-verified). Active codes are advertised on the homepage banner.</p>
+      <CouponForm />
+      <ul className="mt-4 space-y-2">
+        {coupons.map((c) => (
+          <li key={c.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
+            <span className="flex-1">
+              <strong className="font-mono">{c.code}</strong> · −{formatKES(c.value)}
+              {c.minSpend > 0 && <span className="text-ink-400"> · min {formatKES(c.minSpend)}</span>}
+              {" "}<span className="chip">{c.active ? "active" : "off"}</span>
+            </span>
+            <AdminButtons kind="coupon" id={c.code} extra={{ active: c.active }} />
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

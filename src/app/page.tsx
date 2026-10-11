@@ -1,11 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, BadgeCheck, MapPin, Search, ShieldCheck, Store, Truck } from "lucide-react";
-import { CATEGORIES, LISTINGS, SHOPS, POPULAR_SEARCHES } from "@/data/catalog";
+import { CATEGORIES, LISTINGS, SHOPS, POPULAR_SEARCHES, shopListings } from "@/data/catalog";
+import { storeRead } from "@/lib/store";
 import { ListingCard } from "@/components/ui/listing-card";
 import { HeroCategories } from "@/components/hero-categories";
+import { CampaignBanner } from "@/components/campaign-banner";
 import { COUNTY_NAMES, KENYA_COUNTIES } from "@/lib/kenya";
 import { shuffleFeaturedFirst } from "@/lib/search";
+import { ratingLabel } from "@/lib/ratings";
 
 export const metadata: Metadata = {
   title: "chap.co.ke — Kenya's Marketplace for Everything",
@@ -17,7 +20,27 @@ export const dynamic = "force-dynamic";
 
 const ICONS: Record<string, string> = {};
 
-export default function HomePage() {
+const SHOP_COVER_FALLBACKS = [
+  "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80",
+  "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80",
+  "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=800&q=80",
+  "https://images.unsplash.com/photo-1533228100845-08145b01de14?w=800&q=80",
+];
+
+type ShopRailCard = {
+  slug: string;
+  name: string;
+  description: string;
+  cover: string;
+  verified: boolean;
+  place: string;
+  countLabel: string;
+  rating: string;
+  featuredCount: number;
+  featured?: boolean;
+};
+
+export default async function HomePage() {
   const deals = shuffleFeaturedFirst(LISTINGS.filter((l) => l.compareAt && l.compareAt > l.price)).slice(0, 4);
   const featured = shuffleFeaturedFirst(LISTINGS.filter((l) => l.featured)).slice(0, 8);
   const fresh = shuffleFeaturedFirst([...LISTINGS].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 24)).slice(0, 8);
@@ -32,9 +55,52 @@ export default function HomePage() {
     }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 12);
+  // Trusted shops rail: catalogue shops + seller-created community shops.
+  // Shops holding featured products lead; the rest shuffle fresh every visit.
+  const communityShops = await storeRead((s) => s.listShops(), []);
+  const shopCards: ShopRailCard[] = [
+    ...SHOPS.map((s) => {
+      const items = shopListings(s.slug);
+      const featuredCount = items.filter((l) => l.featured).length;
+      return {
+        slug: s.slug,
+        name: s.name,
+        description: s.description,
+        cover: s.cover,
+        verified: s.verified,
+        place: `${s.town}, ${s.county}`,
+        countLabel: `${items.length} listing${items.length === 1 ? "" : "s"}`,
+        rating: "",
+        featuredCount,
+        featured: featuredCount > 0,
+      };
+    }),
+    ...communityShops
+      .filter((s) => !SHOPS.some((d) => d.slug === s.slug))
+      .map((s, i) => ({
+        slug: s.slug,
+        name: s.name,
+        description: s.description,
+        cover: SHOP_COVER_FALLBACKS[i % SHOP_COVER_FALLBACKS.length],
+        verified: s.verified,
+        place: `${s.town}, ${s.county}`,
+        countLabel: s.verified ? "Verified business" : "New shop",
+        rating: "",
+        featuredCount: 0,
+      })),
+  ];
+  const shopRail = shuffleFeaturedFirst(shopCards).slice(0, 4);
+  // Real ratings only: average of approved reviews per shown shop (no static stars).
+  const shopRailLive = await Promise.all(
+    shopRail.map(async (c) => ({
+      ...c,
+      rating: ratingLabel(await storeRead((st) => st.listApprovedReviewsForShop(c.slug), [])),
+    }))
+  );
 
   return (
     <div>
+      <CampaignBanner />
       {/* A: Hero + search — mobile-first: headline, search, swipeable categories */}
       <section className="bg-gradient-to-b from-brand-50 via-white to-white">
         <div className="container-bd grid items-center gap-6 py-8 md:py-10 lg:grid-cols-[240px_minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-8">
@@ -206,17 +272,27 @@ export default function HomePage() {
       {/* F: trusted shops */}
       <section className="container-bd py-10" aria-labelledby="shops">
         <div className="mb-5 flex items-end justify-between">
-          <h2 id="shops" className="section-title">Trusted business shops</h2>
+          <div>
+            <h2 id="shops" className="section-title">Trusted business shops</h2>
+            <p className="text-sm text-ink-500">Shops with featured products lead · fresh mix every visit.</p>
+          </div>
           <Link href="/shops" className="link-bd">All shops →</Link>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {SHOPS.map((s) => (
-            <Link key={s.slug} href={`/shops/${s.slug}`} className="card overflow-hidden transition hover:shadow-lg">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={s.cover} alt={`${s.name} cover`} loading="lazy" className="h-28 w-full object-cover" />
+          {shopRailLive.map((s) => (
+            <Link key={s.slug} href={`/shops/${s.slug}`} className="card group overflow-hidden transition hover:shadow-lg">
+              <div className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={s.cover} alt={`${s.name} cover`} loading="lazy" className="h-28 w-full object-cover transition duration-300 group-hover:scale-105" />
+                {s.featuredCount > 0 && (
+                  <span className="absolute bottom-2.5 left-2.5 rounded-xl bg-brand-600 px-2.5 py-1 text-xs font-bold text-white shadow">
+                    ★ {s.featuredCount} featured
+                  </span>
+                )}
+              </div>
               <div className="p-4">
                 <p className="font-bold">{s.name} {s.verified && <span className="text-brand-600">✓</span>}</p>
-                <p className="text-xs text-ink-500">{s.town}, {s.county} · ★ {s.rating} · {s.listingsCount} listings</p>
+                <p className="text-xs text-ink-500">{s.place} · {s.rating} · {s.countLabel}</p>
                 <p className="clamp-2 mt-1 text-sm text-ink-500">{s.description}</p>
               </div>
             </Link>

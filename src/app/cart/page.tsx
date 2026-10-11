@@ -5,24 +5,44 @@ import { useCart } from "@/components/cart-provider";
 import { getListing } from "@/data/catalog";
 import { formatKES, cartTotals } from "@/lib/format";
 import { COUPONS } from "@/data/catalog";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function CartPage() {
   const { lines, setQty, remove, clear } = useCart();
   const [coupon, setCoupon] = useState("");
   const [couponMsg, setCouponMsg] = useState("");
+  const [serverValue, setServerValue] = useState<number | null>(null);
 
   const detailed = lines
     .map((l) => ({ ...l, listing: getListing(l.id)! }))
     .filter((l) => l.listing && l.listing.transactionMethod === "buy_online");
 
+  const subtotal = detailed.reduce((s, l) => s + (l.listing?.price ?? 0) * l.qty, 0);
+
+  // Server truth (admin-managed codes) with local fallback when offline.
+  useEffect(() => {
+    setServerValue(null);
+    const code = coupon.trim().toUpperCase();
+    if (!code) return;
+    let stop = false;
+    fetch(`/api/coupons/validate?code=${encodeURIComponent(code)}&subtotal=${subtotal}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!stop && j) setServerValue(j.valid ? j.value : 0);
+      })
+      .catch(() => null);
+    return () => {
+      stop = true;
+    };
+  }, [coupon, subtotal]);
+
   const couponValue = useMemo(() => {
     if (!coupon) return 0;
+    if (serverValue !== null) return serverValue;
     const c = COUPONS[coupon.toUpperCase()];
     if (!c) return 0;
-    const sub = detailed.reduce((s, l) => s + (l.listing?.price ?? 0) * l.qty, 0);
-    return sub >= c.minSpend ? c.value : 0;
-  }, [coupon, detailed]);
+    return subtotal >= c.minSpend ? c.value : 0;
+  }, [coupon, serverValue, subtotal]);
 
   const totals = cartTotals(
     detailed.map((l) => ({ unitPrice: l.listing.price, qty: l.qty })),

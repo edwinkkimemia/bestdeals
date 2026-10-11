@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
+import { qualifyReferralsFor } from "@/lib/referrals";
 
 /** Admin-only: approve/reject a verification. Approval marks the user verified. */
 export async function POST(req: NextRequest) {
@@ -15,6 +16,8 @@ export async function POST(req: NextRequest) {
   if (approve === true && v) {
     await store.setUserVerified(v.userId, true);
     if (shopSlug) await store.setShopVerified(shopSlug, true).catch(() => {});
+    // Referral milestone: inviter earns a free Featured boost.
+    await qualifyReferralsFor(v.userId).catch(() => null);
   }
   return NextResponse.json({ ok: true });
 }

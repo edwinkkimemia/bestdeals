@@ -52,7 +52,7 @@ export default async function DashPage({ params }: { params: { page: string } })
           <ul className="mt-2 list-disc space-y-1 pl-5 text-ink-700">
             <li>Only <strong>active</strong> (moderation-approved) listings with at least one photo qualify.</li>
             <li>Verified sellers rank higher in featured rails; unverified shops can still boost.</li>
-            <li>Featured slots come from Growth/Professional credits or per-boost payment — see plans.</li>
+            <li>Featured slots come from Silver/Gold credits or per-boost payment — see plans.</li>
           </ul>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link href="/pricing" className="btn-primary">See plans</Link>
