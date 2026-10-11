@@ -46,8 +46,6 @@ export default function OrderDetail({ params }: { params: { id: string } }) {
 function OrderInner({ id }: { id: string }) {
   const sp = useSearchParams();
   const [order, setOrder] = useState<Order | null>(null);
-  const [payState, setPayState] = useState("");
-  const [busy, setBusy] = useState(false);
   const [dispute, setDispute] = useState<Dispute | null>(null);
   const [dForm, setDForm] = useState({ reason: "not_received", details: "", name: "", phone: "" });
   const [dMsg, setDMsg] = useState("");
@@ -82,27 +80,6 @@ function OrderInner({ id }: { id: string }) {
     })();
   }, [id, phone]);
 
-  const pay = sp.get("pay") || order?.paymentMethod;
-
-  const triggerPay = async () => {
-    if (!order) return;
-    setBusy(true);
-    setPayState("Sending payment prompt…");
-    try {
-      const r = await fetch("/api/payments/initiate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: order.id, method: order.paymentMethod, phone: order.phone }),
-      });
-      const j = await r.json();
-      setPayState(j.message || "Response received");
-    } catch {
-      setPayState("Could not reach payment service. Your order is saved as pending.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   if (!order) {
     return (
       <div className="container-bd py-12">
@@ -132,12 +109,10 @@ function OrderInner({ id }: { id: string }) {
           ))}
         </ol>
         <ul className="text-sm">{order.items.map((it, k) => <li key={k}>· {it.title} × {it.qty} — {formatKES(it.price * it.qty)}</li>)}</ul>
-        {order.paymentStatus !== "paid" && (pay === "mpesa" || order.paymentMethod === "mpesa") && (
+        {order.paymentStatus !== "paid" && (
           <div className="rounded-xl bg-sand-50 p-3 text-sm">
-            <p className="font-semibold">Pay with M-Pesa</p>
-            <p className="text-ink-500">We&apos;ll send an STK push to {order.phone}. Enter your PIN to complete.</p>
-            <button onClick={triggerPay} disabled={busy} className="btn-primary mt-2">{busy ? "Sending…" : "Send M-Pesa prompt"}</button>
-            {payState && <p className="mt-2 text-ink-700" role="status">{payState}</p>}
+            <p className="font-semibold">Cash on delivery</p>
+            <p className="text-ink-500">Pay the courier in cash when your order arrives. Never send money in advance — Chap staff will never ask for your PIN.</p>
           </div>
         )}
         <p className="text-xs text-ink-400">Payment status changes only via verified server callbacks — never from browser state.</p>

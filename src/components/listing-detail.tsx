@@ -25,7 +25,6 @@ import { ReviewsBlock } from "./reviews-block";
 import { ViewTracker } from "./view-tracker";
 import { ViewCount } from "./view-count";
 import { Badge, ConditionBadge, VerifiedBadge } from "@/components/ui/badge";
-import { WmPill } from "@/components/ui/watermark";
 import { WmImage } from "@/components/ui/wm-image";
 import { Price } from "@/components/ui/listing-card";
 import { useCart } from "@/components/cart-provider";
@@ -162,9 +161,8 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
       <div className="container-bd">
       <div className="mt-6 flex flex-col gap-6 lg:grid lg:grid-cols-[1.2fr_1fr]">
         <div className="order-1 min-w-0 lg:order-1">
-          <div className="card relative overflow-hidden">
+          <div className="card overflow-hidden">
             <WmImage src={listing.images[img]} alt={listing.title} className="aspect-[4/3] w-full object-cover" />
-            <WmPill />
           </div>
           {listing.images.length > 1 && (
             <div className="mt-2 flex gap-2">
@@ -282,7 +280,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
           <div className="card mt-4 space-y-2 p-5 text-sm">
             <h2 className="flex items-center gap-2 font-bold"><Truck className="h-4 w-4 text-brand-600" /> Delivery & payments</h2>
             <p className="text-ink-700">{shop?.deliveryInfo ?? "Delivery arranged with the seller — confirm fee and timeline before paying."}</p>
-            <p className="text-ink-500">Shop checkout supports M-Pesa STK push, card where enabled, and cash on delivery on eligible orders. Totals are always computed on our servers.</p>
+            <p className="text-ink-500">Shop checkout is cash on delivery — pay the courier in cash when your order arrives. Totals are always computed on our servers.</p>
           </div>
 
           {/* Safety */}
@@ -347,10 +345,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
           <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {moreFromSeller.map((r) => (
               <Link key={r.id} href={listingHref(r)} className="card p-3">
-                <span className="relative block">
-                  <WmImage src={r.images[0]} alt={r.title} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
-                  <WmPill />
-                </span>
+                <WmImage src={r.images[0]} alt={r.title} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
                 <p className="clamp-2 mt-2 text-sm font-semibold">{r.title}</p>
                 <p className="text-sm font-bold">{formatKES(r.price)}</p>
               </Link>
@@ -366,10 +361,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
           <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {related.map((r) => (
               <Link key={r.id} href={listingHref(r)} className="card p-3">
-                <span className="relative block">
-                  <WmImage src={r.images[0]} alt={r.title} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
-                  <WmPill />
-                </span>
+                <WmImage src={r.images[0]} alt={r.title} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
                 <p className="clamp-2 mt-2 text-sm font-semibold">{r.title}</p>
                 <p className="text-sm font-bold">{formatKES(r.price)}</p>
                 <p className="mt-0.5 truncate text-xs text-ink-400">{r.sellerName} · {r.town}, {r.county}</p>
@@ -385,10 +377,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
           <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
             {recent.map((r) => (
               <Link key={r.id} href={listingHref(r)} className="card p-3">
-                <span className="relative block">
-                  <WmImage src={r.images[0]} alt={r.title} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
-                  <WmPill />
-                </span>
+                <WmImage src={r.images[0]} alt={r.title} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
                 <p className="clamp-2 mt-2 text-sm font-semibold">{r.title}</p>
                 <p className="text-sm font-bold">{formatKES(r.price)}</p>
               </Link>

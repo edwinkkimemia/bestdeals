@@ -129,7 +129,7 @@ export function Footer() {
       <div className="border-t border-neutral-200">
         <div className="container-bd flex flex-col items-center justify-between gap-2 py-4 text-xs text-ink-400 sm:flex-row">
           <p>© {new Date().getFullYear()} chap.co.ke — Nairobi, Kenya. All prices in KES.</p>
-          <p>Secure M-Pesa checkout · Buyer Safety · Seller Guidelines</p>
+          <p>Cash on delivery · Buyer Safety · Seller Guidelines</p>
         </div>
       </div>
     </footer>

@@ -105,8 +105,8 @@ export async function POST(req: NextRequest) {
     discount: totals.discount,
     delivery: totals.delivery,
     status: "pending",
-    paymentStatus: d.paymentMethod === "cod" ? "pending_cod" : "pending",
-    paymentMethod: d.paymentMethod,
+    paymentStatus: "pending_cod",
+    paymentMethod: "cod",
     phone: d.phone,
     name: d.name,
     email: d.email || undefined,
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
   });
   await store.recordPayment({ orderId, method: d.paymentMethod, amount: totals.total, status: "pending" }).catch(() => {});
 
-  await sendNotification({ channel: "sms", to: d.phone, message: `Chap: order ${orderId} received (${totals.total} KES). ${d.paymentMethod === "mpesa" ? "Complete the M-Pesa prompt to pay." : "We will confirm shortly."}` }).catch(() => {});
+  await sendNotification({ channel: "sms", to: d.phone, message: `Chap: order ${orderId} received (${totals.total} KES). Pay cash on delivery — never send money in advance.` }).catch(() => {});
 
   return NextResponse.json({ ok: true, orderId, total: totals.total, suborders: suborders.length, order });
 }

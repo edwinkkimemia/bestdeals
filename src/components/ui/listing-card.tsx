@@ -4,7 +4,6 @@ import type { Listing } from "@/data/catalog";
 import { Badge, ConditionBadge } from "./badge";
 import { Heart } from "lucide-react";
 import { WishlistButton } from "./wishlist-button";
-import { WmPill } from "./watermark";
 import { WmImage } from "./wm-image";
 
 export function Price({ value, compareAt }: { value: number; compareAt?: number | null }) {
@@ -45,7 +44,6 @@ export function ListingCard({ listing }: { listing: Listing }) {
         <div className="absolute right-2 top-2">
           <WishlistButton id={listing.id} title={listing.title} />
         </div>
-        <WmPill />
       </Link>
       <div className="space-y-2 p-3.5">
         <div className="flex items-center gap-1.5">

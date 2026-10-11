@@ -30,7 +30,7 @@ function CheckoutInner() {
   const detailed = lines.map((l) => ({ ...l, listing: getListing(l.id)! })).filter((l) => l.listing);
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { deliveryMethod: "standard", paymentMethod: "mpesa", coupon: sp.get("coupon") ?? "", instructions: "" } as never,
+    defaultValues: { deliveryMethod: "standard", paymentMethod: "cod", coupon: sp.get("coupon") ?? "", instructions: "" } as never,
   });
   const county = watch("county");
   const deliveryMethod = watch("deliveryMethod");
@@ -96,7 +96,7 @@ function CheckoutInner() {
               localStorage.setItem("bd_orders_v1", JSON.stringify(box.slice(0, 50)));
               localStorage.setItem("bd_phone", data.phone);
             } catch {}
-            router.push(`/orders/${j.orderId}?pay=${data.paymentMethod}&phone=${encodeURIComponent(data.phone)}`);
+            router.push(`/orders/${j.orderId}?pay=cod&phone=${encodeURIComponent(data.phone)}`);
           } finally {
             setPlacing(false);
           }
@@ -105,7 +105,7 @@ function CheckoutInner() {
         <div className="card space-y-3 p-5">
           <div className="grid gap-3 sm:grid-cols-2">
             <div><label className="label-bd" htmlFor="co-name">Full name</label><input id="co-name" className="input-bd" {...register("name")} />{errors.name && <p className="text-xs text-red-600">{String(errors.name.message)}</p>}</div>
-            <div><label className="label-bd" htmlFor="co-phone">Phone (M-Pesa)</label><input id="co-phone" className="input-bd" placeholder="0712345678" {...register("phone")} />{errors.phone && <p className="text-xs text-red-600">{String(errors.phone.message)}</p>}</div>
+            <div><label className="label-bd" htmlFor="co-phone">Phone (delivery updates)</label><input id="co-phone" className="input-bd" placeholder="0712345678" {...register("phone")} />{errors.phone && <p className="text-xs text-red-600">{String(errors.phone.message)}</p>}</div>
           </div>
           <div><label className="label-bd" htmlFor="co-email">Email (receipts)</label><input id="co-email" className="input-bd" type="email" {...register("email")} /></div>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -127,12 +127,14 @@ function CheckoutInner() {
                 <option value="express">Express (KSh 500)</option>
                 <option value="pickup">Pickup (Free)</option>
               </select></div>
-            <div><label className="label-bd" htmlFor="co-pay">Payment</label>
-              <select id="co-pay" className="input-bd" {...register("paymentMethod")}>
-                <option value="mpesa">M-Pesa (STK push)</option>
-                <option value="card">Card (via provider)</option>
-                <option value="cod">Cash on delivery</option>
-              </select></div>
+            <div>
+              <span className="label-bd">Payment</span>
+              <div className="rounded-xl bg-sand-50 p-3 text-sm">
+                <p className="font-bold">Cash on delivery</p>
+                <p className="text-ink-500">Pay the courier in cash when your order arrives. No advance payments — ever.</p>
+              </div>
+              <input type="hidden" {...register("paymentMethod")} value="cod" />
+            </div>
           </div>
           <div><label className="label-bd" htmlFor="co-coupon">Coupon</label><input id="co-coupon" className="input-bd uppercase" {...register("coupon")} /></div>
           {serverErr && <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{serverErr}</p>}

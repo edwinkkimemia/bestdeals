@@ -18,6 +18,8 @@ export type PaymentInit = {
   amount: number;
   phone: string;
   method: PaymentMethod;
+  /** Human label for messages (e.g. "plan", "boost"). Defaults to "order". */
+  label?: string;
 };
 
 export type PaymentResult = {
@@ -42,8 +44,7 @@ export async function initiateSTKPush(init: PaymentInit): Promise<PaymentResult>
     return {
       ok: false,
       status: "pending",
-      message:
-        "Your order is reserved as pending. You will receive an M-Pesa payment prompt to complete it.",
+      message: `Your ${init.label ?? "order"} is reserved as pending. You will receive an M-Pesa payment prompt to complete it.`,
     };
   }
   // Production path: OAuth -> STK push via Daraja (sandbox/prod base URLs).

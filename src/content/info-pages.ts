@@ -72,7 +72,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
         blocks: [
           {
             type: "p",
-            text: "Pay with M-Pesa STK push (enter your PIN on your phone — Chap staff will never ask for it), card where enabled, or cash on delivery. Multi-seller carts split into per-seller suborders so each seller fulfils their part. Track everything under My orders.",
+            text: "Pay cash on delivery — hand cash to the courier when your order arrives, and never send money in advance. Multi-seller carts split into per-seller suborders so each seller fulfils their part. Track everything under My orders.",
           },
           {
             type: "list",
@@ -186,8 +186,8 @@ export const INFO_PAGES: Record<string, InfoPage> = {
           {
             type: "list",
             items: [
-              "How do I pay? M-Pesa STK push straight to your phone, card where the seller enables it, or cash on delivery on eligible orders.",
-              "Is my payment safe? Totals are computed on our servers (never in your browser), and orders only flip to 'paid' on verified provider callbacks. We never ask for your M-Pesa PIN — anyone who does is a scammer.",
+              "How do I pay? Cash on delivery — pay the courier in cash when your order arrives. Never send money in advance.",
+              "Is my payment safe? Totals are computed on our servers (never in your browser), you pay cash only when your order arrives, and anyone asking for money or a PIN in advance is a scammer.",
               "Can I negotiate? On listings marked Negotiable, message the seller with a fair offer. Fixed-price shop products generally aren't negotiable.",
               "What if my item never arrives? Open a dispute from the order page — seller responds first, then a moderator resolves with refund or ruling.",
             ],
@@ -378,7 +378,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
           {
             type: "list",
             items: [
-              "Shop products: new goods from retailers, wholesalers, and independents — cart, checkout, M-Pesa.",
+              "Shop products: new goods from retailers, wholesalers, and independents — cart, checkout, cash on delivery.",
               "Classifieds: new and pre-owned from individuals and businesses — enquire, negotiate, meet safely.",
               "Business shops: branded storefronts with catalogues, bulk enquiries, and delivery info.",
               "Services: fundis, cleaners, tutors, and pros — compare coverage areas and request quotes.",
@@ -391,7 +391,7 @@ export const INFO_PAGES: Record<string, InfoPage> = {
         blocks: [
           {
             type: "p",
-            text: "Built in Nairobi for how Kenya actually trades: prices in KES, all 47 counties and towns (no GPS required), M-Pesa at the centre of checkout, delivery Latitudes from CBD same-day to countrywide courier, and safety guidance written for Kenyan scams — not imported ones. The same foundations (multi-currency, multi-language, regional payments) are designed in for East Africa next.",
+            text: "Built in Nairobi for how Kenya actually trades: prices in KES, all 47 counties and towns (no GPS required), cash on delivery for shop orders and M-Pesa for seller services (advertising, shop plans), delivery Latitudes from CBD same-day to countrywide courier, and safety guidance written for Kenyan scams — not imported ones. The same foundations (multi-currency, multi-language, regional payments) are designed in for East Africa next.",
           },
         ],
       },

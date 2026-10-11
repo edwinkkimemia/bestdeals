@@ -8,7 +8,7 @@ import { shuffleFeaturedFirst } from "@/lib/search";
 
 export const metadata = {
   title: "Shop Products",
-  description: "New products from verified retailers, wholesalers and independents across Kenya — cart, M-Pesa checkout, countrywide delivery.",
+  description: "New products from verified retailers, wholesalers and independents across Kenya — cart, cash on delivery, countrywide delivery.",
 };
 
 // Fresh order every visit: featured/promoted lead, the rest shuffle.
@@ -20,11 +20,11 @@ export default function ShopIndex() {
     <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Shop" }]} />
       <h1 className="section-title mt-2">Shop Products</h1>
-      <p className="text-sm text-ink-500">New products from retailers, wholesalers and independent merchants — with cart, M-Pesa checkout and delivery across all 47 counties.</p>
+      <p className="text-sm text-ink-500">New products from retailers, wholesalers and independent merchants — with cart, cash on delivery and delivery across all 47 counties.</p>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         {[
-          { t: "Cart & M-Pesa checkout", d: "One cart across sellers, server-verified totals, STK push to your phone. Never share your PIN." },
+          { t: "Cart & cash on delivery", d: "One cart across sellers, server-verified totals, pay the courier in cash on arrival. Never pay in advance." },
           { t: "Multi-seller, zero confusion", d: "Mixed carts split into per-seller suborders — each seller packs and ships their part, tracked in one place." },
           { t: "Compare and save", d: "Every product page shows the same item from other sellers and classifieds, with genuine savings badges." },
         ].map((c) => (

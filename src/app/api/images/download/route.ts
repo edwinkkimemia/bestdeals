@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
 
   let buf: Buffer | null = null;
   let name = "photo.jpg";
+  let isSiteUpload = false;
   try {
     if (src.startsWith("/uploads/") || src.startsWith("/api/files/")) {
       const rel = src.replace(/^\/uploads\//, "").replace(/^\/api\/files\//, "");
@@ -53,6 +54,9 @@ export async function GET(req: NextRequest) {
       if (!file.startsWith(base)) return NextResponse.json({ error: "Invalid image path." }, { status: 400 });
       buf = await readFile(file);
       name = basename(rel);
+      // Site uploads already carry the baked mark from upload time —
+      // re-stamping would double it. Serve stored bytes as-is.
+      isSiteUpload = true;
     } else if (/^https:\/\//i.test(src)) {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 10_000);
@@ -77,6 +81,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Could not read image." }, { status: 422 });
   }
   if (!buf) return NextResponse.json({ error: "Could not read image." }, { status: 422 });
+
+  if (isSiteUpload) return respond(buf, name, asAttachment, true);
 
   const stamped = await watermarkBuffer(buf);
   // Persist for future hits — best-effort, never fails the response.

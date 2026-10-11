@@ -7,10 +7,11 @@ import { formatKES } from "@/lib/format";
 
 type ShopOpt = { slug: string; name: string; planId: string };
 
-/** Switch the shop's plan (demo billing — activates immediately, no charge). */
+/** Switch the shop's plan — paid plans trigger an M-Pesa STK push. */
 export function PlanPanel({ shops, activeSlug }: { shops: ShopOpt[]; activeSlug: string }) {
   const router = useRouter();
   const [slug, setSlug] = useState(activeSlug);
+  const [phone, setPhone] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const current = shops.find((s) => s.slug === slug);
@@ -28,11 +29,11 @@ export function PlanPanel({ shops, activeSlug }: { shops: ShopOpt[]; activeSlug:
       const r = await fetch("/api/shops/plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shopSlug: slug, planId }),
+        body: JSON.stringify({ shopSlug: slug, planId, phone: phone.trim() || undefined }),
       });
       const j = await r.json();
       if (!r.ok) return setMsg(j.error || "Plan change failed.");
-      setMsg(`${planId === "free" ? "Free" : planId[0].toUpperCase() + planId.slice(1)} plan active on ${j.shopSlug} ✓`);
+      setMsg(j.summary || `${planId} plan active ✓`);
       router.refresh();
     } catch {
       setMsg("Network error — try again.");
@@ -54,6 +55,17 @@ export function PlanPanel({ shops, activeSlug }: { shops: ShopOpt[]; activeSlug:
   return (
     <div className="card border-brand-600 p-5">
       <p className="font-bold">Current plan: {currentPlan}</p>
+      <p className="mt-1 text-xs text-ink-500">Paid plans are billed via M-Pesa STK push to the number below.</p>
+      <label className="mt-2 block text-sm">
+        <span className="label-bd">M-Pesa phone (for Silver/Gold)</span>
+        <input
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="0712345678"
+          inputMode="tel"
+          className="input-bd"
+        />
+      </label>
       {shops.length > 1 && (
         <label className="mt-2 block text-sm">
           <span className="label-bd">Shop</span>
@@ -81,7 +93,7 @@ export function PlanPanel({ shops, activeSlug }: { shops: ShopOpt[]; activeSlug:
         })}
       </div>
       {msg && <p role="status" className="mt-2 text-sm text-ink-700">{msg}</p>}
-      <p className="mt-2 text-xs text-ink-400">Billing records, invoices & renewal reminders live here. Failed or refunded payments are never counted as revenue. M-Pesa plan billing ships separately.</p>
+      <p className="mt-2 text-xs text-ink-400">Billing records, invoices & renewal reminders live here. Failed or refunded payments are never counted as revenue. Paid plans trigger an M-Pesa STK push; complete the prompt to pay.</p>
     </div>
   );
 }

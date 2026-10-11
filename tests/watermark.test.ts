@@ -1,8 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
-import { watermarkBuffer, sniffContentType, wmCacheKey, WATERMARK_VERSION } from "../src/lib/watermark-server.ts";
-import { wmImageSrc } from "../src/lib/watermark.ts";
+import { watermarkBuffer, sniffContentType, wmCacheKey } from "../src/lib/watermark-server.ts";
+import { wmImageSrc, WATERMARK_VERSION } from "../src/lib/watermark.ts";
 
 describe("watermark", () => {
   it("bakes a visible pill into jpeg and png photos", async () => {
@@ -25,9 +25,10 @@ describe("watermark", () => {
   it("routes display images through the watermark endpoint", () => {
     assert.equal(
       wmImageSrc("https://x.co/i.jpg"),
-      "/api/images/download?src=https%3A%2F%2Fx.co%2Fi.jpg"
+      `/api/images/download?src=https%3A%2F%2Fx.co%2Fi.jpg&v=${WATERMARK_VERSION}`
     );
     assert.ok(wmImageSrc("/uploads/2026/a.jpg", true).endsWith("&dl=1"));
+    assert.ok(wmImageSrc("/uploads/2026/a.jpg").includes(`&v=${WATERMARK_VERSION}`));
     assert.equal(wmImageSrc(""), "");
     assert.equal(wmImageSrc("data:image/png;base64,xx"), "data:image/png;base64,xx");
   });

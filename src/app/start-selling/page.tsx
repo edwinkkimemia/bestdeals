@@ -14,7 +14,7 @@ export const metadata = {
 const FAQS = [
   { q: "How fast do listings go live?", a: "Moderation usually clears listings within hours. You'll see pending / active / rejected with reasons in your dashboard." },
   { q: "Do I need a shop to sell?", a: "No. Individuals sell free with full search visibility. Open a shop when you want branding, bulk tools, and wholesale enquiries." },
-  { q: "How do I get paid?", a: "Shop checkout pays via M-Pesa, card, or cash on delivery. Classifieds are person-to-person: inspect, then pay face-to-face — never in advance." },
+  { q: "How do I get paid?", a: "Shop checkout is cash on delivery — buyers pay your courier in cash on arrival. Classifieds are person-to-person: inspect, then pay face-to-face — never in advance." },
   { q: "What can't I sell?", a: "Weapons, drugs, counterfeits sold as genuine, stolen goods, scams, and the rest of the prohibited list. Violations mean removal or bans." },
 ];
 

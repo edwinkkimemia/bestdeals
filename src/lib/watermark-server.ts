@@ -6,14 +6,12 @@ import sharp from "sharp";
 import { createHash } from "crypto";
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { WATERMARK_VERSION } from "./watermark";
 
 const ALLOWED_FORMATS = new Set(["jpeg", "png", "webp"]);
-/** Logo covers a large share of the frame; faded so the photo stays visible. */
-const LOGO_WIDTH_RATIO = 0.72;
+/** Logo sits bottom-center; modest size so the photo stays the hero. */
+const LOGO_WIDTH_RATIO = 0.38;
 const LOGO_OPACITY = 0.6;
-
-/** Bump when the logo artwork or mark style changes — invalidates the cache. */
-export const WATERMARK_VERSION = "v2";
 
 /** Stable disk-cache filename for a source URL (content-addressed + versioned). */
 export function wmCacheKey(src: string): string {
@@ -78,7 +76,8 @@ export async function watermarkBuffer(input: Buffer): Promise<Buffer> {
       const lw = lm.width ?? w;
       const lh = lm.height ?? h;
       const left = Math.max(0, Math.round((w - lw) / 2));
-      const top = Math.max(0, Math.round((h - lh) / 2));
+      const pad = Math.max(8, Math.round(h * 0.03));
+      const top = Math.max(0, h - lh - pad);
       return await img.composite([{ input: logo, left, top }]).toBuffer();
     } catch {
       return await img.composite([{ input: textPillSvg(w, h) }]).toBuffer();
