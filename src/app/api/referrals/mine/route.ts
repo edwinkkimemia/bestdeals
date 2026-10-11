@@ -7,7 +7,7 @@ import { referralLink } from "@/lib/referrals";
 export async function GET(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
-  const items = await getStore().listReferralsByReferrer(user.id);
+  const items = await getStore().listReferralsByReferrer(user.id).catch(() => []);
   const stats = {
     invited: items.length,
     qualified: items.filter((r) => r.status === "qualified" || r.status === "rewarded").length,

@@ -19,7 +19,7 @@ export async function GET() {
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const store = getStore();
   await store.sweepExpiredPromotions().catch(() => null);
-  const items = await store.listPromotionsForOwner(user.id);
+  const items = await store.listPromotionsForOwner(user.id).catch(() => []);
   return NextResponse.json({ items });
 }
 
