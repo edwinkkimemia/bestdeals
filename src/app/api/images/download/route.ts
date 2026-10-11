@@ -25,7 +25,9 @@ function respond(buf: Buffer, name: string, asAttachment: boolean, immutable: bo
  * cache on first request, so traffic spikes never re-composite.
  */
 export async function GET(req: NextRequest) {
-  const rl = rateLimit(clientKey(req, "img:dl"), { limit: 30, windowMs: 60_000 });
+  // Generous limit: product grids fire one request per photo (misses are
+  // disk-cached after first composite, hits are plain file serves).
+  const rl = rateLimit(clientKey(req, "img:dl"), { limit: 300, windowMs: 60_000 });
   if (!rl.ok) return NextResponse.json({ error: "Too many downloads. Try again shortly." }, { status: 429 });
   const src = (new URL(req.url).searchParams.get("src") ?? "").trim();
   if (!src) return NextResponse.json({ error: "Missing image." }, { status: 400 });

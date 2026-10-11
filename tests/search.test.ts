@@ -89,6 +89,11 @@ describe("seller-kind-signup", () => {
     assert.equal(signupSchema.parse({ ...base }).sellerKind, "individual");
     assert.equal(signupSchema.parse({ ...base, sellerKind: "business" }).sellerKind, "business");
   });
+  it("accepts an optional business display name", () => {
+    const base = { name: "Jane Doe", email: "j@x.co.ke", phone: "0712345678", password: "password1", acceptTerms: true as const };
+    assert.equal(signupSchema.parse({ ...base }).businessName, "");
+    assert.equal(signupSchema.parse({ ...base, businessName: "Acme Ltd" }).businessName, "Acme Ltd");
+  });
 });
 
 describe("subcategories", () => {

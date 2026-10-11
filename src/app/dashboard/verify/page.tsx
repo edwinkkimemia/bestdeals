@@ -9,8 +9,10 @@ export default function VerifyPage() {
   const [kind, setKind] = useState("id");
   const [phone, setPhone] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [file2, setFile2] = useState<File | null>(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const isBusiness = kind === "business";
 
   const load = async () => {
     const r = await fetch("/api/verify");
@@ -47,22 +49,28 @@ export default function VerifyPage() {
           e.preventDefault();
           setMsg("");
           if (!file) return setMsg("Choose a document photo first.");
+          if (isBusiness && !file2) return setMsg("Businesses need both: the permit AND the owner ID.");
           setBusy(true);
           try {
             const fd = new FormData();
             fd.append("private", "1");
             fd.append("files", file);
+            if (isBusiness && file2) fd.append("files", file2);
             const up = await fetch("/api/upload", { method: "POST", body: fd });
             const uj = await up.json();
             if (!up.ok) return setMsg(uj.error || "Upload failed.");
             const r = await fetch("/api/verify", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ kind, phone, docPath: uj.urls[0], fileName: file.name }),
+              body: JSON.stringify({
+                kind, phone, docPath: uj.urls[0], fileName: file.name,
+                ...(isBusiness && file2 ? { docPath2: uj.urls[1], fileName2: file2.name } : {}),
+              }),
             });
             const j = await r.json();
             if (!r.ok) return setMsg(j.error || "Failed.");
             setFile(null);
+            setFile2(null);
             setMsg("Submitted ✓ — moderators review within 2 business days.");
             load();
           } finally {
@@ -74,7 +82,7 @@ export default function VerifyPage() {
           <label className="label-bd" htmlFor="v-kind">Verification type</label>
           <select id="v-kind" className="input-bd" value={kind} onChange={(e) => setKind(e.target.value)}>
             <option value="id">National ID / Passport (individual)</option>
-            <option value="business">Business permit / KRA PIN (business)</option>
+            <option value="business">Business permit + owner ID (business)</option>
           </select>
         </div>
         <div>
@@ -83,10 +91,17 @@ export default function VerifyPage() {
           <p className="mt-1 text-xs text-ink-400">Same number on your profile and WhatsApp. Update it in Profile first if it changed.</p>
         </div>
         <div>
-          <label className="label-bd" htmlFor="v-file">National ID / permit photo (JPG/PNG/WebP, ≤5MB)</label>
+          <label className="label-bd" htmlFor="v-file">{isBusiness ? "Business permit photo" : "National ID photo"} (JPG/PNG/WebP, ≤5MB)</label>
           <input id="v-file" type="file" accept="image/jpeg,image/png,image/webp" className="text-sm"
             onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
         </div>
+        {isBusiness && (
+          <div>
+            <label className="label-bd" htmlFor="v-file2">Owner national ID photo (JPG/PNG/WebP, ≤5MB)</label>
+            <input id="v-file2" type="file" accept="image/jpeg,image/png,image/webp" className="text-sm"
+              onChange={(e) => setFile2(e.target.files?.[0] ?? null)} />
+          </div>
+        )}
         {msg && <p role="status" className="rounded-lg bg-sand-50 p-2 text-sm">{msg}</p>}
         <button className="btn-primary w-full" disabled={busy}>{busy ? "Submitting…" : "Submit for verification"}</button>
       </form>

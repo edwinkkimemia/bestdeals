@@ -14,6 +14,7 @@ export type Role = "BUYER" | "SELLER" | "MERCHANT" | "ADMIN";
 export type UserRecord = {
   id: string;
   name: string;
+  businessName?: string;
   email: string;
   phone: string;
   role: Role;
@@ -835,11 +836,11 @@ class DemoStore implements Store {
 /* ------------------------------ prisma store ----------------------------- */
 
 const mapUser = (u: {
-  id: string; name: string; email: string; phone: string; role: string;
+  id: string; name: string; businessName?: string | null; email: string; phone: string; role: string;
   verified: boolean; passwordHash: string; createdAt: Date; emailVerified?: boolean;
   sellerKind?: string;
 }): UserRecord => ({
-  id: u.id, name: u.name, email: u.email, phone: u.phone,
+  id: u.id, name: u.name, businessName: u.businessName ?? undefined, email: u.email, phone: u.phone,
   role: u.role as Role, verified: u.verified, emailVerified: u.emailVerified ?? false,
   sellerKind: u.sellerKind === "business" ? "business" : "individual",
   passwordHash: u.passwordHash,
@@ -879,9 +880,9 @@ class PrismaStore implements Store {
   async createUser(u: Omit<UserRecord, "id" | "createdAt" | "emailVerified" | "sellerKind"> & { emailVerified?: boolean; sellerKind?: "individual" | "business" }) {
     const rec = await this.p.user.create({
       data: {
-        name: u.name, email: u.email.toLowerCase(), phone: u.phone,
+        name: u.name, businessName: u.businessName ?? null, email: u.email.toLowerCase(), phone: u.phone,
         passwordHash: u.passwordHash, role: u.role as never, verified: u.verified,
-        seller: { create: { displayName: u.name } },
+        seller: { create: { displayName: u.businessName || u.name } },
       },
     });
     return mapUser(rec);

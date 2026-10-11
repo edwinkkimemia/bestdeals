@@ -77,6 +77,7 @@ enum SubscriptionStatus {
 model User {
   id           String         @id @default(cuid())
   name         String
+  businessName String? // displayed trading name for business accounts
   email        String         @unique
   phone        String
   passwordHash String

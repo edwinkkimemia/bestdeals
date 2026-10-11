@@ -16,13 +16,17 @@ export async function POST(req: NextRequest) {
   const parsed = signupSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid input" }, { status: 400 });
   const name = parsed.data.name.trim();
+  const businessName = (parsed.data.businessName ?? "").trim();
   const email = parsed.data.email.trim().toLowerCase();
   const phone = parsed.data.phone.trim();
   const { password, sellerKind } = parsed.data;
+  if (sellerKind === "business" && businessName.length < 2) {
+    return NextResponse.json({ error: "Enter your business name — it's shown on your shop and listings." }, { status: 400 });
+  }
   const store = getStore();
   if (await store.findUserByEmail(email)) return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
   const role = (isAdminEmail(email) ? "ADMIN" : "SELLER") as "SELLER" | "ADMIN";
-  const user = await store.createUser({ name, email, phone, role, verified: false, emailVerified: false, sellerKind, passwordHash: await hashPassword(password) });
+  const user = await store.createUser({ name, businessName: businessName || undefined, email, phone, role, verified: false, emailVerified: false, sellerKind, passwordHash: await hashPassword(password) });
   // Referral attribution (best-effort — never fails signup; self/dup codes ignored).
   const ref = (parsed.data.ref ?? "").trim();
   if (ref) {

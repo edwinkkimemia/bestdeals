@@ -38,7 +38,7 @@ export default async function ShopDash({ searchParams }: { searchParams: { plan?
           </p>
           <p className="mt-1 text-amber-800">
             {kind === "business"
-              ? "Submit your business permit or KRA PIN — it becomes your verified-business ✓ badge."
+              ? "Submit your business permit and owner ID — they become your verified-business ✓ badge."
               : "Every seller is verified (national ID + email + phone) before posting or opening a shop."}
           </p>
           <Link href={kind === "business" ? "/dashboard/verify?kind=business" : "/dashboard/verify"} className="btn-primary mt-3">
@@ -56,7 +56,7 @@ export default async function ShopDash({ searchParams }: { searchParams: { plan?
             <Link href="/shops/fon-zone-nairobi" className="link-bd text-sm">See an example storefront →</Link>
           )}
           <form action="/api/shops" method="post" className="mt-3 space-y-2">
-            <input name="name" required placeholder="Business name" className="input-bd" aria-label="Business name" />
+            <input name="name" required placeholder="Business name" defaultValue={fresh?.businessName ?? ""} className="input-bd" aria-label="Business name" />
             <button className="btn-primary w-full" formAction="/api/shops" type="submit">Check availability & create</button>
           </form>
           {active && <BulkPanel shopName={active.name} isGold={activePlan === "gold"} />}

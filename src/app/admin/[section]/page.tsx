@@ -102,7 +102,7 @@ export default async function AdminSection({
           {users.map((u) => (
             <li key={u.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
               <span className="flex-1">
-                <strong>{u.name}</strong> <span className="text-ink-400">· {u.email} · {u.phone} · {u.role}</span>
+                <strong>{u.name}</strong>{u.businessName ? <span> · 🏪 {u.businessName}</span> : null} <span className="text-ink-400">· {u.email} · {u.phone} · {u.role}</span>
                 <span className="ml-2 chip">{u.sellerKind === "business" ? "business" : "individual"}</span>
                 <span className="chip">{u.verified ? "✓ seller" : "unverified"}</span>
                 <span className="chip">{u.emailVerified ? "✓ email" : "no email ✓"}</span>

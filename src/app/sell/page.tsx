@@ -58,7 +58,7 @@ async function VerificationGate({ userId }: { userId: string }) {
       <p className="font-bold text-amber-900">Verify before you post</p>
       <p className="mt-1 text-amber-800">
         {business
-          ? "Businesses verify with a permit or KRA PIN before the first listing. It unlocks your verified-business ✓ badge."
+          ? "Businesses verify with a permit and owner ID before the first listing. It unlocks your verified-business ✓ badge."
           : "Every seller is verified by our team (national ID + email + phone) before their first listing. It keeps buyers safe — and unlocks your ✓ badge."}
       </p>
       <Link href={business ? "/dashboard/verify?kind=business" : "/dashboard/verify"} className="btn-primary mt-3">Get verified</Link>

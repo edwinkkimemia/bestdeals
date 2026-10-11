@@ -3,6 +3,7 @@ import { categoryBySlug } from "@/data/catalog";
 
 export const signupSchema = z.object({
   name: z.string().min(2, "Enter your name").max(80),
+  businessName: z.string().trim().max(80).optional().default(""),
   email: z.string().email("Enter a valid email"),
   phone: z
     .string()

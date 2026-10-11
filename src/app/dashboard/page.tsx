@@ -19,12 +19,13 @@ export default async function DashboardPage() {
   const verified = fresh?.verified ?? user.verified;
   const emailVerified = fresh?.emailVerified ?? false;
   const kind = fresh?.sellerKind ?? "individual";
+  const businessName = fresh?.businessName?.trim() || "";
   const verifyHref = kind === "business" ? "/dashboard/verify?kind=business" : "/dashboard/verify";
   return (
     <div className="container-bd py-8">
       <h1 className="section-title">Hello, {name.split(" ")[0]} 👋</h1>
       <p className="text-sm text-ink-500">
-        Role: {role} · {kind === "business" ? "Business account" : "Individual seller"} · {verified ? "Verified ✓" : "Verification pending — complete it in Verification"}
+        Role: {role} · {kind === "business" ? `Business account${businessName ? ` · ${businessName}` : ""}` : "Individual seller"} · {verified ? "Verified ✓" : "Verification pending — complete it in Verification"}
       </p>
       {!emailVerified && (
         <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
