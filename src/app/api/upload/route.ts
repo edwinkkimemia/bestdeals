@@ -5,6 +5,7 @@ import { currentUser } from "@/lib/auth";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { uid, slugify } from "@/lib/utils";
 import { uploadsBaseDir, privateBaseDir, uploadPublicUrl, isServerlessUploads } from "@/lib/storage";
+import { watermarkBuffer } from "@/lib/watermark";
 
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX = 5 * 1024 * 1024;
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
 
   if ((process.env.UPLOAD_DRIVER || "local") === "s3") {
     return NextResponse.json(
-      { error: "S3 driver selected but not configured. Set S3_* credentials (docs/providers.md)." },
+      { error: "File storage is not configured right now. Try again later." },
       { status: 501 }
     );
   }
@@ -57,7 +58,9 @@ export async function POST(req: NextRequest) {
     } else {
       const dir = join(uploadsBaseDir(), stamp);
       await mkdir(dir, { recursive: true });
-      await writeFile(join(dir, name), buf);
+      // Bake the chap.co.ke watermark into every public product photo.
+      const stamped = await watermarkBuffer(buf);
+      await writeFile(join(dir, name), stamped);
       urls.push(uploadPublicUrl(stamp, name));
     }
   }

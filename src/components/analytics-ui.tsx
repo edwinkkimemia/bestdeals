@@ -11,10 +11,11 @@ export function Stat({ label, value, sub }: { label: string; value: string; sub?
   );
 }
 
-export function RangeTabs({ base, current }: { base: string; current: number }) {
+export function RangeTabs({ base, current, options }: { base: string; current: number; options?: number[] }) {
+  const ranges = options ?? [7, 30, 90];
   return (
     <div className="flex flex-wrap gap-2" role="tablist" aria-label="Date range">
-      {[7, 30, 90].map((d) => (
+      {ranges.map((d) => (
         <Link
           key={d}
           href={`${base}?days=${d}`}

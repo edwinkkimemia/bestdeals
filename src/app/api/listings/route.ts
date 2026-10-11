@@ -4,6 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { requireVerifiedSeller } from "@/lib/gate";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
+import { getSellerPlan, countLiveListings, planAllowsListings, limitMessage } from "@/lib/plans";
 
 /** Listing intake: verified sellers only; validates, spam-checks, queues for moderation. */
 export async function POST(req: NextRequest) {
@@ -12,6 +13,13 @@ export async function POST(req: NextRequest) {
   const user = gate.seller;
   const rl = rateLimit(clientKey(req, `list:${user.id}`), { limit: 10, windowMs: 3600_000 });
   if (!rl.ok) return NextResponse.json({ error: "Listing limit reached for now. Try again later." }, { status: 429 });
+
+  // Plan allowance: Free 5 · Silver 30 · Gold unlimited live listings.
+  const plan = await getSellerPlan(user.id);
+  const live = await countLiveListings(user.id);
+  if (!planAllowsListings(plan.planId, live)) {
+    return NextResponse.json({ error: limitMessage(plan.planId, live), code: "PLAN_LIMIT" }, { status: 403 });
+  }
 
   const body = await req.json().catch(() => ({}));
   const parsed = listingSchema.safeParse(body);
@@ -48,6 +56,7 @@ export async function POST(req: NextRequest) {
     sellerPhone: user.phone,
     categorySlug: d.categorySlug,
     subcategory: (d.subcategory ?? "").trim() || undefined,
+    shopSlug: plan.shopSlug,
   });
   return NextResponse.json({ ok: true, id: rec.id, status: "pending", message: "Saved and queued for moderation." });
 }

@@ -43,7 +43,7 @@ export async function initiateSTKPush(init: PaymentInit): Promise<PaymentResult>
       ok: false,
       status: "pending",
       message:
-        "M-Pesa is not configured. Add MPESA_* credentials (see .env.example) to go live. Order is reserved as pending.",
+        "Your order is reserved as pending. You will receive an M-Pesa payment prompt to complete it.",
     };
   }
   // Production path: OAuth -> STK push via Daraja (sandbox/prod base URLs).

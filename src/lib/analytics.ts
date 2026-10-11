@@ -377,9 +377,11 @@ export async function resolveSellerListingIds(
 
 export async function getSellerAnalyticsReport(
   user: { id: string; name: string },
-  days = 30
+  days = 30,
+  maxDays = 90
 ): Promise<SellerReport> {
-  const rangeDays = [7, 30, 90].includes(days) ? days : 30;
+  const allowed = [7, 30, 90].filter((d) => d <= maxDays);
+  const rangeDays = allowed.includes(days) ? days : Math.max(...allowed);
   const { ids: listingIds, titles } = await resolveSellerListingIds(user.id, user.name);
   const [stats, referrers] = await Promise.all([
     getListingsStats(listingIds, rangeDays),

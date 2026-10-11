@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { currentUser } from "@/lib/auth";
+import { canManageListing } from "@/lib/gate";
 import { redirect, notFound } from "next/navigation";
 import { getListing } from "@/data/catalog";
 import { getStore } from "@/lib/store";
@@ -15,8 +16,9 @@ export default async function ManageListing({ params }: { params: { id: string }
   const stored = await getStore().getListing(params.id);
   const demo = !stored ? getListing(params.id) : null;
   if (!stored && !demo) notFound();
-  // Ownership check — sellers can only manage their own listings (admins exempt).
-  if (stored && stored.ownerId !== user.id && user.role !== "ADMIN") notFound();
+  // Ownership check — sellers manage their own listings; shop staff (Gold)
+  // may manage their shop's catalogue; admins exempt.
+  if (stored && !(await canManageListing(user, stored))) notFound();
 
   if (!stored && demo) {
     return (
@@ -26,7 +28,7 @@ export default async function ManageListing({ params }: { params: { id: string }
         <div className="card mt-4 p-5">
           <p className="font-bold">{demo.title}</p>
           <p className="text-sm text-ink-500">{demo.listingType} · {demo.town}, {demo.county}</p>
-          <p className="mt-2 rounded-xl bg-sand-50 p-3 text-sm">Demo catalog item — create your own listing to edit, hide or mark as sold.</p>
+          <p className="mt-2 rounded-xl bg-sand-50 p-3 text-sm">Sample catalogue item — create your own listing to edit, hide or mark as sold.</p>
           <div className="mt-4"><Link href="/sell" className="btn-primary">Create a listing</Link></div>
         </div>
       </div>

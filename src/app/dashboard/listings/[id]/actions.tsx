@@ -46,7 +46,7 @@ export function ManageActions({ id, status }: { id: string; status: string }) {
           <button className="btn-secondary !px-3 !py-1.5 text-xs" disabled={busy} onClick={() => run("sold")}>Mark as sold</button>
         )}
         {status === "hidden" ? (
-          <button className="btn-secondary !px-3 !py-1.5 text-xs" disabled={busy} onClick={() => run("republish")}>Unhide / republish</button>
+          <button className="btn-secondary !px-3 !py-1.5 text-xs" disabled={busy} onClick={() => run("republish")}>Unhide for review</button>
         ) : (
           status !== "sold" && (
             <button className="btn-secondary !px-3 !py-1.5 text-xs" disabled={busy} onClick={() => run("hidden")}>Hide</button>

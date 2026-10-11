@@ -31,6 +31,6 @@ export async function GET(
       },
     });
   } catch {
-    return NextResponse.json({ error: "Document not found on this server (demo storage is per-instance)." }, { status: 404 });
+    return NextResponse.json({ error: "Document not found on this server." }, { status: 404 });
   }
 }

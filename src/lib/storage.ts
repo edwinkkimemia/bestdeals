@@ -22,6 +22,11 @@ export function uploadPublicUrl(stamp: string, name: string): string {
   return onVercel ? `/api/files/${stamp}/${name}` : `/uploads/${stamp}/${name}`;
 }
 
+/** Disk cache for watermarked renditions (git-ignored; ephemeral on serverless). */
+export function wmCacheDir(): string {
+  return onVercel ? join(tmpdir(), "chap", "wmcache") : join(process.cwd(), ".data", "wmcache");
+}
+
 export function isServerlessUploads(): boolean {
   return onVercel;
 }

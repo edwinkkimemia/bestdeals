@@ -117,8 +117,7 @@ export function PromotePanel({ listings, phone: defaultPhone, isAdmin }: { listi
         })}
       </ul>
       <p className="mt-3 text-xs text-ink-400">
-        Boosts are labelled Featured and never override moderation. Payment via M-Pesa STK push
-        {!process.env.NEXT_PUBLIC_MPESA ? " (demo mode: configure MPESA_* to go live — orders reserve as pending)" : ""}.
+        Boosts are labelled Featured and never override moderation. Payment via M-Pesa STK push.
         Cancel anytime; refunds follow the Returns policy.
       </p>
       <p className="mt-2 text-sm"><Link href="/pricing" className="link-bd">See shop plans →</Link></p>

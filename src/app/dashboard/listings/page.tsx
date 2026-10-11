@@ -3,7 +3,7 @@ import { currentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getStore } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
-import { formatKES } from "@/lib/format";
+import { formatKES, formatDay } from "@/lib/format";
 import { getListingsStats } from "@/lib/analytics";
 
 const TABS = ["all", "active", "pending", "rejected", "sold", "hidden", "draft", "expired"];
@@ -12,11 +12,24 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
   const user = await currentUser();
   if (!user) redirect("/auth/signin?next=/dashboard/listings");
   const tab = TABS.includes(searchParams.tab ?? "") ? (searchParams.tab as string) : "all";
-  const mine = await getStore().listListingsByOwner(user.id);
+  const store = getStore();
+  const mine = await store.listListingsByOwner(user.id);
   const items = mine.filter((l) => tab === "all" || l.status === tab);
   const viewMap = new Map(
     (await getListingsStats(mine.map((l) => l.id), 30).catch(() => ({ perListing: [] as { listingId: string; views: number }[] }))).perListing.map((p) => [p.listingId, p.views])
   );
+  // Staff view (Gold): catalogues of shops where this seller is a member.
+  const staffShops = await store.listStaffShops(user.id).catch(() => []);
+  const ownIds = new Set(mine.map((l) => l.id));
+  const staffItems: { shopName: string; shopSlug: string; listing: (typeof mine)[number] }[] = [];
+  for (const s of staffShops) {
+    const items = await store.listListingsByShop(s.slug).catch(() => []);
+    for (const l of items) {
+      if (!ownIds.has(l.id) && !staffItems.some((x) => x.listing.id === l.id)) {
+        staffItems.push({ shopName: s.name, shopSlug: s.slug, listing: l });
+      }
+    }
+  }
 
   return (
     <div className="container-bd py-8">
@@ -43,13 +56,33 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
               <img src={l.images[0] ?? "/chaplogo.png"} alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{l.title}</p>
-                <p className="text-xs text-ink-400">{l.type} · {formatKES(l.price)} · {l.town}, {l.county} · {(viewMap.get(l.id) ?? 0).toLocaleString()} views</p>
+                <p className="text-xs text-ink-400">{l.type} · {formatKES(l.price)} · {l.town}, {l.county} · {(viewMap.get(l.id) ?? 0).toLocaleString()} views · {formatDay(l.createdAt)}</p>
               </div>
               <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
               <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">Manage</Link>
             </li>
           ))}
         </ul>
+      )}
+      {staffItems.length > 0 && (
+        <>
+          <h2 className="mt-8 font-bold">Shop catalogues you staff ({staffItems.length})</h2>
+          <p className="mt-1 text-sm text-ink-500">Listings from shops where you&apos;re a staff member — you can manage these too.</p>
+          <ul className="mt-3 space-y-2">
+            {staffItems.map(({ shopName, listing: l }) => (
+              <li key={l.id} className="card flex items-center gap-3 p-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={l.images[0] ?? "/chaplogo.png"} alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{l.title}</p>
+                  <p className="text-xs text-ink-400">{l.type} · {formatKES(l.price)} · {shopName} · staff</p>
+                </div>
+                <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
+                <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">Manage</Link>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );

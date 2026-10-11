@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   const { orderId, method, phone } = body as { orderId?: string; method?: string; phone?: string };
   if (!orderId || !phone) return NextResponse.json({ error: "Order and phone are required." }, { status: 400 });
   if (method === "card") {
-    return NextResponse.json({ ok: false, status: "pending", message: "Card provider not configured. Add CARD_PROVIDER credentials (see .env.example)." });
+    return NextResponse.json({ ok: false, status: "pending", message: "Card payments are not available yet — please choose M-Pesa or cash on delivery." });
   }
   if (method === "cod") {
     return NextResponse.json({ ok: true, status: "pending_cod", message: "Cash on delivery selected. Pay the courier on arrival." });

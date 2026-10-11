@@ -12,6 +12,8 @@ export type SearchParams = {
   town?: string;
   type?: "product" | "classified" | "service" | "all";
   seller?: "individual" | "business" | "all";
+  /** Only listings posted within the last N hours (e.g. 24, 168, 720). */
+  postedWithinHours?: number;
   sort?: "relevance" | "newest" | "price_asc" | "price_desc";
   page?: number;
   perPage?: number;
@@ -77,6 +79,10 @@ export function searchListings(p: SearchParams): {
     if (town && town !== "all" && l.town.trim().toLowerCase() !== town) return false;
     if (p.min != null && l.price < p.min) return false;
     if (p.max != null && l.price > p.max) return false;
+    if (p.postedWithinHours != null && p.postedWithinHours > 0) {
+      const t = +new Date(l.createdAt);
+      if (!Number.isFinite(t) || Date.now() - t > p.postedWithinHours * 3600_000) return false;
+    }
     if (tokens.length > 0 && score(l, tokens) <= 0) return false;
     return true;
   });

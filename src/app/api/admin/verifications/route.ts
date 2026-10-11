@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
+import { applyVerificationApproval } from "@/lib/kyc";
 import { qualifyReferralsFor } from "@/lib/referrals";
 
 /** Admin-only: approve/reject a verification. Approval marks the user verified. */
@@ -11,13 +12,15 @@ export async function POST(req: NextRequest) {
   const { id, approve, shopSlug } = body as { id?: string; approve?: boolean; shopSlug?: string };
   if (!id) return NextResponse.json({ error: "Missing id." }, { status: 400 });
   const store = getStore();
-  await store.decideVerification(id, approve === true, user.id);
-  const v = (await store.listVerifications()).find((x) => x.id === id);
-  if (approve === true && v) {
-    await store.setUserVerified(v.userId, true);
+  if (approve === true) {
+    // User verified + (for business KYC) their shops verified automatically.
+    const v = await applyVerificationApproval(store, id, user.id);
+    if (!v) return NextResponse.json({ error: "Verification not found." }, { status: 404 });
     if (shopSlug) await store.setShopVerified(shopSlug, true).catch(() => {});
     // Referral milestone: inviter earns a free Featured boost.
     await qualifyReferralsFor(v.userId).catch(() => null);
+  } else {
+    await store.decideVerification(id, false, user.id);
   }
   return NextResponse.json({ ok: true });
 }

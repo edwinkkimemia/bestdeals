@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listingSchema } from "@/lib/validators";
 import { currentUser } from "@/lib/auth";
+import { canManageListing } from "@/lib/gate";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 
@@ -9,7 +10,7 @@ async function owned(id: string) {
   if (!user) return { error: NextResponse.json({ error: "Sign in first." }, { status: 401 }) } as const;
   const listing = await getStore().getListing(id);
   if (!listing) return { error: NextResponse.json({ error: "Listing not found." }, { status: 404 }) } as const;
-  if (listing.ownerId !== user.id && user.role !== "ADMIN") {
+  if (!(await canManageListing(user, listing))) {
     return { error: NextResponse.json({ error: "Not your listing." }, { status: 403 }) } as const;
   }
   return { user, listing } as const;
@@ -73,7 +74,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json({ ok: true, id: params.id, status: fresh?.status ?? "pending", item: fresh });
 }
 
-/** Quick status actions: sold | hidden | republish (hidden/sold → live queue). */
+/** Quick status actions: sold | hidden | republish (hidden/sold → review queue). */
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const res = await owned(params.id);
   if ("error" in res) return res.error;
@@ -85,8 +86,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   } else if (action === "hidden") {
     await store.setListingStatus(params.id, "hidden");
   } else if (action === "republish" || action === "active") {
-    // Unhide → active directly (no content change); sold → pending (re-review).
-    await store.setListingStatus(params.id, res.listing.status === "hidden" ? "active" : "pending");
+    // Always back to the moderation queue — sellers (and admin-hidden
+    // listings) must never self-activate without a fresh admin check.
+    await store.setListingStatus(params.id, "pending");
   } else {
     return NextResponse.json({ error: "Unknown action. Use sold, hidden or republish." }, { status: 400 });
   }

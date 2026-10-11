@@ -20,6 +20,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
   const [searchFocus, setSearchFocus] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [wishCount, setWishCount] = useState(0);
   const box = useRef<HTMLDivElement>(null);
   const [locOpen, setLocOpen] = useState(false);
   const [locFilter, setLocFilter] = useState("");
@@ -111,6 +112,27 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
       document.removeEventListener("keydown", onKey);
     };
   }, [locOpen]);
+
+  useEffect(() => {
+    // Wishlist badge: localStorage-backed, refreshed on toggle/focus/storage.
+    const loadWishlist = () => {
+      try {
+        const raw = JSON.parse(localStorage.getItem("bd_wishlist_v1") || "[]");
+        setWishCount(Array.isArray(raw) ? raw.length : 0);
+      } catch {
+        setWishCount(0);
+      }
+    };
+    loadWishlist();
+    window.addEventListener("bd:wishlist", loadWishlist);
+    window.addEventListener("storage", loadWishlist);
+    window.addEventListener("focus", loadWishlist);
+    return () => {
+      window.removeEventListener("bd:wishlist", loadWishlist);
+      window.removeEventListener("storage", loadWishlist);
+      window.removeEventListener("focus", loadWishlist);
+    };
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -311,7 +333,10 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
               </div>
             )}
           </div>
-          <Link href="/wishlist" className="rounded-lg p-2 hover:bg-sand-100" aria-label="Wishlist"><Heart className="h-5 w-5" /></Link>
+          <Link href="/wishlist" className="relative rounded-lg p-2 hover:bg-sand-100" aria-label={wishCount > 0 ? `Wishlist, ${wishCount} saved` : "Wishlist"}>
+            <Heart className="h-5 w-5" />
+            {wishCount > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-bold text-white">{wishCount > 99 ? "99+" : wishCount}</span>}
+          </Link>
           {user && (
             <Link href="/messages" className="relative rounded-lg p-2 hover:bg-sand-100" aria-label={unread > 0 ? `Messages, ${unread} unread` : "Messages"}>
               <MessageCircle className="h-5 w-5" />

@@ -1,6 +1,49 @@
 import Image from "next/image";
 import Link from "next/link";
 
+function XIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231 5.451-6.231Zm-1.161 17.52h1.833L7.084 4.126H5.117l11.966 15.644Z" />
+    </svg>
+  );
+}
+
+function FacebookIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073Z" />
+    </svg>
+  );
+}
+
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <rect x="2" y="2" width="20" height="20" rx="5" />
+      <circle cx="12" cy="12" r="4" />
+      <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function YoutubeIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+      <rect x="2" y="5" width="20" height="14" rx="4" />
+      <path d="m10 9 5 3-5 3z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
+// Brand social profiles — update hrefs if handles change.
+const SOCIALS = [
+  { label: "Chap on X", href: "https://x.com/chap_co_ke", Icon: XIcon },
+  { label: "Chap on Facebook", href: "https://www.facebook.com/chap.co.ke", Icon: FacebookIcon },
+  { label: "Chap on Instagram", href: "https://www.instagram.com/chap.co.ke", Icon: InstagramIcon },
+  { label: "Chap on YouTube", href: "https://www.youtube.com/@chapcoke", Icon: YoutubeIcon },
+];
+
 const COLS: { title: string; links: { href: string; label: string }[] }[] = [
   {
     title: "Marketplace",
@@ -53,6 +96,14 @@ export function Footer() {
             <Image src="/chaplogo.png" alt="chap.co.ke" width={1147} height={287} className="h-9 w-auto" />
           </Link>
           <p className="mt-2 text-sm text-ink-500">Kenya&apos;s marketplace for everything. Find it. Sell it. Get the best deal.</p>
+          <div className="mt-3 flex items-center gap-2" aria-label="Follow Chap">
+            {SOCIALS.map(({ label, href, Icon }) => (
+              <a key={label} href={href} target="_blank" rel="noreferrer" aria-label={label} title={label}
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 bg-white text-ink-500 transition hover:border-brand-600 hover:text-brand-700">
+                <Icon className="h-4 w-4" />
+              </a>
+            ))}
+          </div>
           <form action="/api/newsletter" method="post" className="mt-4 space-y-2" data-newsletter>
             <label htmlFor="nl-email" className="text-sm font-medium">Get deals by email (opt-in)</label>
             <div className="flex gap-2">
@@ -78,7 +129,7 @@ export function Footer() {
       <div className="border-t border-neutral-200">
         <div className="container-bd flex flex-col items-center justify-between gap-2 py-4 text-xs text-ink-400 sm:flex-row">
           <p>© {new Date().getFullYear()} chap.co.ke — Nairobi, Kenya. All prices in KES.</p>
-          <p>M-Pesa payments via Daraja when configured. Never share your PIN.</p>
+          <p>Secure M-Pesa checkout · Buyer Safety · Seller Guidelines</p>
         </div>
       </div>
     </footer>

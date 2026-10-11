@@ -1,9 +1,11 @@
 import Link from "next/link";
-import { formatKES, savings, timeAgo } from "@/lib/format";
+import { formatKES, savings, timeAgo, formatDay, formatFull } from "@/lib/format";
 import type { Listing } from "@/data/catalog";
 import { Badge, ConditionBadge } from "./badge";
 import { Heart } from "lucide-react";
 import { WishlistButton } from "./wishlist-button";
+import { WmPill } from "./watermark";
+import { WmImage } from "./wm-image";
 
 export function Price({ value, compareAt }: { value: number; compareAt?: number | null }) {
   const pct = compareAt ? savings(compareAt, value) : null;
@@ -30,8 +32,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
   return (
     <div className="card group overflow-hidden transition hover:shadow-lg">
       <Link href={href} className="relative block aspect-[4/3] overflow-hidden bg-sand-100">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <WmImage
           src={listing.images[0]}
           alt={listing.title}
           loading="lazy"
@@ -44,6 +45,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
         <div className="absolute right-2 top-2">
           <WishlistButton id={listing.id} title={listing.title} />
         </div>
+        <WmPill />
       </Link>
       <div className="space-y-2 p-3.5">
         <div className="flex items-center gap-1.5">
@@ -58,7 +60,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
         <Price value={listing.price} compareAt={listing.compareAt} />
         <div className="flex items-center justify-between text-xs text-ink-500">
           <span className="truncate">{listing.verified ? `✓ ${listing.sellerName}` : listing.sellerName}</span>
-          <span>{timeAgo(listing.createdAt)}</span>
+          <span className="shrink-0" title={`Posted ${formatFull(listing.createdAt)}`}>{timeAgo(listing.createdAt)} · {formatDay(listing.createdAt)}</span>
         </div>
       </div>
     </div>

@@ -29,7 +29,24 @@ export async function requireVerifiedSeller(): Promise<GateOk | GateNo> {
     );
   }
   return {
-    ok: true,
+    ok: true as const,
     seller: { ...user, name: fresh?.name ?? user.name, phone: fresh?.phone ?? user.phone, verified: true },
   };
+}
+
+/**
+ * Catalogue manage rights: the owner, any admin, or a staff member of the
+ * shop the listing belongs to (Gold staff accounts).
+ */
+export async function canManageListing(
+  user: { id: string; role: string },
+  listing: { ownerId?: string; shopSlug?: string }
+): Promise<boolean> {
+  if (user.role === "ADMIN") return true;
+  if (listing.ownerId && listing.ownerId === user.id) return true;
+  if (listing.shopSlug) {
+    const members = await getStore().listShopMembers(listing.shopSlug).catch(() => []);
+    if (members.some((m) => m.userId === user.id)) return true;
+  }
+  return false;
 }

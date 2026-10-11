@@ -12,11 +12,15 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
   const rawCounty = (searchParams.county ?? "").trim();
   const county = resolveCounty(rawCounty);
   const countyFallback = rawCounty.length > 0 && county === "all";
+  const postedKey = searchParams.posted ?? "any";
+  const postedWithinHours =
+    postedKey === "24h" ? 24 : postedKey === "7d" ? 168 : postedKey === "30d" ? 720 : undefined;
   const params = {
     q: searchParams.q ?? "",
     category: searchParams.category ?? "all",
     subcategory: searchParams.subcategory ?? "all",
     county,
+    postedWithinHours,
     town: (searchParams.town ?? "all").trim() || "all",
     min: searchParams.min ? Number(searchParams.min) : undefined,
     max: searchParams.max ? Number(searchParams.max) : undefined,
@@ -41,6 +45,7 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
   if (params.category && params.category !== "all") keep.set("category", params.category);
   if (params.subcategory && params.subcategory !== "all") keep.set("subcategory", params.subcategory);
   if (params.county && params.county !== "all") keep.set("county", params.county);
+  if (postedKey !== "any") keep.set("posted", postedKey);
   if (params.town && params.town !== "all") keep.set("town", params.town);
   if (searchParams.min) keep.set("min", searchParams.min);
   if (searchParams.max) keep.set("max", searchParams.max);
@@ -56,6 +61,13 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
     const s = new URLSearchParams(keep);
     s.delete("county");
     s.delete("town");
+    if (params.type !== "all") s.set("type", params.type);
+    const qs = s.toString();
+    return `/search${qs ? `?${qs}` : ""}`;
+  })();
+  const clearPostedHref = (() => {
+    const s = new URLSearchParams(keep);
+    s.delete("posted");
     if (params.type !== "all") s.set("type", params.type);
     const qs = s.toString();
     return `/search${qs ? `?${qs}` : ""}`;
@@ -94,6 +106,9 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
       )}
       {county !== "all" && (
         <p className="mt-2 text-sm text-ink-500">Showing results in <strong>{county}</strong>{params.town !== "all" && <> · <strong>{params.town}</strong> · <Link href={clearTownHref} className="link-bd">clear town</Link></>} · <Link href={clearCountyHref} className="link-bd">clear</Link></p>
+      )}
+      {postedWithinHours && (
+        <p className="mt-1 text-sm text-ink-500">Posted within <strong>{postedKey === "24h" ? "24 hours" : postedKey === "7d" ? "7 days" : "30 days"}</strong> · <Link href={clearPostedHref} className="link-bd">clear</Link></p>
       )}
       {params.subcategory !== "all" && (
         <p className="mt-1 text-sm text-ink-500">Subcategory <strong>{params.subcategory}</strong> · <Link href={clearSubHref} className="link-bd">clear</Link></p>
@@ -165,6 +180,15 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
               <option value="newest">Newest</option>
               <option value="price_asc">Price: low → high</option>
               <option value="price_desc">Price: high → low</option>
+            </select>
+          </div>
+          <div>
+            <label className="label-bd" htmlFor="f-posted">Posted within</label>
+            <select id="f-posted" name="posted" defaultValue={postedKey} className="input-bd">
+              <option value="any">Any time</option>
+              <option value="24h">Last 24 hours</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
             </select>
           </div>
           <button className="btn-primary w-full" type="submit">Apply filters</button>

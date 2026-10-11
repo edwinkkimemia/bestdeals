@@ -41,7 +41,7 @@ export default async function AdminPage() {
     <div>
       <h1 className="section-title">Platform control</h1>
       <p className="text-sm text-ink-500">
-        Live queues from the {process.env.DATABASE_URL ? "PostgreSQL" : "demo"} store · every action records a reason + audit trail.
+        Live queues · every action records a reason + audit trail.
       </p>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {stats.map((s) => (
@@ -65,7 +65,7 @@ export default async function AdminPage() {
         ))}
         {pending.length + verifications.length + openDisputes.length === 0 && <li>All queues clear ✓</li>}
       </ul>
-      <p className="mt-8 text-xs text-ink-400">Admin access via ADMIN_EMAILS in .env. RBAC enforced server-side on every action.</p>
+      <p className="mt-8 text-xs text-ink-400">Restricted area. Every admin action is logged with a reason.</p>
     </div>
   );
 }

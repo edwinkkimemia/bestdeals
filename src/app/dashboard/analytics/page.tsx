@@ -3,6 +3,7 @@ import { currentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getStore } from "@/lib/store";
 import { getSellerAnalyticsReport } from "@/lib/analytics";
+import { getSellerPlan, PLAN_ANALYTICS_DAYS } from "@/lib/plans";
 import { Stat, RangeTabs, DailyChart } from "@/components/analytics-ui";
 
 export const metadata = { title: "Listing analytics", robots: { index: false, follow: false } };
@@ -11,10 +12,13 @@ export const dynamic = "force-dynamic";
 export default async function SellerAnalyticsPage({ searchParams }: { searchParams: { days?: string } }) {
   const user = await currentUser();
   if (!user) redirect("/auth/signin?next=/dashboard/analytics");
-  const d = Number(searchParams.days ?? "30");
-  const days = [7, 30, 90].includes(d) ? d : 30;
+  const plan = await getSellerPlan(user.id);
+  const maxDays = PLAN_ANALYTICS_DAYS[plan.planId];
+  const options = [7, 30, 90].filter((n) => n <= maxDays);
+  const d = Number(searchParams.days ?? String(maxDays));
+  const days = options.includes(d) ? d : Math.max(...options);
 
-  const report = await getSellerAnalyticsReport({ id: user.id, name: user.name }, days);
+  const report = await getSellerAnalyticsReport({ id: user.id, name: user.name }, days, maxDays);
   const ownedIds = new Set((await getStore().listListingsByOwner(user.id).catch(() => [])).map((l) => l.id));
   const maxViews = Math.max(1, ...report.perListing.map((p) => p.views));
   const convRate =
@@ -28,9 +32,17 @@ export default async function SellerAnalyticsPage({ searchParams }: { searchPara
           <h1 className="section-title">Listing analytics</h1>
           <p className="mt-1 text-sm text-ink-500">
             How many people saw your products. One view = one visitor per product per 30 min — refreshes don&apos;t inflate it.
+            {" "}Your {plan.planId} plan keeps {maxDays} days of history.
           </p>
+          <div className="mt-2 flex flex-wrap gap-2 text-sm">
+            {plan.planId === "gold" ? (
+              <a href={`/api/analytics/seller/export?days=${report.rangeDays}`} className="link-bd">Download CSV ↓</a>
+            ) : (
+              <Link href="/pricing" className="link-bd">Unlock 90-day history + CSV export with Gold →</Link>
+            )}
+          </div>
         </div>
-        <RangeTabs base="/dashboard/analytics" current={days} />
+        <RangeTabs base="/dashboard/analytics" current={report.rangeDays} options={options} />
       </div>
 
       {report.perListing.length === 0 ? (

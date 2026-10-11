@@ -61,6 +61,16 @@ describe("location-filtering", () => {
     const r = searchListings({ q: "Eldoret", perPage: 60 });
     assert.ok(r.items.some((l) => l.town === "Eldoret"));
   });
+  it("filters listings by posting date", () => {
+    const all = searchListings({ perPage: 100 });
+    assert.ok(all.total > 0);
+    const day = searchListings({ postedWithinHours: 24, perPage: 100 });
+    assert.ok(day.total <= all.total);
+    const now = Date.now();
+    assert.ok(day.items.every((l) => now - +new Date(l.createdAt) <= 24 * 3600_000));
+    const month = searchListings({ postedWithinHours: 720, perPage: 100 });
+    assert.ok(month.total >= day.total);
+  });
 });
 
 describe("instant-suggestions", () => {

@@ -44,9 +44,28 @@ export function timeAgo(iso: string): string {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString("en-KE", {
+  return formatDay(iso);
+}
+
+/** Short posting date: "8 Oct" (this year) or "8 Oct 2025" (older). */
+export function formatDay(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(+d)) return "";
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString("en-KE", {
     day: "numeric",
     month: "short",
-    year: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
   });
+}
+
+/** Full posting timestamp: "8 Oct 2026, 14:05". */
+export function formatFull(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(+d)) return "";
+  return (
+    d.toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" }) +
+    ", " +
+    d.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })
+  );
 }
