@@ -5,7 +5,6 @@ import { currentUser } from "@/lib/auth";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { uid, slugify } from "@/lib/utils";
 import { uploadsBaseDir, privateBaseDir, uploadPublicUrl, isServerlessUploads } from "@/lib/storage";
-import { watermarkBuffer } from "@/lib/watermark-server";
 
 const ALLOWED = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX = 5 * 1024 * 1024;
@@ -58,9 +57,9 @@ export async function POST(req: NextRequest) {
     } else {
       const dir = join(uploadsBaseDir(), stamp);
       await mkdir(dir, { recursive: true });
-      // Bake the chap.co.ke watermark into every public product photo.
-      const stamped = await watermarkBuffer(buf);
-      await writeFile(join(dir, name), stamped);
+      // Store the original: the watermark is applied on serve (single mark
+      // for every source, no doubles, no legacy gaps).
+      await writeFile(join(dir, name), buf);
       urls.push(uploadPublicUrl(stamp, name));
     }
   }

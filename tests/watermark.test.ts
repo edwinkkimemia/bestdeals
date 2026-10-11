@@ -31,6 +31,8 @@ describe("watermark", () => {
     assert.ok(wmImageSrc("/uploads/2026/a.jpg").includes(`&v=${WATERMARK_VERSION}`));
     assert.equal(wmImageSrc(""), "");
     assert.equal(wmImageSrc("data:image/png;base64,xx"), "data:image/png;base64,xx");
+    assert.equal(wmImageSrc("/chaplogo.png"), "/chaplogo.png");
+    assert.equal(wmImageSrc("/fav.png"), "/fav.png");
   });
   it("keys the disk cache stably per source and version", () => {
     assert.equal(wmCacheKey("https://x.co/i.jpg"), wmCacheKey("https://x.co/i.jpg"));

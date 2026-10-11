@@ -3,6 +3,7 @@ import { currentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getStore } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
+import { WmImage } from "@/components/ui/wm-image";
 import { formatKES, formatDay } from "@/lib/format";
 import { getListingsStats } from "@/lib/analytics";
 
@@ -52,8 +53,12 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
         <ul className="mt-4 space-y-2">
           {items.map((l) => (
             <li key={l.id} className="card flex items-center gap-3 p-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={l.images[0] ?? "/chaplogo.png"} alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
+              {l.images[0] ? (
+                <WmImage src={l.images[0]} alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img src="/chaplogo.png" alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">{l.title}</p>
                 <p className="text-xs text-ink-400">{l.type} · {formatKES(l.price)} · {l.town}, {l.county} · {(viewMap.get(l.id) ?? 0).toLocaleString()} views · {formatDay(l.createdAt)}</p>
@@ -71,8 +76,12 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
           <ul className="mt-3 space-y-2">
             {staffItems.map(({ shopName, listing: l }) => (
               <li key={l.id} className="card flex items-center gap-3 p-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={l.images[0] ?? "/chaplogo.png"} alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
+                {l.images[0] ? (
+                  <WmImage src={l.images[0]} alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
+                ) : (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img src="/chaplogo.png" alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{l.title}</p>
                   <p className="text-xs text-ink-400">{l.type} · {formatKES(l.price)} · {shopName} · staff</p>

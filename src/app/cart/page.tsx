@@ -5,6 +5,7 @@ import { useCart } from "@/components/cart-provider";
 import { getListing } from "@/data/catalog";
 import { formatKES, cartTotals } from "@/lib/format";
 import { COUPONS } from "@/data/catalog";
+import { WmImage } from "@/components/ui/wm-image";
 import { useEffect, useMemo, useState } from "react";
 
 export default function CartPage() {
@@ -66,8 +67,7 @@ export default function CartPage() {
           <ul className="space-y-3">
             {detailed.map((l) => (
               <li key={l.id} className="card flex gap-3 p-3">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={l.listing.images[0]} alt={l.listing.title} className="h-20 w-24 rounded-lg object-cover" />
+                <WmImage src={l.listing.images[0]} alt={l.listing.title} className="h-20 w-24 rounded-lg object-cover" />
                 <div className="flex-1">
                   <Link href={`/product/${l.listing.slug}`} className="clamp-2 text-sm font-semibold hover:text-brand-700">{l.listing.title}</Link>
                   <p className="text-sm font-bold">{formatKES(l.listing.price)} <span className="font-normal text-ink-400">· {l.listing.sellerName}</span></p>
