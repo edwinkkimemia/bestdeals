@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BadgeCheck, Flag, Megaphone, Package, Receipt, Scale, Star, Ticket, Users } from "lucide-react";
+import { BadgeCheck, Flag, Megaphone, Package, Receipt, Scale, Star, Store, Ticket, Users } from "lucide-react";
+import { normalizePlan } from "@/lib/plans";
 import { getStore } from "@/lib/store";
 import { formatKES } from "@/lib/format";
+import { LISTINGS } from "@/data/catalog";
 import { AdminButtons, PromoButtons } from "../actions";
 import { CouponForm } from "../coupon-form";
 
@@ -10,6 +12,7 @@ const SECTION_ICONS: Record<string, typeof Package> = {
   listings: Package,
   verifications: BadgeCheck,
   users: Users,
+  shops: Store,
   orders: Receipt,
   disputes: Scale,
   reports: Flag,
@@ -20,7 +23,7 @@ const SECTION_ICONS: Record<string, typeof Package> = {
 
 export const dynamic = "force-dynamic";
 
-const SECTIONS = ["listings", "verifications", "users", "orders", "disputes", "reports", "reviews", "promotions", "coupons"] as const;
+const SECTIONS = ["listings", "verifications", "users", "shops", "orders", "disputes", "reports", "reviews", "promotions", "coupons"] as const;
 export function generateStaticParams() {
   return SECTIONS.map((section) => ({ section }));
 }
@@ -29,6 +32,7 @@ const TITLES: Record<string, string> = {
   listings: "Listing moderation",
   verifications: "Seller verifications",
   users: "Users",
+  shops: "Shops",
   orders: "Orders",
   disputes: "Disputes",
   reports: "Reports",
@@ -76,6 +80,7 @@ export default async function AdminSection({
     return (
       <div>
         <SectionTitle section="listings">{TITLES.listings} ({items.length})</SectionTitle>
+        <p className="mt-1 text-sm text-ink-500">Seller-submitted listings only — the {LISTINGS.length} static demo-catalogue listings on the storefront don&apos;t need moderation and aren&apos;t listed here.</p>
         <Tabs base="/admin/listings" tabs={statuses} current={status} />
         {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">Nothing {status} ✓</p> : (
           <ul className="mt-4 space-y-2">
@@ -119,7 +124,8 @@ export default async function AdminSection({
     return (
       <div>
         <SectionTitle section="users">{TITLES.users} ({users.length})</SectionTitle>
-        <p className="mt-1 text-sm text-ink-500">Grant or revoke the seller ✓ (ID verification). Email verification is self-serve and can&apos;t be granted here.</p>
+        <p className="mt-1 text-sm text-ink-500">Grant or revoke the seller ✓ (ID verification). Email verification is self-serve and can&apos;t be granted here. Registered accounts only — seller display names on listings aren&apos;t accounts.</p>
+        {users.length === 0 && <p className="mt-4 text-sm text-ink-500">No registered accounts yet — signups appear here. In-memory demo mode (no DATABASE_URL) resets on restart.</p>}
         <ul className="mt-4 space-y-2">
           {users.map((u) => (
             <li key={u.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
@@ -133,6 +139,43 @@ export default async function AdminSection({
             </li>
           ))}
         </ul>
+      </div>
+    );
+  }
+
+  if (section === "shops") {
+    const tabs = ["all", "verified", "pending"];
+    const tab = tabs.includes(searchParams.status ?? "") ? searchParams.status! : "all";
+    const all = await store.listShops();
+    const items = tab === "all" ? all : all.filter((s) => (tab === "verified" ? s.verified : !s.verified));
+    const owners = new Map((await store.listUsers().catch(() => [])).map((u) => [u.id, u.name]));
+    return (
+      <div>
+        <SectionTitle section="shops">{TITLES.shops} ({items.length})</SectionTitle>
+        <p className="mt-1 text-sm text-ink-500">Every seller shop: verify the business badge, check the plan, jump to the live storefront.</p>
+        <Tabs base="/admin/shops" tabs={tabs} current={tab} />
+        {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">No shops {tab === "all" ? "yet" : tab}.</p> : (
+          <ul className="mt-4 space-y-2">
+            {items.map((s) => (
+              <li key={s.slug} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-sand-100 font-black text-ink-400">
+                  {s.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={s.logoUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    s.name.charAt(0).toUpperCase()
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <strong>{s.name}</strong> <span className="text-ink-400">· /shops/{s.slug} · {s.ownerId ? owners.get(s.ownerId) ?? "owner" : "no owner"} · {normalizePlan(s.planId)} · {s.town}, {s.county}</span>{" "}
+                  <span className="chip">{s.verified ? "✓ verified" : "pending"}</span>
+                </span>
+                <Link href={`/shops/${s.slug}`} className="link-bd text-xs">View →</Link>
+                <AdminButtons kind="shop" id={s.slug} extra={{ verified: s.verified }} />
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     );
   }
@@ -203,7 +246,7 @@ export default async function AdminSection({
           <ul className="mt-4 space-y-2">
             {items.map((r) => (
               <li key={r.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
-                <span className="flex-1">Listing {r.listingId ?? "—"}: {r.reason} · <span className="chip">{r.status}</span></span>
+                <span className="flex-1">Listing {r.listingId ?? "—"}: {r.reason} · <span className="chip">{r.status}</span> <span className="text-ink-400">· {r.createdAt.slice(0, 10)}</span></span>
                 {r.status === "open" && <AdminButtons kind="report" id={r.id} />}
               </li>
             ))}

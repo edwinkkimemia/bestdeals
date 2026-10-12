@@ -10,11 +10,13 @@ import {
   LayoutDashboard,
   LogOut,
   Megaphone,
+  Newspaper,
   Package,
   Receipt,
   Scale,
-  Shield,
+  Settings,
   Star,
+  Store,
   Ticket,
   Users,
 } from "lucide-react";
@@ -26,15 +28,18 @@ const NAV = [
   { href: "/admin/listings", label: "Listings", Icon: Package },
   { href: "/admin/verifications", label: "Verifications", Icon: BadgeCheck },
   { href: "/admin/users", label: "Users", Icon: Users },
+  { href: "/admin/shops", label: "Shops", Icon: Store },
   { href: "/admin/orders", label: "Orders", Icon: Receipt },
   { href: "/admin/disputes", label: "Disputes", Icon: Scale },
   { href: "/admin/reports", label: "Reports", Icon: Flag },
   { href: "/admin/reviews", label: "Reviews", Icon: Star },
   { href: "/admin/promotions", label: "Promotions", Icon: Megaphone },
   { href: "/admin/coupons", label: "Coupons", Icon: Ticket },
+  { href: "/admin/blog", label: "Blog", Icon: Newspaper },
+  { href: "/admin/settings", label: "Settings", Icon: Settings },
 ];
 
-export function AdminSidebar({ email }: { email: string }) {
+export function AdminSidebar() {
   const path = usePathname();
   const router = useRouter();
   const isActive = (href: string, exact?: boolean) =>
@@ -49,18 +54,9 @@ export function AdminSidebar({ email }: { email: string }) {
   };
 
   return (
-    <aside aria-label="Admin" className="contents lg:block lg:w-60 lg:shrink-0">
-      {/* Desktop: full-height panel anchored under the sticky header */}
-      <div className="sticky top-[110px] hidden w-60 shrink-0 flex-col self-start border-r border-neutral-200 bg-white py-5 pr-4 lg:flex">
-        <div className="flex items-center gap-2.5 px-3 pb-4">
-          <span aria-hidden className="flex h-9 w-9 items-center justify-center rounded-xl bg-ink-900 text-white">
-            <Shield className="h-4 w-4" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-bold">Admin control</p>
-            <p className="truncate text-xs text-ink-400">{email}</p>
-          </div>
-        </div>
+    <aside aria-label="Admin" className="block min-w-0 lg:w-60 lg:shrink-0">
+      {/* Desktop: full-height panel anchored under the sticky admin header */}
+      <div className="sticky top-[72px] hidden w-60 shrink-0 flex-col self-start border-r border-neutral-200 bg-white py-5 pr-4 lg:flex">
         <nav aria-label="Admin sections" className="space-y-1">
           {NAV.map(({ href, label, Icon, exact }) => (
             <Link
@@ -87,24 +83,39 @@ export function AdminSidebar({ email }: { email: string }) {
         </div>
       </div>
 
-      {/* Mobile/tablet: horizontal section scroller */}
-      <nav aria-label="Admin sections" className="flex gap-1.5 overflow-x-auto py-4 lg:hidden">
+      {/* Mobile: slim icon-only sidebar rail */}
+      <nav aria-label="Admin sections" className="sticky top-[62px] flex flex-col items-center gap-1 self-start py-4 lg:hidden">
         {NAV.map(({ href, label, Icon, exact }) => (
           <Link
             key={href}
             href={href}
+            title={label}
+            aria-label={label}
             aria-current={isActive(href, exact) ? "page" : undefined}
             className={cn(
-              "flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[13px] font-medium",
-              isActive(href, exact)
-                ? "border-ink-900 bg-ink-900 font-bold text-white"
-                : "border-neutral-200 bg-white text-ink-700"
+              "flex h-10 w-10 items-center justify-center rounded-xl",
+              isActive(href, exact) ? "bg-ink-900 font-bold text-white" : "text-ink-700 hover:bg-sand-100"
             )}
           >
-            <Icon className="h-3.5 w-3.5" />
-            {label}
+            <Icon className="h-5 w-5" aria-hidden />
           </Link>
         ))}
+        <Link
+          href="/"
+          title="View site"
+          aria-label="View site"
+          className="mt-2 flex h-10 w-10 items-center justify-center rounded-xl text-ink-700 hover:bg-sand-100"
+        >
+          <ExternalLink className="h-5 w-5" aria-hidden />
+        </Link>
+        <button
+          onClick={signOut}
+          title="Sign out"
+          aria-label="Sign out"
+          className="flex h-10 w-10 items-center justify-center rounded-xl text-red-700 hover:bg-red-50"
+        >
+          <LogOut className="h-5 w-5" aria-hidden />
+        </button>
       </nav>
     </aside>
   );

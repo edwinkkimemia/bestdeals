@@ -18,6 +18,7 @@ import {
   Truck,
 } from "lucide-react";
 import { formatKES, timeAgo, formatFull } from "@/lib/format";
+import { toSafeHtml } from "@/lib/richtext";
 import { getListing, getShop, type Listing } from "@/data/catalog";
 import { listingHref } from "@/lib/related";
 import type { ReviewRecord } from "@/lib/store";
@@ -99,7 +100,7 @@ function ShareButtons({ title }: { title: string }) {
   );
 }
 
-export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonLd }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; jsonLd: Record<string, unknown> }) {
+export function ListingDetail({ listing, related, moreFromSeller, reviews, listingReviews, jsonLd, sellerPhotoUrl }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; listingReviews?: ReviewRecord[]; jsonLd: Record<string, unknown>; sellerPhotoUrl?: string | null }) {
   const { add } = useCart();
   const [img, setImg] = useState(0);
   const [qty, setQty] = useState(1);
@@ -109,6 +110,8 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
   const [recent, setRecent] = useState<Listing[]>([]);
 
   const shop = listing.shopSlug ? getShop(listing.shopSlug) : undefined;
+  // Seller avatar: uploaded profile photo first, shop logo as fallback.
+  const avatarUrl = sellerPhotoUrl ?? shop?.logo ?? null;
   // WhatsApp ordering always uses the verified number: the snapshot taken at
   // posting time first, then the shop's approved contact. No number, no button.
   const waPhone = listing.sellerPhone
@@ -260,7 +263,10 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
         <div className="order-3 min-w-0 lg:order-3">
           <div className="card mt-4 p-5 lg:mt-0">
             <h2 className="font-bold">Description</h2>
-            <p className="mt-2 whitespace-pre-line break-words text-sm leading-relaxed text-ink-700">{listing.description}</p>
+            <div
+              className="mt-2 space-y-2 break-words text-sm leading-relaxed text-ink-700 [&_a]:text-brand-700 [&_a]:underline [&_code]:rounded [&_code]:bg-sand-100 [&_code]:px-1 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5"
+              dangerouslySetInnerHTML={{ __html: toSafeHtml(listing.description, 6000) }}
+            />
             {Object.keys(listing.attributes).length > 0 && (
               <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
                 {Object.entries(listing.attributes).map(([k, v]) => (
@@ -301,8 +307,13 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
       <section className="mt-6 grid gap-3 lg:grid-cols-2" aria-label="Seller and report">
         <div className="card space-y-3 p-5">
           <div className="flex items-center gap-3">
-            <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-600 text-lg font-black text-white">
-              {listing.sellerName.charAt(0).toUpperCase()}
+            <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-lg font-black text-white">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                listing.sellerName.charAt(0).toUpperCase()
+              )}
             </span>
             <div className="min-w-0 flex-1">
               <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <VerifiedBadge verified={listing.verified} /></p>
@@ -388,6 +399,9 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, jsonL
       )}
 
       <ReviewsBlock reviews={reviews ?? []} title={`Reviews for ${listing.sellerName}`} />
+      {(listingReviews ?? []).length > 0 && (
+        <ReviewsBlock reviews={listingReviews ?? []} title={`Reviews for this listing`} />
+      )}
       </div>
     </div>
   );

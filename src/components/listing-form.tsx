@@ -8,6 +8,7 @@ import { CATEGORIES, categoryBySlug } from "@/data/catalog";
 import { COUNTY_NAMES, townsFor } from "@/lib/kenya";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { RichTextField } from "./rich-text-field";
 
 const TYPES = ["product", "classified", "service"] as const;
 
@@ -32,7 +33,7 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
     setMsg(text);
   };
 
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(listingSchema),
     defaultValues: {
       listingType: (initialValues?.listingType as never) ?? ((TYPES as readonly string[]).includes(typeParam ?? "") ? (typeParam as never) : ("classified" as never)),
@@ -54,6 +55,7 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
   });
   const catSlug = watch("categorySlug");
   const county = watch("county");
+  const description = (watch("description") as string | undefined) ?? "";
   const cat = categoryBySlug(catSlug ?? "");
 
   return (
@@ -105,7 +107,14 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
           </select></div>
       </div>
       <div><label className="label-bd" htmlFor="l-title">Title</label><input id="l-title" className="input-bd" placeholder="e.g. Samsung Galaxy A15 128GB, sealed" {...register("title")} />{errors.title && <p className="text-xs text-red-600">{String(errors.title.message)}</p>}</div>
-      <div><label className="label-bd" htmlFor="l-desc">Description</label><textarea id="l-desc" rows={5} className="input-bd" {...register("description")} />{errors.description && <p className="text-xs text-red-600">{String(errors.description.message)}</p>}</div>
+      <RichTextField
+        id="l-desc"
+        label="Description (max 1000 characters)"
+        value={description}
+        onChange={(v) => setValue("description", v as never, { shouldValidate: true, shouldDirty: true })}
+        error={errors.description ? String(errors.description.message) : undefined}
+        maxLength={1000}
+      />
       <div className="grid gap-3 sm:grid-cols-2">
         <div><label className="label-bd" htmlFor="l-cat">Category</label>
           <select id="l-cat" className="input-bd" {...register("categorySlug")}>

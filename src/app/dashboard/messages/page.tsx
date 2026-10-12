@@ -5,6 +5,57 @@ import Link from "next/link";
 import { MessageCircleOff, Search } from "lucide-react";
 import { timeAgo } from "@/lib/format";
 
+function ChatList({ items, phone, filter, setFilter }: {
+  items: Convo[];
+  phone: string;
+  filter: string;
+  setFilter: (v: string) => void;
+}) {
+  const q = filter.trim().toLowerCase();
+  const shown = q
+    ? items.filter((c) =>
+        [c.listingTitle, c.sellerName, c.lastMessage].some((s) => (s ?? "").toLowerCase().includes(q))
+      )
+    : items;
+  return (
+    <>
+      <div className="relative mt-4">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
+        <input
+          aria-label="Search chats"
+          placeholder="Search chats…"
+          className="input-bd !rounded-full !pl-9"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+        />
+      </div>
+      {shown.length === 0 ? (
+        <p className="mt-4 text-center text-sm text-ink-500">No chats match “{filter.trim()}”.</p>
+      ) : (
+        <ul className="mt-3 space-y-2">
+          {shown.map((c) => (
+            <li key={c.id}>
+              <Link href={`/dashboard/messages/${c.id}${phone ? `?phone=${encodeURIComponent(phone)}` : ""}`} className="card flex items-center gap-3 p-4 hover:border-brand-600">
+                <span aria-hidden className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 font-black text-brand-700">
+                  {(c.sellerName ?? "C").charAt(0).toUpperCase()}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-2">
+                    <strong className="truncate text-sm">{c.listingTitle ?? "General enquiry"}</strong>
+                    {c.unread > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1.5 text-[11px] font-bold text-white">{c.unread > 99 ? "99+" : c.unread}</span>}
+                  </span>
+                  <span className="block truncate text-sm text-ink-500">{c.lastMessage ?? "—"}</span>
+                  <span className="text-xs text-ink-400">{c.sellerName} · {c.lastAt ? timeAgo(c.lastAt) : ""}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
 type Convo = {
   id: string;
   listingTitle?: string;
@@ -18,6 +69,7 @@ export default function InboxPage() {
   const [items, setItems] = useState<Convo[]>([]);
   const [ready, setReady] = useState(false);
   const [phone, setPhone] = useState("");
+  const [filter, setFilter] = useState("");
 
   const load = async (p?: string) => {
     const qs = p ? `?phone=${encodeURIComponent(p)}` : "";
@@ -74,25 +126,7 @@ export default function InboxPage() {
           <Link href="/classifieds" className="btn-primary mt-4">Browse classifieds</Link>
         </div>
       ) : (
-        <ul className="mt-4 space-y-2">
-          {items.map((c) => (
-            <li key={c.id}>
-              <Link href={`/dashboard/messages/${c.id}${phone ? `?phone=${encodeURIComponent(phone)}` : ""}`} className="card flex items-center gap-3 p-4 hover:border-brand-600">
-                <span aria-hidden className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 font-black text-brand-700">
-                  {(c.sellerName ?? "C").charAt(0).toUpperCase()}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-2">
-                    <strong className="truncate text-sm">{c.listingTitle ?? "General enquiry"}</strong>
-                    {c.unread > 0 && <span className="rounded-full bg-accent-500 px-2 py-0.5 text-[11px] font-bold text-white">{c.unread} new</span>}
-                  </span>
-                  <span className="block truncate text-sm text-ink-500">{c.lastMessage ?? "—"}</span>
-                  <span className="text-xs text-ink-400">{c.sellerName} · {c.lastAt ? timeAgo(c.lastAt) : ""}</span>
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <ChatList items={items} phone={phone} filter={filter} setFilter={setFilter} />
       )}
     </div>
   );

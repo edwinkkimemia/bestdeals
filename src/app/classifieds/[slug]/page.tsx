@@ -26,10 +26,15 @@ export default async function ClassifiedDetail({ params }: { params: { slug: str
   if (!l) notFound();
   const { fromOthers, fromSeller } = getRelated(l);
   const reviews = await storeRead((s) => s.listApprovedReviewsForSeller(l.sellerName), []);
+  const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(l.id), []);
+  const sellerPhotoUrl = await storeRead(
+    (s) => s.findUserByDisplayName(l.sellerName).then((u) => u?.photoUrl ?? null),
+    null
+  );
   const jsonLd = breadcrumbJsonLd([
     { name: "Home", url: "https://chap.co.ke/" },
     { name: "Classifieds", url: "https://chap.co.ke/classifieds" },
     { name: l.title, url: `https://chap.co.ke/classifieds/${l.slug}` },
   ]);
-  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} jsonLd={jsonLd} />;
+  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} jsonLd={jsonLd} />;
 }

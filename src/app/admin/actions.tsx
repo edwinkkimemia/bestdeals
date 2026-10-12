@@ -10,7 +10,7 @@ async function call(url: string, body: Record<string, unknown>): Promise<string>
 }
 
 /** Small admin action buttons (verify / review / dispute / report / moderate). */
-export function AdminButtons({ kind, id, extra }: { kind: "verify" | "review" | "dispute" | "report" | "listing" | "user" | "coupon"; id: string; extra?: Record<string, unknown> }) {
+export function AdminButtons({ kind, id, extra }: { kind: "verify" | "review" | "dispute" | "report" | "listing" | "user" | "shop" | "coupon"; id: string; extra?: Record<string, unknown> }) {
   const router = useRouter();
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -24,6 +24,7 @@ export function AdminButtons({ kind, id, extra }: { kind: "verify" | "review" | 
       : kind === "dispute" ? "/api/admin/disputes"
       : kind === "report" ? "/api/admin/reports"
       : kind === "user" ? "/api/admin/users"
+      : kind === "shop" ? "/api/admin/shops"
       : kind === "coupon" ? "/api/admin/coupons"
       : "/api/admin/moderate";
     setMsg(await call(url, { id, ...extra, ...payload }));
@@ -46,11 +47,11 @@ export function AdminButtons({ kind, id, extra }: { kind: "verify" | "review" | 
     );
   }
 
-  if (kind === "user") {
+  if (kind === "user" || kind === "shop") {
     const verified = Boolean(extra?.verified);
     return (
       <span className="flex gap-1.5">
-        <button disabled={busy} className={verified ? btn : primary} onClick={() => run({ verified: !verified })}>
+        <button disabled={busy} className={verified ? btn : primary} onClick={() => run(kind === "shop" ? { slug: id, verified: !verified } : { verified: !verified })}>
           {verified ? "Revoke ✓" : "Verify"}
         </button>
         {msg && msg !== "ok" && <span className="text-xs text-red-600">{msg}</span>}
@@ -79,7 +80,8 @@ export function AdminButtons({ kind, id, extra }: { kind: "verify" | "review" | 
   if (kind === "report") {
     return (
       <span className="flex gap-1.5">
-        <button disabled={busy} className={btn} onClick={() => run({})}>Close report</button>
+        <button disabled={busy} className={btn} onClick={() => run({ action: "close" })}>Close report</button>
+        <button disabled={busy} className={primary} onClick={() => run({ action: "hide" })} title="Close + hide the reported listing">Hide listing</button>
         {msg && msg !== "ok" && <span className="text-xs text-red-600">{msg}</span>}
       </span>
     );

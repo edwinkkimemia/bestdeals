@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/layout/header";
+import { Chrome } from "@/components/layout/chrome";
 import { Footer } from "@/components/layout/footer";
-import { BottomNav } from "@/components/layout/bottom-nav";
 import { CartProvider } from "@/components/cart-provider";
 import { currentUser } from "@/lib/auth";
+import { storeRead } from "@/lib/store";
 import { websiteJsonLd } from "@/lib/seo";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -45,15 +45,29 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser().catch(() => null);
+  // Site-wide announcement bar (Admin → Settings). Silent when disabled/unset.
+  const announcement = await storeRead(async (s) => {
+    const [enabled, text] = await Promise.all([
+      s.getSetting("announcement_enabled").catch(() => null),
+      s.getSetting("announcement_text").catch(() => null),
+    ]);
+    const on = enabled === "1" || enabled === true;
+    const msg = typeof text === "string" ? text.trim() : "";
+    return on && msg ? msg.slice(0, 200) : null;
+  }, null);
   return (
     <html lang="en-KE">
       <body className={`${inter.variable} font-sans`}>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd()) }} />
         <CartProvider>
-          <Header user={user ? { name: user.name, role: user.role } : null} />
-          <main className="min-h-[60vh]">{children}</main>
-          <Footer />
-          <BottomNav />
+          <Chrome
+            user={user ? { name: user.name, role: user.role } : null}
+            adminUser={user ? { name: user.name, email: user.email } : null}
+            announcement={announcement}
+            footer={<Footer />}
+          >
+            {children}
+          </Chrome>
         </CartProvider>
       </body>
     </html>

@@ -176,6 +176,20 @@ describe("store", () => {
     assert.equal(shops.length, 1);
     assert.equal(shops[0].verified, false);
   });
+
+  it("scopes reviews to listings and looks them up by order", async () => {
+    const s = freshDemoStore();
+    await s.createReview({ listingId: "l1", sellerName: "Amina", authorName: "Brian", rating: 5, body: "Great phone", verifiedPurchase: false });
+    await s.createReview({ listingId: "l2", sellerName: "Amina", authorName: "Cate", rating: 4, verifiedPurchase: false });
+    for (const r of await s.listPendingReviews()) await s.setReviewStatus(r.id, "approved");
+    assert.equal((await s.listApprovedReviewsForListing("l1")).length, 1);
+    assert.equal((await s.listApprovedReviewsForListing("l2")).length, 1);
+    assert.equal((await s.listApprovedReviewsForListing("l3")).length, 0);
+    assert.equal((await s.listApprovedReviewsForSeller("Amina")).length, 2);
+    await s.createReview({ orderId: "o9", sellerName: "Amina", authorName: "Brian", rating: 5, verifiedPurchase: true });
+    assert.equal((await s.findReviewByOrder("o9"))?.authorName, "Brian");
+    assert.equal(await s.findReviewByOrder("nope"), null);
+  });
 });
 
 describe("trust-validators", () => {

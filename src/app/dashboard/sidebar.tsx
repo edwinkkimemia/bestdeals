@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
 import {
   BadgeCheck,
   BarChart3,
@@ -33,20 +32,8 @@ const NAV = [
 export function DashboardSidebar({ unread }: { unread: number }) {
   const path = usePathname();
   const router = useRouter();
-  const scrollRef = useRef<HTMLElement>(null);
   const isActive = (href: string, exact?: boolean) =>
     exact ? path === href : path === href || path.startsWith(`${href}/`);
-
-  // Keep the active pill visible when navigating on mobile.
-  const activeHref = NAV.find(({ href, exact }) => isActive(href, exact))?.href;
-  useEffect(() => {
-    const root = scrollRef.current;
-    if (!root) return;
-    const active = root.querySelector<HTMLElement>('[aria-current="page"]');
-    if (active) {
-      active.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
-    }
-  }, [activeHref]);
 
   const signOut = async () => {
     try {
@@ -57,7 +44,7 @@ export function DashboardSidebar({ unread }: { unread: number }) {
   };
 
   return (
-    <aside aria-label="Dashboard" className="block min-w-0 lg:w-60 lg:shrink-0">
+    <aside aria-label="Dashboard" className="w-12 shrink-0 lg:w-60">
       {/* Desktop: full-height panel anchored under the sticky header (not a floating card) */}
       <div className="sticky top-[110px] hidden w-60 shrink-0 flex-col self-start border-r border-neutral-200 bg-white py-5 pr-4 lg:flex">
         <nav aria-label="Dashboard sections" className="space-y-1">
@@ -91,44 +78,37 @@ export function DashboardSidebar({ unread }: { unread: number }) {
         </div>
       </div>
 
-      {/* Mobile: sticky pill bar — full-bleed, hidden scrollbar, edge fades */}
-      <div className="sticky top-[60px] z-30 -mx-4 border-b border-neutral-200/70 bg-white/95 py-2.5 backdrop-blur sm:-mx-6 sm:top-[64px] lg:hidden">
-        <nav
-          ref={scrollRef}
-          aria-label="Dashboard sections"
-          className="flex snap-x snap-proximity gap-2 overflow-x-auto overscroll-x-contain scroll-smooth px-4 pb-1 pt-0.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:px-6 [&::-webkit-scrollbar]:hidden"
+      {/* Mobile: slim icon-only sidebar rail */}
+      <nav aria-label="Dashboard sections" className="sticky top-[62px] flex flex-col items-center gap-1 self-start py-4 lg:hidden">
+        {NAV.map(({ href, label, Icon, exact }) => (
+          <Link
+            key={href}
+            href={href}
+            title={label}
+            aria-label={label}
+            aria-current={isActive(href, exact) ? "page" : undefined}
+            className={cn(
+              "relative flex h-10 w-10 items-center justify-center rounded-xl",
+              isActive(href, exact) ? "bg-brand-50 font-bold text-brand-700" : "text-ink-700 hover:bg-sand-100"
+            )}
+          >
+            <Icon className="h-5 w-5" aria-hidden />
+            {href === "/dashboard/messages" && unread > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-500 px-1 text-[10px] font-bold text-white">
+                {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+          </Link>
+        ))}
+        <button
+          onClick={signOut}
+          title="Sign out"
+          aria-label="Sign out"
+          className="mt-2 flex h-10 w-10 items-center justify-center rounded-xl text-red-700 hover:bg-red-50"
         >
-          {NAV.map(({ href, label, Icon, exact }) => {
-            const active = isActive(href, exact);
-            return (
-              <Link
-                key={href}
-                href={href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex shrink-0 snap-start items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-2 text-[13px] leading-none font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-1",
-                  active
-                    ? "border-brand-600 bg-brand-600 font-semibold text-white shadow-sm"
-                    : "border-neutral-200 bg-white text-ink-700 active:bg-sand-100"
-                )}
-              >
-                <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                {label}
-                {href === "/dashboard/messages" && unread > 0 && (
-                  <span
-                    className={cn(
-                      "flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold",
-                      active ? "bg-white text-brand-700" : "bg-accent-500 text-white"
-                    )}
-                  >
-                    {unread > 99 ? "99+" : unread}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+          <LogOut className="h-5 w-5" aria-hidden />
+        </button>
+      </nav>
     </aside>
   );
 }

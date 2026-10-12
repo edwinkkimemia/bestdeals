@@ -57,10 +57,28 @@ export default async function ShopsIndex() {
           <h2 className="mb-2 mt-8 font-bold">New from the community ({community.length})</h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {community.map((s) => (
-              <Link key={s.slug} href={`/shops/${s.slug}`} className="card p-4 hover:border-brand-600">
-                <p className="font-bold">{s.name} {s.verified ? <Badge tone="green">✓ Verified</Badge> : <Badge>New</Badge>}</p>
-                <p className="text-xs text-ink-500">{s.businessCategory} · {s.town}, {s.county}</p>
-                <p className="clamp-2 mt-1 text-sm text-ink-500">{s.description}</p>
+              <Link key={s.slug} href={`/shops/${s.slug}`} className="card overflow-hidden hover:border-brand-600">
+                {s.coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={s.coverUrl} alt={`${s.name} cover`} loading="lazy" className="h-28 w-full object-cover" />
+                ) : (
+                  <div aria-hidden className="h-16 w-full bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800" />
+                )}
+                <div className="flex items-start gap-2.5 p-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-600 font-black text-white">
+                    {s.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={s.logoUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      s.name.charAt(0).toUpperCase()
+                    )}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-bold">{s.name} {s.verified ? <Badge tone="green">✓ Verified</Badge> : <Badge>New</Badge>}</span>
+                    <span className="block text-xs text-ink-500">{s.businessCategory} · {s.town}, {s.county}</span>
+                    <span className="clamp-2 mt-1 block text-sm text-ink-500">{s.description}</span>
+                  </span>
+                </div>
               </Link>
             ))}
           </div>

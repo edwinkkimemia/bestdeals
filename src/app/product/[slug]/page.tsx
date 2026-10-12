@@ -26,6 +26,11 @@ export default async function ProductPage({ params }: { params: { slug: string }
   if (!l) notFound();
   const { fromOthers, fromSeller } = getRelated(l);
   const reviews = await storeRead((s) => s.listApprovedReviewsForSeller(l.sellerName), []);
+  const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(l.id), []);
+  const sellerPhotoUrl = await storeRead(
+    (s) => s.findUserByDisplayName(l.sellerName).then((u) => u?.photoUrl ?? null),
+    null
+  );
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -37,5 +42,5 @@ export default async function ProductPage({ params }: { params: { slug: string }
       ]),
     ],
   };
-  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} jsonLd={jsonLd} />;
+  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} jsonLd={jsonLd} />;
 }

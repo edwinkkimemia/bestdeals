@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Store } from "lucide-react";
 import { normalizePlan } from "@/lib/plans";
 import { getStore } from "@/lib/store";
-import { PlanPanel, BulkPanel, StaffPanel } from "./panels";
+import { PlanPanel, BulkPanel, StaffPanel, ShopHeaderForm } from "./panels";
 
 export const metadata = { title: "My Shop" };
 export const dynamic = "force-dynamic";
@@ -61,6 +61,23 @@ export default async function ShopDash({ searchParams }: { searchParams: { plan?
             <button className="btn-primary w-full" formAction="/api/shops" type="submit">Check availability & create</button>
           </form>
           {active && <BulkPanel shopName={active.name} isGold={activePlan === "gold"} />}
+          {active && isOwner && (
+            <ShopHeaderForm
+              shop={{
+                slug: active.slug,
+                name: active.name,
+                description: active.description,
+                businessCategory: active.businessCategory,
+                county: active.county,
+                town: active.town,
+                phone: active.phone,
+                logoUrl: active.logoUrl ?? null,
+                coverUrl: active.coverUrl ?? null,
+                deliveryInfo: active.deliveryInfo ?? null,
+                hours: active.hours ?? null,
+              }}
+            />
+          )}
         </div>
         <div>
           <PlanPanel

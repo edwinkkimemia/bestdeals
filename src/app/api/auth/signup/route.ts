@@ -12,6 +12,11 @@ const isAdminEmail = (email: string) =>
 export async function POST(req: NextRequest) {
   const rl = rateLimit(clientKey(req, "auth:signup"), { limit: 10, windowMs: 60_000 });
   if (!rl.ok) return NextResponse.json({ error: "Too many attempts. Try again shortly." }, { status: 429 });
+  // Admin kill-switch (Admin → Settings). Unset defaults to open.
+  const regOpen = await getStore().getSetting("registrations_open").catch(() => null);
+  if (regOpen === "0" || regOpen === false) {
+    return NextResponse.json({ error: "Registrations are currently closed. Please check back soon." }, { status: 403 });
+  }
   const body = await req.json().catch(() => ({}));
   const parsed = signupSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid input" }, { status: 400 });

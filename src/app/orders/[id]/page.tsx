@@ -51,6 +51,7 @@ function OrderInner({ id }: { id: string }) {
   const [dMsg, setDMsg] = useState("");
   const [rForm, setRForm] = useState({ name: "", rating: 5, body: "" });
   const [rMsg, setRMsg] = useState("");
+  const [existingReview, setExistingReview] = useState<{ status: string } | null>(null);
 
   const phone = sp.get("phone") || (typeof window !== "undefined" ? localStorage.getItem("bd_phone") || "" : "");
 
@@ -76,6 +77,13 @@ function OrderInner({ id }: { id: string }) {
       try {
         const r = await fetch(`/api/disputes?order=${id}`);
         if (r.ok) setDispute((await r.json()).dispute);
+      } catch {}
+      try {
+        const r = await fetch(`/api/reviews?order=${id}`);
+        if (r.ok) {
+          const j = await r.json();
+          if (j.review) setExistingReview(j.review);
+        }
       } catch {}
     })();
   }, [id, phone]);
@@ -165,6 +173,11 @@ function OrderInner({ id }: { id: string }) {
       <div className="card mt-3 p-5">
         <h2 className="font-bold">Rate this purchase{seller ? ` from ${seller}` : ""}</h2>
         <p className="text-xs text-ink-400">Paid or delivered orders earn a ✓ Verified purchase badge. All reviews are moderated before display.</p>
+        {existingReview ? (
+          <p role="status" className="mt-2 rounded-xl bg-green-50 p-3 text-sm text-green-800">
+            Review submitted ✓ — {existingReview.status === "approved" ? "it's live on the seller's page." : "it's queued for moderation."} One review per order.
+          </p>
+        ) : (
         <form
           className="mt-2 grid gap-2 sm:grid-cols-2"
           onSubmit={async (e) => {
@@ -176,7 +189,11 @@ function OrderInner({ id }: { id: string }) {
               body: JSON.stringify({ orderId: id, sellerName: seller, authorName: rForm.name, rating: rForm.rating, body: rForm.body }),
             });
             const j = await r.json();
-            setRMsg(r.ok ? `Thanks ✓ — review queued for moderation${j.verifiedPurchase ? " with Verified purchase badge" : ""}.` : (j.error || "Failed."));
+            if (r.ok) {
+              setExistingReview({ status: "pending" });
+            } else {
+              setRMsg(j.error || "Failed.");
+            }
           }}
         >
           <input aria-label="Your name" placeholder="Your name" className="input-bd" value={rForm.name} onChange={(e) => setRForm({ ...rForm, name: e.target.value })} required />
@@ -187,6 +204,7 @@ function OrderInner({ id }: { id: string }) {
           <button className="btn-primary sm:col-span-2">Submit review</button>
           {rMsg && <p role="status" className="text-sm sm:col-span-2">{rMsg}</p>}
         </form>
+        )}
       </div>
     </div>
   );

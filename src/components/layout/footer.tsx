@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { storeRead } from "@/lib/store";
 
 function XIcon({ className }: { className?: string }) {
   return (
@@ -78,6 +79,7 @@ const COLS: { title: string; links: { href: string; label: string }[] }[] = [
     title: "Company & Legal",
     links: [
       { href: "/about", label: "About Chap" },
+      { href: "/blog", label: "Blog" },
       { href: "/terms", label: "Terms & Conditions" },
       { href: "/privacy", label: "Privacy Policy" },
       { href: "/returns", label: "Returns & Refunds" },
@@ -87,7 +89,17 @@ const COLS: { title: string; links: { href: string; label: string }[] }[] = [
   },
 ];
 
-export function Footer() {
+export async function Footer() {
+  // Support contacts are managed in Admin → Settings. Silent when unset.
+  const support = await storeRead(async (s) => {
+    const [email, phone, whatsapp] = await Promise.all([
+      s.getSetting("support_email").catch(() => null),
+      s.getSetting("support_phone").catch(() => null),
+      s.getSetting("support_whatsapp").catch(() => null),
+    ]);
+    const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+    return { email: str(email), phone: str(phone), whatsapp: str(whatsapp) };
+  }, { email: null, phone: null, whatsapp: null });
   return (
     <footer className="mt-16 border-t border-neutral-200 bg-sand-50">
       <div className="container-bd grid gap-8 py-12 sm:grid-cols-2 lg:grid-cols-5">
@@ -96,6 +108,18 @@ export function Footer() {
             <Image src="/chaplogo.png" alt="chap.co.ke" width={1147} height={287} className="h-9 w-auto" />
           </Link>
           <p className="mt-2 text-sm text-ink-500">Kenya&apos;s marketplace for everything. Find it. Sell it. Get the best deal.</p>
+          {(support.email || support.phone || support.whatsapp) && (
+            <p className="mt-2 text-sm text-ink-500">
+              Support:{" "}
+              {support.email && <a href={`mailto:${support.email}`} className="link-bd">{support.email}</a>}
+              {support.email && (support.phone || support.whatsapp) && " · "}
+              {support.phone && <a href={`tel:${support.phone.replace(/\s/g, "")}`} className="link-bd">{support.phone}</a>}
+              {support.phone && support.whatsapp && " · "}
+              {support.whatsapp && (
+                <a href={`https://wa.me/${support.whatsapp.replace(/\D/g, "").replace(/^0/, "254")}`} target="_blank" rel="noreferrer" className="link-bd">WhatsApp</a>
+              )}
+            </p>
+          )}
           <div className="mt-3 flex items-center gap-2" aria-label="Follow Chap">
             {SOCIALS.map(({ label, href, Icon }) => (
               <a key={label} href={href} target="_blank" rel="noreferrer" aria-label={label} title={label}

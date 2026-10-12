@@ -81,7 +81,7 @@ export default async function HomePage() {
         slug: s.slug,
         name: s.name,
         description: s.description,
-        cover: SHOP_COVER_FALLBACKS[i % SHOP_COVER_FALLBACKS.length],
+        cover: s.coverUrl || SHOP_COVER_FALLBACKS[i % SHOP_COVER_FALLBACKS.length],
         verified: s.verified,
         place: `${s.town}, ${s.county}`,
         countLabel: s.verified ? "Verified business" : "New shop",

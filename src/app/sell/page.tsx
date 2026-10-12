@@ -32,7 +32,7 @@ export default async function SellPage() {
   return (
     <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Sell" }]} />
-      <div className="mx-auto mt-4 max-w-2xl">
+      <div className="mt-4">
         <h1 className="section-title">Sell an item</h1>
         <VerificationGate userId={user.id} />
         <p className="mt-1 text-sm text-ink-500">Fields adapt to the category. Photos upload from your phone; listings go live after moderation.</p>

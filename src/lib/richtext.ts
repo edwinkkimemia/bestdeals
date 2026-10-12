@@ -35,8 +35,8 @@ function inline(src: string): string {
 }
 
 /** Markdown subset → sanitized HTML. Always safe to inject. */
-export function toSafeHtml(input: string): string {
-  const lines = String(input ?? "").slice(0, MAX).split("\n");
+export function toSafeHtml(input: string, maxLen = MAX): string {
+  const lines = String(input ?? "").slice(0, maxLen).split("\n");
   const out: string[] = [];
   let list: string[] = [];
   const flush = () => {

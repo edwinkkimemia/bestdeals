@@ -6,11 +6,13 @@ import {
   Eye,
   Flag,
   Megaphone,
+  Newspaper,
   Package,
   Receipt,
   Scale,
   ShieldCheck,
   Star,
+  Store,
   Ticket,
   Users,
 } from "lucide-react";
@@ -18,10 +20,13 @@ import { getStore } from "@/lib/store";
 import { formatKES } from "@/lib/format";
 import { getPlatformAnalytics } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
+import { LISTINGS, SHOPS } from "@/data/catalog";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const store = getStore();
-  const [pending, reports, disputes, reviews, verifications, orders, promos, users, views, coupons] = await Promise.all([
+  const [pending, reports, disputes, reviews, verifications, orders, promos, users, shops, posts, views, coupons] = await Promise.all([
     store.listListingsByStatus("pending"),
     store.listReports("open"),
     store.listDisputes(),
@@ -30,6 +35,8 @@ export default async function AdminPage() {
     store.listOrders(),
     store.listPromotions("pending_payment"),
     store.listUsers(),
+    store.listShops(),
+    store.listBlogPosts("published"),
     getPlatformAnalytics(30, 1).catch(() => ({ totalViews: 0, uniqueViewers: 0 })),
     store.listCoupons(),
   ]);
@@ -50,6 +57,8 @@ export default async function AdminPage() {
     { t: "Active coupons", v: String(coupons.filter((c) => c.active).length), href: "/admin/coupons", Icon: Ticket, tile: "bg-green-50 text-green-700" },
     { t: "Total orders", v: String(orders.length), href: "/admin/orders", Icon: Receipt, tile: "bg-green-50 text-green-700" },
     { t: "Registered users", v: String(users.length), href: "/admin/users", Icon: Users, tile: "bg-green-50 text-green-700" },
+    { t: "Shops", v: String(shops.length), href: "/admin/shops", Icon: Store, tile: "bg-green-50 text-green-700" },
+    { t: "Published posts", v: String(posts.length), href: "/admin/blog", Icon: Newspaper, tile: "bg-green-50 text-green-700" },
     { t: "Paid revenue (KES)", v: formatKES(revenue), href: "/admin/orders", Icon: BarChart3, tile: "bg-green-50 text-green-700" },
   ];
 
@@ -86,6 +95,14 @@ export default async function AdminPage() {
         ))}
         {pending.length + verifications.length + openDisputes.length === 0 && <li>All queues clear ✓</li>}
       </ul>
+
+      <h2 className="mt-8 flex items-center gap-2 font-bold"><Package className="h-4 w-4 text-ink-400" /> Storefront demo catalogue (static)</h2>
+      <p className="mt-1 text-sm text-ink-500">
+        {LISTINGS.length} listings · {SHOPS.length} shops of seed data power the public storefront.
+        They are not database rows, so they never appear in the queues above — only seller-submitted
+        listings, signups and orders do. Without <code>DATABASE_URL</code> the store is in-memory demo
+        mode and resets on restart; set it + run migrations for persistent data.
+      </p>
       <p className="mt-8 text-xs text-ink-400">Restricted area. Every admin action is logged with a reason.</p>
     </div>
   );

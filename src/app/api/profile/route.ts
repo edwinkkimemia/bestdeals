@@ -3,21 +3,30 @@ import { currentUser, createSessionToken, SESSION_COOKIE } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 
-/** Update own profile (display name + phone). Verification status can't be self-edited. */
+/** Update own profile (display name + phone + public photo). Verification status can't be self-edited. */
 export async function PUT(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const rl = rateLimit(clientKey(req, `profile:${user.id}`), { limit: 10, windowMs: 3600_000 });
   if (!rl.ok) return NextResponse.json({ error: "Too many updates. Try again later." }, { status: 429 });
   const body = await req.json().catch(() => ({}));
-  const { name, phone } = body as { name?: string; phone?: string };
+  const { name, phone, photoUrl } = body as { name?: string; phone?: string; photoUrl?: string | null };
   if (name !== undefined && (name.trim().length < 2 || name.trim().length > 80)) {
     return NextResponse.json({ error: "Name must be 2–80 characters." }, { status: 400 });
   }
   if (phone !== undefined && !/^(\+254|0)[17]\d{8}$/.test(phone)) {
     return NextResponse.json({ error: "Use a valid Kenyan phone e.g. 0712345678." }, { status: 400 });
   }
-  const updated = await getStore().updateUser(user.id, { name, phone });
+  if (photoUrl !== undefined && photoUrl !== null && photoUrl !== "") {
+    const ok =
+      typeof photoUrl === "string" &&
+      photoUrl.length <= 2000 &&
+      (photoUrl.startsWith("https://") || photoUrl.startsWith("/uploads/") || photoUrl.startsWith("/api/files/"));
+    if (!ok) return NextResponse.json({ error: "Photo must be an uploaded image (JPG/PNG/WebP)." }, { status: 400 });
+  }
+  const patch: { name?: string; phone?: string; photoUrl?: string | null } = { name, phone };
+  if (photoUrl !== undefined) patch.photoUrl = photoUrl ? photoUrl : null;
+  const updated = await getStore().updateUser(user.id, patch);
   if (!updated) return NextResponse.json({ error: "Account not found." }, { status: 404 });
   // Re-issue the session cookie so header/dashboard show the new name/phone immediately.
   const token = await createSessionToken({
@@ -28,7 +37,7 @@ export async function PUT(req: NextRequest) {
     role: updated.role,
     verified: updated.verified,
   });
-  const res = NextResponse.json({ ok: true, name: updated.name, phone: updated.phone });
+  const res = NextResponse.json({ ok: true, name: updated.name, phone: updated.phone, photoUrl: updated.photoUrl ?? null });
   res.cookies.set(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 604800 });
   return res;
 }

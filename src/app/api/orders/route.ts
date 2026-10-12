@@ -83,7 +83,10 @@ export async function POST(req: NextRequest) {
     deliveryFee: DELIVERY[d.deliveryMethod],
   });
 
-  // Split by seller → suborders with commission memo
+  // Split by seller → suborders with commission memo (rate from Admin → Settings).
+  const bpsRaw = await store.getSetting("commission_bps").catch(() => null);
+  const bpsNum = typeof bpsRaw === "string" ? Number(bpsRaw) : typeof bpsRaw === "number" ? bpsRaw : NaN;
+  const commissionBps = Number.isFinite(bpsNum) && bpsNum >= 0 && bpsNum <= 3000 ? Math.round(bpsNum) : COMMISSION_BPS_DEFAULT;
   const bySeller = new Map<string, typeof lines>();
   for (const l of lines) {
     const arr = bySeller.get(l.seller) ?? [];
@@ -92,7 +95,7 @@ export async function POST(req: NextRequest) {
   }
   const suborders = [...bySeller.entries()].map(([seller, items]) => {
     const st = items.reduce((s, i) => s + i.price * i.qty, 0);
-    return { seller, items: items.map((i) => ({ id: i.id, title: i.title, qty: i.qty, price: i.price })), subtotal: st, commission: commissionDue(st, COMMISSION_BPS_DEFAULT) };
+    return { seller, items: items.map((i) => ({ id: i.id, title: i.title, qty: i.qty, price: i.price })), subtotal: st, commission: commissionDue(st, commissionBps) };
   });
 
   const orderId = uid("BD").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 14) || uid("order");

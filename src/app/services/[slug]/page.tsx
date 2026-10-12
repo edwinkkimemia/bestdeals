@@ -21,5 +21,10 @@ export default async function ServiceDetail({ params }: { params: { slug: string
   if (!l) notFound();
   const { fromOthers, fromSeller } = getRelated(l);
   const reviews = await storeRead((s) => s.listApprovedReviewsForSeller(l.sellerName), []);
-  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} jsonLd={breadcrumbJsonLd([{ name: "Home", url: "https://chap.co.ke/" }, { name: "Services", url: "https://chap.co.ke/services" }, { name: l.title, url: `https://chap.co.ke/services/${l.slug}` }])} />;
+  const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(l.id), []);
+  const sellerPhotoUrl = await storeRead(
+    (s) => s.findUserByDisplayName(l.sellerName).then((u) => u?.photoUrl ?? null),
+    null
+  );
+  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} jsonLd={breadcrumbJsonLd([{ name: "Home", url: "https://chap.co.ke/" }, { name: "Services", url: "https://chap.co.ke/services" }, { name: l.title, url: `https://chap.co.ke/services/${l.slug}` }])} />;
 }

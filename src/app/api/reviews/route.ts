@@ -26,6 +26,9 @@ export async function POST(req: NextRequest) {
     const order = await getStore().getOrder(d.orderId);
     if (!order) return NextResponse.json({ error: "Order not found." }, { status: 404 });
     verifiedPurchase = order.paymentStatus === "paid" || order.status === "delivered";
+    // One review per order — no ballot-stuffing from repeat submits.
+    const dup = await getStore().findReviewByOrder(d.orderId);
+    if (dup) return NextResponse.json({ error: "This order already has a review.", reviewId: dup.id }, { status: 409 });
   }
 
   const rec = await getStore().createReview({
@@ -46,7 +49,14 @@ export async function GET(req: NextRequest) {
   const store = getStore();
   const seller = q.get("seller");
   const shop = q.get("shop");
+  const listing = q.get("listing");
+  const order = q.get("order");
   if (shop) return NextResponse.json({ items: await store.listApprovedReviewsForShop(shop) });
   if (seller) return NextResponse.json({ items: await store.listApprovedReviewsForSeller(seller) });
+  if (listing) return NextResponse.json({ items: await store.listApprovedReviewsForListing(listing) });
+  if (order) {
+    const r = await store.findReviewByOrder(order);
+    return NextResponse.json({ review: r, items: r ? [r] : [] });
+  }
   return NextResponse.json({ items: [] });
 }

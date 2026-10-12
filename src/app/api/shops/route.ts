@@ -3,6 +3,8 @@ import { requireVerifiedSeller } from "@/lib/gate";
 import { getStore } from "@/lib/store";
 import { slugify } from "@/lib/utils";
 import { SHOPS } from "@/data/catalog";
+import { currentUser } from "@/lib/auth";
+import { rateLimit, clientKey } from "@/lib/rate-limit";
 
 /** Shop creation: verified sellers only, with slug availability check. */
 export async function POST(req: NextRequest) {
@@ -40,4 +42,80 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   const csv = "title,description,category,price,stock,condition,county,town\n\"Sample Phone\",\"Sealed demo row\",\"phones-tablets\",52999,10,new,Nairobi,CBD\n";
   return new NextResponse(csv, { headers: { "Content-Type": "text/csv", "Content-Disposition": "attachment; filename=chap-bulk-template.csv" } });
+}
+
+const isPublicImageUrl = (u: string) =>
+  u.length <= 2000 &&
+  (u.startsWith("https://") || u.startsWith("/uploads/") || u.startsWith("/api/files/"));
+
+/** Shop header edit: owner or admin only. Logo/cover must be uploaded images. */
+export async function PATCH(req: NextRequest) {
+  const user = await currentUser();
+  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  const rl = rateLimit(clientKey(req, `shop-edit:${user.id}`), { limit: 20, windowMs: 3600_000 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many updates. Try again later." }, { status: 429 });
+  const body = await req.json().catch(() => ({}));
+  const slug = String(body.slug ?? "").trim();
+  if (!slug) return NextResponse.json({ error: "Shop is required." }, { status: 400 });
+  const store = getStore();
+  const shop = await store.getShopBySlug(slug).catch(() => null);
+  if (!shop) return NextResponse.json({ error: "Shop not found." }, { status: 404 });
+  const members = await store.listShopMembers(slug).catch(() => []);
+  const isOwner =
+    user.role === "ADMIN" ||
+    shop.ownerId === user.id ||
+    members.some((m) => m.userId === user.id && m.role === "owner");
+  if (!isOwner) return NextResponse.json({ error: "Only the shop owner can edit the header." }, { status: 403 });
+
+  const patch: Record<string, unknown> = {};
+  if (body.name !== undefined) {
+    const name = String(body.name).trim();
+    if (name.length < 3 || name.length > 80) return NextResponse.json({ error: "Shop name must be 3–80 characters." }, { status: 400 });
+    patch.name = name;
+  }
+  if (body.description !== undefined) {
+    const d = String(body.description).trim();
+    if (d.length > 2000) return NextResponse.json({ error: "Description is too long (max 2000)." }, { status: 400 });
+    patch.description = d;
+  }
+  if (body.businessCategory !== undefined) {
+    const c = String(body.businessCategory).trim();
+    if (!c) return NextResponse.json({ error: "Category is required." }, { status: 400 });
+    patch.businessCategory = c.slice(0, 80);
+  }
+  if (body.county !== undefined) patch.county = String(body.county).trim().slice(0, 80);
+  if (body.town !== undefined) patch.town = String(body.town).trim().slice(0, 80);
+  if (body.phone !== undefined) {
+    const phone = String(body.phone).trim();
+    if (phone && !/^(\+254|0)[17]\d{8}$/.test(phone)) {
+      return NextResponse.json({ error: "Use a valid Kenyan phone e.g. 0712345678." }, { status: 400 });
+    }
+    if (phone) patch.phone = phone;
+  }
+  for (const k of ["logoUrl", "coverUrl"] as const) {
+    if (body[k] !== undefined) {
+      const v = body[k];
+      if (v === null || v === "") {
+        patch[k] = null;
+      } else if (typeof v !== "string" || !isPublicImageUrl(v)) {
+        return NextResponse.json({ error: `${k === "logoUrl" ? "Logo" : "Cover"} must be an uploaded image (JPG/PNG/WebP).` }, { status: 400 });
+      } else {
+        patch[k] = v;
+      }
+    }
+  }
+  if (body.deliveryInfo !== undefined) {
+    const d = String(body.deliveryInfo ?? "");
+    if (d.length > 500) return NextResponse.json({ error: "Delivery info is too long (max 500)." }, { status: 400 });
+    patch.deliveryInfo = d.trim() ? d.trim() : null;
+  }
+  if (body.hours !== undefined) {
+    const h = String(body.hours ?? "");
+    if (h.length > 200) return NextResponse.json({ error: "Hours are too long (max 200)." }, { status: 400 });
+    patch.hours = h.trim() ? h.trim() : null;
+  }
+  if (Object.keys(patch).length === 0) return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
+  const updated = await store.updateShop(slug, patch);
+  if (!updated) return NextResponse.json({ error: "Update failed." }, { status: 500 });
+  return NextResponse.json({ ok: true, shop: updated });
 }

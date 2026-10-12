@@ -30,7 +30,7 @@ export const passwordResetSchema = z.object({
 
 export const listingSchema = z.object({
   title: z.string().min(8, "Title needs at least 8 characters").max(120),
-  description: z.string().min(20, "Describe the item (min 20 chars)").max(5000),
+  description: z.string().min(20, "Describe the item (min 20 chars)").max(1000, "Keep it under 1000 characters"),
   categorySlug: z.string().min(1, "Choose a category"),
   subcategory: z.string().max(60).optional().default(""),
   price: z.coerce.number().int().min(1, "Enter a price in KES").max(500_000_000),
