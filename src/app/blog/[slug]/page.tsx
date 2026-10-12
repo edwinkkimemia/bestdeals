@@ -70,18 +70,6 @@ export default async function BlogArticle({ params }: { params: { slug: string }
       </div>
       <BlogSidebar latestPosts={more.map((p) => ({ slug: p.slug, title: p.title }))} />
       </div>
-      <style jsx global>{`
-        .blog-body h2 { font-size: 1.35rem; font-weight: 800; color: #101812; margin: 1.1em 0 0.45em; }
-        .blog-body h3 { font-size: 1.15rem; font-weight: 700; color: #101812; margin: 1em 0 0.4em; }
-        .blog-body h4 { font-size: 1rem; font-weight: 700; color: #101812; margin: 0.9em 0 0.35em; }
-        .blog-body p { margin: 0.6em 0; }
-        .blog-body ul { list-style: disc; padding-left: 1.5em; margin: 0.6em 0; }
-        .blog-body ol { list-style: decimal; padding-left: 1.5em; margin: 0.6em 0; }
-        .blog-body blockquote { border-left: 3px solid #0043d2; padding-left: 0.9em; color: #5b6a63; margin: 0.8em 0; }
-        .blog-body a { color: #0033a6; text-decoration: underline; }
-        .blog-body img { border-radius: 1rem; margin: 0.8em 0; max-width: 100%; }
-        .blog-body hr { border: none; border-top: 1px solid #e7e5e4; margin: 1.2em 0; }
-      `}</style>
     </div>
   );
 }
