@@ -17,13 +17,13 @@ export function savings(prev: number | null, curr: number): number | null {
   return Math.round(((prev - curr) / prev) * 100);
 }
 
-/** Server-truth pricing: qty * unit, minus coupon, plus delivery. Never trust client totals. */
+/** Server-truth pricing: qty * unit, minus discount, plus delivery. Never trust client totals. */
 export function cartTotals(
   lines: { unitPrice: number; qty: number }[],
-  opts?: { couponValue?: number; deliveryFee?: number }
+  opts?: { discount?: number; deliveryFee?: number }
 ): { subtotal: number; discount: number; delivery: number; total: number } {
   const subtotal = lines.reduce((s, l) => s + l.unitPrice * Math.max(0, l.qty), 0);
-  const discount = Math.min(opts?.couponValue ?? 0, subtotal);
+  const discount = Math.min(opts?.discount ?? 0, subtotal);
   const delivery = Math.max(0, opts?.deliveryFee ?? 0);
   return { subtotal, discount, delivery, total: subtotal - discount + delivery };
 }

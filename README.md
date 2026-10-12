@@ -32,7 +32,7 @@ npm run dev
 | `npm run lint` / `npm run typecheck` | Lint + strict type check |
 | `npm test` | Unit/integration tests (node:test) |
 | `npx prisma migrate dev` | Apply schema migrations |
-| `npx prisma db seed` | Seed categories, plans, coupons, blog, demo users/shops/listings (idempotent) |
+| `npx prisma db seed` | Seed categories, plans, blog, demo users/shops/listings (idempotent) |
 
 ## Key routes
 

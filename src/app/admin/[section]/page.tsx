@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BadgeCheck, Flag, Megaphone, Package, Receipt, Scale, Star, Store, Ticket, Users } from "lucide-react";
+import { BadgeCheck, Flag, Megaphone, Package, Receipt, Scale, Star, Store, Users } from "lucide-react";
 import { normalizePlan } from "@/lib/plans";
 import { getStore } from "@/lib/store";
 import { formatKES } from "@/lib/format";
 import { LISTINGS } from "@/data/catalog";
 import { AdminButtons, PromoButtons } from "../actions";
-import { CouponForm } from "../coupon-form";
 
 const SECTION_ICONS: Record<string, typeof Package> = {
   listings: Package,
@@ -18,12 +17,11 @@ const SECTION_ICONS: Record<string, typeof Package> = {
   reports: Flag,
   reviews: Star,
   promotions: Megaphone,
-  coupons: Ticket,
 };
 
 export const dynamic = "force-dynamic";
 
-const SECTIONS = ["listings", "verifications", "users", "shops", "orders", "disputes", "reports", "reviews", "promotions", "coupons"] as const;
+const SECTIONS = ["listings", "verifications", "users", "shops", "orders", "disputes", "reports", "reviews", "promotions"] as const;
 export function generateStaticParams() {
   return SECTIONS.map((section) => ({ section }));
 }
@@ -38,7 +36,6 @@ const TITLES: Record<string, string> = {
   reports: "Reports",
   reviews: "Review moderation",
   promotions: "Promotions & boosts",
-  coupons: "Coupons & campaigns",
 };
 
 export const metadata = { title: "Admin section", robots: { index: false, follow: false } };
@@ -303,25 +300,5 @@ export default async function AdminSection({
     );
   }
 
-  // coupons
-  const coupons = await store.listCoupons();
-  return (
-    <div>
-      <SectionTitle section="coupons">{TITLES.coupons} ({coupons.length})</SectionTitle>
-      <p className="mt-1 text-sm text-ink-500">Codes apply at cart + checkout (server-verified). Active codes are advertised on the homepage banner.</p>
-      <CouponForm />
-      <ul className="mt-4 space-y-2">
-        {coupons.map((c) => (
-          <li key={c.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
-            <span className="flex-1">
-              <strong className="font-mono">{c.code}</strong> · −{formatKES(c.value)}
-              {c.minSpend > 0 && <span className="text-ink-400"> · min {formatKES(c.minSpend)}</span>}
-              {" "}<span className="chip">{c.active ? "active" : "off"}</span>
-            </span>
-            <AdminButtons kind="coupon" id={c.code} extra={{ active: c.active }} />
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+  notFound();
 }

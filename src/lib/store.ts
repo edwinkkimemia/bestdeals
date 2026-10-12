@@ -4,10 +4,11 @@
  * - PrismaStore (PostgreSQL): used automatically once DATABASE_URL is set and
  *   `prisma migrate deploy` has run. Swap is transparent to API routes.
  */
-import { db } from "./db";
+import { db, isDbConfigured } from "./db";
 import type { PrismaClient } from "@prisma/client";
 import { uid, slugify } from "./utils";
 import { SHOP_PLANS } from "../data/catalog";
+import { BLOG_POSTS } from "../data/blog-posts";
 
 export type Role = "BUYER" | "SELLER" | "MERCHANT" | "ADMIN";
 
@@ -208,14 +209,6 @@ export type ReferralRecord = {
   createdAt: string;
 };
 
-export type CouponRecord = {
-  id: string;
-  code: string;
-  value: number;
-  minSpend: number;
-  active: boolean;
-};
-
 export type BlogRecord = {
   id: string;
   slug: string;
@@ -363,10 +356,6 @@ export interface Store {
   findReferralByReferred(referredUserId: string): Promise<ReferralRecord | null>;
   listReferralsByReferrer(referrerUserId: string): Promise<ReferralRecord[]>;
   setReferralStatus(id: string, status: string, rewardPromoId?: string): Promise<void>;
-  // coupons (admin-managed checkout discounts)
-  getCoupon(code: string): Promise<CouponRecord | null>;
-  listCoupons(): Promise<CouponRecord[]>;
-  upsertCoupon(c: { code: string; value: number; minSpend: number; active: boolean }): Promise<CouponRecord>;
   // blog (admin-authored articles, rich-text HTML sanitized on write)
   createBlogPost(b: { slug: string; title: string; excerpt?: string | null; coverUrl?: string | null; bodyHtml: string; status?: string; authorId?: string; authorName?: string }): Promise<BlogRecord>;
   getBlogPost(idOrSlug: string): Promise<BlogRecord | null>;
@@ -405,8 +394,6 @@ class DemoStore implements Store {
   messages = new Map<string, MessageRecord[]>();
   promotions = new Map<string, PromotionRecord>();
   referrals = new Map<string, ReferralRecord>();
-  coupons = new Map<string, CouponRecord>();
-  private couponsSeeded = false;
 
   async findUserByEmail(email: string) {
     return [...this.users.values()].find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
@@ -837,35 +824,26 @@ class DemoStore implements Store {
     }
   }
 
-  private seedCoupons() {
-    if (this.couponsSeeded) return;
-    this.couponsSeeded = true;
-    // Launch codes (mirrors the catalogue fallback; admin edits live here).
-    const seed: CouponRecord[] = [
-      { id: uid("cpn"), code: "KARIBU500", value: 500, minSpend: 5000, active: true },
-      { id: uid("cpn"), code: "SHOPNAIROBI", value: 300, minSpend: 2500, active: true },
-    ];
-    for (const c of seed) this.coupons.set(c.code, c);
-  }
-  async getCoupon(code: string) {
-    this.seedCoupons();
-    return this.coupons.get(code.trim().toUpperCase()) ?? null;
-  }
-  async listCoupons() {
-    this.seedCoupons();
-    return [...this.coupons.values()].sort((a, b) => a.code.localeCompare(b.code));
-  }
-  async upsertCoupon(c: { code: string; value: number; minSpend: number; active: boolean }) {
-    this.seedCoupons();
-    const code = c.code.trim().toUpperCase();
-    const existing = this.coupons.get(code);
-    const rec: CouponRecord = { id: existing?.id ?? uid("cpn"), code, value: c.value, minSpend: c.minSpend, active: c.active };
-    this.coupons.set(code, rec);
-    return rec;
-  }
-
   blogs = new Map<string, BlogRecord>();
   settings = new Map<string, unknown>();
+  private blogsSeeded = false;
+
+  /** Launch library ships in demo mode too — blogs exist with or without Postgres. */
+  private seedBlogs() {
+    if (this.blogsSeeded) return;
+    this.blogsSeeded = true;
+    for (const p of BLOG_POSTS) {
+      if ([...this.blogs.values()].some((b) => b.slug === p.slug)) continue;
+      const t = now();
+      const rec: BlogRecord = {
+        id: uid("post"), slug: p.slug, title: p.title,
+        excerpt: p.excerpt, coverUrl: p.coverUrl, bodyHtml: p.bodyHtml,
+        status: "published", authorId: null, authorName: "Chap Team",
+        publishedAt: t, createdAt: t, updatedAt: t,
+      };
+      this.blogs.set(rec.id, rec);
+    }
+  }
 
   async createBlogPost(b: { slug: string; title: string; excerpt?: string | null; coverUrl?: string | null; bodyHtml: string; status?: string; authorId?: string; authorName?: string }) {
     const status = b.status === "published" ? "published" : "draft";
@@ -881,9 +859,11 @@ class DemoStore implements Store {
     return { ...rec };
   }
   async getBlogPost(idOrSlug: string) {
+    this.seedBlogs();
     return [...this.blogs.values()].find((p) => p.id === idOrSlug || p.slug === idOrSlug) ?? null;
   }
   async listBlogPosts(status?: string) {
+    this.seedBlogs();
     const all = [...this.blogs.values()];
     const items = !status || status === "all" ? all : all.filter((p) => p.status === status);
     return items.sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt)).map((p) => ({ ...p }));
@@ -1825,27 +1805,6 @@ class PrismaStore implements Store {
     await this.p.referral.update({ where: { id }, data: { status, ...(rewardPromoId !== undefined ? { rewardPromoId } : {}) } });
   }
 
-  private mapCoupon(r: { id: string; code: string; value: number; minSpend: number; active: boolean }): CouponRecord {
-    return { id: r.id, code: r.code, value: r.value, minSpend: r.minSpend, active: r.active };
-  }
-  async getCoupon(code: string) {
-    const r = await this.p.coupon.findUnique({ where: { code: code.trim().toUpperCase() } }).catch(() => null);
-    return r ? this.mapCoupon(r) : null;
-  }
-  async listCoupons() {
-    const recs = await this.p.coupon.findMany({ orderBy: { code: "asc" }, take: 100 });
-    return recs.map((r: { id: string; code: string; value: number; minSpend: number; active: boolean }) => this.mapCoupon(r));
-  }
-  async upsertCoupon(c: { code: string; value: number; minSpend: number; active: boolean }) {
-    const code = c.code.trim().toUpperCase();
-    const rec = await this.p.coupon.upsert({
-      where: { code },
-      update: { value: c.value, minSpend: c.minSpend, active: c.active },
-      create: { code, value: c.value, minSpend: c.minSpend, active: c.active },
-    });
-    return this.mapCoupon(rec);
-  }
-
   private mapBlogPost(r: {
     id: string; slug: string; title: string; excerpt: string | null; coverUrl: string | null;
     bodyHtml: string; status: string; authorId: string | null; authorName: string | null;
@@ -2023,5 +1982,33 @@ export async function storeRead<T>(fn: (s: Store) => Promise<T>, fallback: T): P
   } catch (e) {
     console.warn("[store] database read failed, using fallback:", (e as Error)?.message ?? e);
     return fallback;
+  }
+}
+
+export type StorageHealth =
+  | { mode: "demo"; reachable: true; note: string }
+  | { mode: "postgres"; reachable: boolean; note: string };
+
+/**
+ * Where is data actually living right now? Powers the admin banner so a
+ * broken/missing database shows as a loud warning instead of silent zeros.
+ */
+export async function getStorageHealth(): Promise<StorageHealth> {
+  if (!isDbConfigured()) {
+    return {
+      mode: "demo",
+      reachable: true,
+      note: "In-memory demo storage — data resets between server restarts and doesn't sync across instances.",
+    };
+  }
+  try {
+    await getStore().listUsers();
+    return { mode: "postgres", reachable: true, note: "PostgreSQL connected." };
+  } catch (e) {
+    return {
+      mode: "postgres",
+      reachable: false,
+      note: `Database unreachable (${(e as Error)?.message?.slice(0, 140) ?? "unknown error"}). Run prisma migrate deploy.`,
+    };
   }
 }

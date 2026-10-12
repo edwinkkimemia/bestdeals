@@ -14,14 +14,14 @@ describe("pricing", () => {
   it("computes subtotal/discount/delivery/total", () => {
     const t = cartTotals(
       [{ unitPrice: 52999, qty: 1 }, { unitPrice: 1800, qty: 2 }],
-      { couponValue: 500, deliveryFee: 250 }
+      { discount: 500, deliveryFee: 250 }
     );
     assert.equal(t.subtotal, 56599);
     assert.equal(t.discount, 500);
     assert.equal(t.total, 56349);
   });
   it("caps discount at subtotal", () => {
-    const t = cartTotals([{ unitPrice: 200, qty: 1 }], { couponValue: 500 });
+    const t = cartTotals([{ unitPrice: 200, qty: 1 }], { discount: 500 });
     assert.equal(t.total, 0);
   });
   it("calculates genuine savings only", () => {

@@ -4,7 +4,7 @@
 - [ ] `DATABASE_URL` + migrations + seed applied; `/api/health` reports `configured`
 - [ ] `AUTH_SECRET` rotated; admin accounts via `ADMIN_EMAILS`; least-privilege roles verified
 - [ ] Listings: create → pending → approve/hide with reason + audit (tested as admin)
-- [ ] Checkout: stock re-validation, coupon caps, multi-seller suborders, COD + M-Pesa sandbox STK + callback verified
+- [ ] Checkout: stock re-validation, multi-seller suborders, COD + M-Pesa sandbox STK + callback verified
 - [ ] Refund/dispute workflow dry-run; failed payments excluded from revenue
 - [ ] Uploads: type/size enforced; docs in private bucket
 - [ ] Rate limits moved to Redis; spam/abuse drills (enquiry flood, duplicate listings)

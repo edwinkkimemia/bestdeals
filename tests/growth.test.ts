@@ -68,16 +68,3 @@ describe("referrals", () => {
     assert.equal((await store.findReferralByReferred(friend.id))?.status, "qualified");
   });
 });
-
-describe("coupons", () => {
-  it("seeds launch codes and upserts case-insensitively", async () => {
-    const store = freshDemoStore();
-    assert.equal((await store.getCoupon("karibu500"))?.value, 500);
-    const codes = (await store.listCoupons()).map((c) => c.code);
-    assert.ok(codes.includes("KARIBU500") && codes.includes("SHOPNAIROBI"));
-    await store.upsertCoupon({ code: "newdeal", value: 1000, minSpend: 2000, active: true });
-    assert.equal((await store.getCoupon("NEWDEAL"))?.minSpend, 2000);
-    await store.upsertCoupon({ code: "newdeal", value: 1000, minSpend: 2000, active: false });
-    assert.equal((await store.getCoupon("NEWDEAL"))?.active, false);
-  });
-});

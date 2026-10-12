@@ -444,14 +444,6 @@ model Promotion {
   status    String   @default("active")
 }
 
-model Coupon {
-  id       String  @id @default(cuid())
-  code     String  @unique
-  value    Int
-  minSpend Int     @default(0)
-  active   Boolean @default(true)
-}
-
 model Referral {
   id             String   @id @default(cuid())
   referrerUserId String

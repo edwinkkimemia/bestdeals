@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   Star,
   Store,
-  Ticket,
   Users,
 } from "lucide-react";
 import { getStore } from "@/lib/store";
@@ -26,7 +25,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
   const store = getStore();
-  const [pending, reports, disputes, reviews, verifications, orders, promos, users, shops, posts, views, coupons] = await Promise.all([
+  const [pending, reports, disputes, reviews, verifications, orders, promos, users, shops, posts, views] = await Promise.all([
     store.listListingsByStatus("pending"),
     store.listReports("open"),
     store.listDisputes(),
@@ -38,7 +37,6 @@ export default async function AdminPage() {
     store.listShops(),
     store.listBlogPosts("published"),
     getPlatformAnalytics(30, 1).catch(() => ({ totalViews: 0, uniqueViewers: 0 })),
-    store.listCoupons(),
   ]);
   const openDisputes = disputes.filter((d) => !["resolved_refund", "resolved_reject", "cancelled"].includes(d.status));
   const revenue = orders
@@ -54,7 +52,6 @@ export default async function AdminPage() {
     { t: "Open reports", v: String(reports.length), href: "/admin/reports", Icon: Flag, tile: "bg-red-50 text-red-700" },
     { t: "Pending reviews", v: String(reviews.length), href: "/admin/reviews", Icon: Star, tile: "bg-amber-50 text-amber-700" },
     { t: "Boosts awaiting payment", v: String(promos.length), href: "/admin/promotions", Icon: Megaphone, tile: "bg-brand-50 text-brand-700" },
-    { t: "Active coupons", v: String(coupons.filter((c) => c.active).length), href: "/admin/coupons", Icon: Ticket, tile: "bg-green-50 text-green-700" },
     { t: "Total orders", v: String(orders.length), href: "/admin/orders", Icon: Receipt, tile: "bg-green-50 text-green-700" },
     { t: "Registered users", v: String(users.length), href: "/admin/users", Icon: Users, tile: "bg-green-50 text-green-700" },
     { t: "Shops", v: String(shops.length), href: "/admin/shops", Icon: Store, tile: "bg-green-50 text-green-700" },

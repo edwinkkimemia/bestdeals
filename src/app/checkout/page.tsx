@@ -1,12 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { checkoutSchema } from "@/lib/validators";
 import { useCart } from "@/components/cart-provider";
-import { getListing, COUPONS } from "@/data/catalog";
+import { getListing } from "@/data/catalog";
 import { formatKES, cartTotals } from "@/lib/format";
 import { COUNTY_NAMES, townsFor } from "@/lib/kenya";
 
@@ -21,7 +21,6 @@ export default function CheckoutPage() {
 }
 
 function CheckoutInner() {
-  const sp = useSearchParams();
   const router = useRouter();
   const { lines, clear } = useCart();
   const [serverErr, setServerErr] = useState("");
@@ -30,38 +29,12 @@ function CheckoutInner() {
   const detailed = lines.map((l) => ({ ...l, listing: getListing(l.id)! })).filter((l) => l.listing);
   const { register, handleSubmit, watch, formState: { errors } } = useForm({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { deliveryMethod: "standard", paymentMethod: "cod", coupon: sp.get("coupon") ?? "", instructions: "" } as never,
+    defaultValues: { deliveryMethod: "standard", paymentMethod: "cod", instructions: "" } as never,
   });
   const county = watch("county");
   const deliveryMethod = watch("deliveryMethod");
-  const couponCode = (watch("coupon") as string | undefined)?.toUpperCase() ?? "";
-  const [serverValue, setServerValue] = useState<number | null>(null);
-  const subtotal = detailed.reduce((s, l) => s + l.listing.price * l.qty, 0);
-  useEffect(() => {
-    setServerValue(null);
-    if (!couponCode) return;
-    let stop = false;
-    fetch(`/api/coupons/validate?code=${encodeURIComponent(couponCode)}&subtotal=${subtotal}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => {
-        if (!stop && j) setServerValue(j.valid ? j.value : 0);
-      })
-      .catch(() => null);
-    return () => {
-      stop = true;
-    };
-  }, [couponCode, subtotal]);
-  const couponValue = useMemo(() => {
-    if (!couponCode) return 0;
-    if (serverValue !== null) return serverValue;
-    const c = COUPONS[couponCode];
-    if (!c) return 0;
-    return subtotal >= c.minSpend ? c.value : 0;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [couponCode, lines, serverValue]);
 
   const totals = cartTotals(detailed.map((l) => ({ unitPrice: l.listing.price, qty: l.qty })), {
-    couponValue,
     deliveryFee: DELIVERY[(deliveryMethod as keyof typeof DELIVERY) ?? "standard"],
   });
 
@@ -136,13 +109,11 @@ function CheckoutInner() {
               <input type="hidden" {...register("paymentMethod")} value="cod" />
             </div>
           </div>
-          <div><label className="label-bd" htmlFor="co-coupon">Coupon</label><input id="co-coupon" className="input-bd uppercase" {...register("coupon")} /></div>
           {serverErr && <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-700">{serverErr}</p>}
         </div>
         <div className="card h-fit space-y-2 p-5 text-sm">
           {detailed.map((l) => <div key={l.id} className="flex justify-between gap-2"><span className="truncate">{l.listing.title} × {l.qty}</span><strong>{formatKES(l.listing.price * l.qty)}</strong></div>)}
           <div className="flex justify-between border-t pt-2"><span>Subtotal</span><strong>{formatKES(totals.subtotal)}</strong></div>
-          {totals.discount > 0 && <div className="flex justify-between text-green-700"><span>Coupon {couponCode}</span><span>−{formatKES(totals.discount)}</span></div>}
           <div className="flex justify-between"><span>Delivery</span><strong>{formatKES(totals.delivery)}</strong></div>
           <div className="flex justify-between text-base font-bold"><span>Total</span><span>{formatKES(totals.total)}</span></div>
           <button className="btn-primary w-full" disabled={placing}>{placing ? "Placing order…" : `Place order · ${formatKES(totals.total)}`}</button>

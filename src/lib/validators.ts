@@ -85,7 +85,6 @@ export const checkoutSchema = z.object({
   items: z
     .array(z.object({ id: z.string(), qty: z.coerce.number().int().min(1).max(99) }))
     .min(1),
-  coupon: z.string().max(32).optional().default(""),
 });
 
 export const reviewSchema = z.object({

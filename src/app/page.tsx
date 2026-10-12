@@ -5,7 +5,6 @@ import { CATEGORIES, LISTINGS, SHOPS, POPULAR_SEARCHES, shopListings } from "@/d
 import { storeRead } from "@/lib/store";
 import { ListingCard } from "@/components/ui/listing-card";
 import { HeroCategories } from "@/components/hero-categories";
-import { CampaignBanner } from "@/components/campaign-banner";
 import { COUNTY_NAMES, KENYA_COUNTIES } from "@/lib/kenya";
 import { shuffleFeaturedFirst } from "@/lib/search";
 import { ratingLabel } from "@/lib/ratings";
@@ -100,7 +99,6 @@ export default async function HomePage() {
 
   return (
     <div>
-      <CampaignBanner />
       {/* A: Hero + search — mobile-first: headline, search, swipeable categories */}
       <section className="bg-gradient-to-b from-brand-50 via-white to-white">
         <div className="container-bd grid items-center gap-6 py-8 md:py-10 lg:grid-cols-[240px_minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-8">

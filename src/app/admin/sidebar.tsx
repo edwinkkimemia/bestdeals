@@ -17,7 +17,6 @@ import {
   Settings,
   Star,
   Store,
-  Ticket,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,7 +33,6 @@ const NAV = [
   { href: "/admin/reports", label: "Reports", Icon: Flag },
   { href: "/admin/reviews", label: "Reviews", Icon: Star },
   { href: "/admin/promotions", label: "Promotions", Icon: Megaphone },
-  { href: "/admin/coupons", label: "Coupons", Icon: Ticket },
   { href: "/admin/blog", label: "Blog", Icon: Newspaper },
   { href: "/admin/settings", label: "Settings", Icon: Settings },
 ];
@@ -54,7 +52,7 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside aria-label="Admin" className="block min-w-0 lg:w-60 lg:shrink-0">
+    <aside aria-label="Admin" className="w-12 shrink-0 lg:w-60">
       {/* Desktop: full-height panel anchored under the sticky admin header */}
       <div className="sticky top-[72px] hidden w-60 shrink-0 flex-col self-start border-r border-neutral-200 bg-white py-5 pr-4 lg:flex">
         <nav aria-label="Admin sections" className="space-y-1">

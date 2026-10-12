@@ -132,12 +132,7 @@ export const POPULAR_SEARCHES = [
   "Plumber Nairobi",
 ];
 
-/** Demo coupons + plans + commission rules (admin-configurable in production). */
-export const COUPONS: Record<string, { code: string; value: number; minSpend: number }> = {
-  KARIBU500: { code: "KARIBU500", value: 500, minSpend: 5000 },
-  SHOPNAIROBI: { code: "SHOPNAIROBI", value: 300, minSpend: 2500 },
-};
-
+/** Demo plans + commission rules (admin-configurable in production). */
 export const SHOP_PLANS = [
   { id: "free", name: "Free", monthly: 0, annual: 0, listings: 5, features: ["Basic storefront", "5 active listings", "Seller dashboard", "Buyer enquiries"] },
   { id: "silver", name: "Silver", monthly: 499, annual: 4990, listings: 30, features: ["Everything in Free", "30 active listings", "Promotions & featured products", "Enhanced analytics"] },
