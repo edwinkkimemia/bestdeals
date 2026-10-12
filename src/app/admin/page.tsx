@@ -20,6 +20,7 @@ import { formatKES } from "@/lib/format";
 import { getPlatformAnalytics } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 import { LISTINGS, SHOPS } from "@/data/catalog";
+import { SeedDatabaseButton } from "./seed-button";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,17 @@ export default async function AdminPage() {
       <p className="mt-1 text-sm text-ink-500">
         Live queues · every action records a reason + audit trail.
       </p>
+      {users.length === 0 && shops.length === 0 && posts.length === 0 && orders.length === 0 && (
+        <div className="card mt-4 border-amber-300 bg-amber-50 p-5">
+          <p className="font-bold text-amber-900">Database is connected but empty</p>
+          <p className="mt-1 text-sm text-amber-800">
+            No users, shops, posts or orders yet — usually means the deploy seed never ran.
+            One click fills it with the demo catalogue (re-runs are safe). Manual signups
+            only appear here when made on this same deployment.
+          </p>
+          <SeedDatabaseButton />
+        </div>
+      )}
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {stats.map(({ t, v, href, Icon, tile }) => (
           <Link key={t} href={href} className="card group flex items-center gap-3 p-4 hover:border-brand-600">

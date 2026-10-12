@@ -90,7 +90,7 @@ const COLS: { title: string; links: { href: string; label: string }[] }[] = [
 ];
 
 export async function Footer() {
-  // Support contacts are managed in Admin → Settings. Silent when unset.
+  // Support contacts are managed in Admin → Settings; email always visible via default.
   const support = await storeRead(async (s) => {
     const [email, phone, whatsapp] = await Promise.all([
       s.getSetting("support_email").catch(() => null),
@@ -98,8 +98,8 @@ export async function Footer() {
       s.getSetting("support_whatsapp").catch(() => null),
     ]);
     const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
-    return { email: str(email), phone: str(phone), whatsapp: str(whatsapp) };
-  }, { email: null, phone: null, whatsapp: null });
+    return { email: str(email) ?? "support@chap.co.ke", phone: str(phone), whatsapp: str(whatsapp) };
+  }, { email: "support@chap.co.ke", phone: null, whatsapp: null });
   return (
     <footer className="mt-16 border-t border-neutral-200 bg-sand-50">
       <div className="container-bd grid gap-8 py-12 sm:grid-cols-2 lg:grid-cols-5">

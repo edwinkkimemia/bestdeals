@@ -10,19 +10,36 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { CATEGORIES, SHOPS, LISTINGS, SHOP_PLANS } from "../src/data/catalog";
+import { BLOG_POSTS } from "../src/data/blog-posts";
 
 const prisma = new PrismaClient();
 
-import { BLOG_POSTS } from "../src/data/blog-posts";
+export type SeedCounts = {
+  skipped: boolean;
+  categories: number;
+  plans: number;
+  posts: number;
+  users: number;
+  shops: number;
+  listings: number;
+};
 
-async function main() {
+async function main(): Promise<SeedCounts> {
   // Unreachable database (e.g. preview builds without Postgres): skip loudly,
   // don't fail the deploy — the app falls back to demo mode.
   try {
     await prisma.$queryRaw`SELECT 1`;
   } catch {
     console.warn("[seed] no database reachable — skipping (demo mode).");
-    return;
+    return { skipped: true, categories: 0, plans: 0, posts: 0, users: 0, shops: 0, listings: 0 };
+  }
+  // Unreachable database (e.g. preview builds without Postgres): skip loudly,
+  // don't fail the deploy — the app falls back to demo mode.
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch {
+    console.warn("[seed] no database reachable — skipping (demo mode).");
+    return { skipped: true, categories: 0, plans: 0, posts: 0, users: 0, shops: 0, listings: 0 };
   }
 
   for (const c of CATEGORIES) {
@@ -73,8 +90,17 @@ async function main() {
   const listings = await seedListings(users, shops);
 
   console.log(`Seeded ${CATEGORIES.length} categories, ${SHOP_PLANS.length} plans, ${BLOG_POSTS.length} blog posts.`);
-  console.log(`Seeded ${users} users, ${shops} shops, ${listings} product listings.`);
+  console.log(`Seeded ${users.size} users, ${shops.size} shops, ${listings} product listings.`);
   console.log(`Demo catalogue ships in src/data/catalog.ts (${SHOPS.length} shops, ${LISTINGS.length} listings).`);
+  return {
+    skipped: false,
+    categories: CATEGORIES.length,
+    plans: SHOP_PLANS.length,
+    posts: BLOG_POSTS.length,
+    users: users.size,
+    shops: shops.size,
+    listings,
+  };
 }
 
 const slugifyName = (s: string) =>
@@ -204,7 +230,19 @@ async function seedListings(
   return n;
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-}).finally(() => prisma.$disconnect());
+/** Importable for the admin one-click seed; direct execution for CLI/Vercel builds. */
+export async function runSeed(): Promise<SeedCounts> {
+  try {
+    return await main();
+  } finally {
+    await prisma.$disconnect().catch(() => null);
+  }
+}
+
+const isCli = (process.argv[1] ?? "").replace(/\\/g, "/").endsWith("seed.ts");
+if (isCli) {
+  runSeed().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

@@ -177,6 +177,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
       <div className="container-bd flex h-8 items-center justify-between text-xs">
         <p className="truncate">Kenya&apos;s marketplace for everything · Find it. Sell it. Get the best deal.</p>
         <div className="hidden items-center gap-4 sm:flex">
+          <a href="mailto:support@chap.co.ke" className="hover:underline">support@chap.co.ke</a>
           <Link href="/help" className="hover:underline">Help Centre</Link>
           <Link href="/pricing" className="hover:underline">Business Plans</Link>
           <Link href="/safety" className="hover:underline">Buyer Safety</Link>
