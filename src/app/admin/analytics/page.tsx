@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BarChart3 } from "lucide-react";
 import { getAdminAnalyticsReport } from "@/lib/analytics";
 import { Stat, RangeTabs, DailyChart } from "@/components/analytics-ui";
 
@@ -15,7 +16,7 @@ export default async function AdminAnalyticsPage({ searchParams }: { searchParam
     <div>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="section-title">Product-view analytics ({report.totalViews.toLocaleString()})</h1>
+          <h1 className="section-title flex items-center gap-2"><BarChart3 className="h-6 w-6 text-brand-600" /> Product-view analytics ({report.totalViews.toLocaleString()})</h1>
           <p className="mt-1 text-sm text-ink-500">
             How people discover products across the marketplace — same counter sellers see, platform-wide.
           </p>

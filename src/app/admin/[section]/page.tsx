@@ -75,7 +75,7 @@ export default async function AdminSection({
     const items = await store.listListingsByStatus(status);
     return (
       <div>
-        <SectionTitle section="listings">{TITLES.listings} ({items.length}))</SectionTitle>
+        <SectionTitle section="listings">{TITLES.listings} ({items.length})</SectionTitle>
         <Tabs base="/admin/listings" tabs={statuses} current={status} />
         {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">Nothing {status} ✓</p> : (
           <ul className="mt-4 space-y-2">
@@ -97,7 +97,7 @@ export default async function AdminSection({
     const items = await store.listVerifications(status === "all" ? undefined : status);
     return (
       <div>
-        <SectionTitle section="verifications">{TITLES.verifications} ({items.length}))</SectionTitle>
+        <SectionTitle section="verifications">{TITLES.verifications} ({items.length})</SectionTitle>
         <Tabs base="/admin/verifications" tabs={tabs} current={status} />
         {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">None {status}.</p> : (
           <ul className="mt-4 space-y-2">
@@ -118,7 +118,7 @@ export default async function AdminSection({
     const users = await store.listUsers();
     return (
       <div>
-        <SectionTitle section="users">{TITLES.users} ({users.length}))</SectionTitle>
+        <SectionTitle section="users">{TITLES.users} ({users.length})</SectionTitle>
         <p className="mt-1 text-sm text-ink-500">Grant or revoke the seller ✓ (ID verification). Email verification is self-serve and can&apos;t be granted here.</p>
         <ul className="mt-4 space-y-2">
           {users.map((u) => (
@@ -142,7 +142,7 @@ export default async function AdminSection({
     const paid = orders.filter((o) => o.paymentStatus === "paid").length;
     return (
       <div>
-        <SectionTitle section="orders">{TITLES.orders} ({orders.length} · {paid} paid))</SectionTitle>
+        <SectionTitle section="orders">{TITLES.orders} ({orders.length} · {paid} paid)</SectionTitle>
         <ul className="mt-4 space-y-2">
           {orders.map((o) => (
             <li key={o.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
@@ -164,7 +164,7 @@ export default async function AdminSection({
     const done = all.filter((d) => ["resolved_refund", "resolved_reject", "cancelled"].includes(d.status));
     return (
       <div>
-        <SectionTitle section="disputes">{TITLES.disputes} ({open.length} open))</SectionTitle>
+        <SectionTitle section="disputes">{TITLES.disputes} ({open.length} open)</SectionTitle>
         {open.length === 0 ? <p className="mt-4 text-sm text-ink-500">None open.</p> : (
           <ul className="mt-4 space-y-2">
             {open.map((d) => (
@@ -197,7 +197,7 @@ export default async function AdminSection({
     const items = await store.listReports(status === "all" ? undefined : status);
     return (
       <div>
-        <SectionTitle section="reports">{TITLES.reports} ({items.length}))</SectionTitle>
+        <SectionTitle section="reports">{TITLES.reports} ({items.length})</SectionTitle>
         <Tabs base="/admin/reports" tabs={tabs} current={status} />
         {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">None {status}.</p> : (
           <ul className="mt-4 space-y-2">
@@ -217,7 +217,7 @@ export default async function AdminSection({
     const items = await store.listPendingReviews();
     return (
       <div>
-        <SectionTitle section="reviews">{TITLES.reviews} ({items.length}))</SectionTitle>
+        <SectionTitle section="reviews">{TITLES.reviews} ({items.length})</SectionTitle>
         {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">None pending.</p> : (
           <ul className="mt-4 space-y-2">
             {items.map((r) => (
@@ -240,7 +240,7 @@ export default async function AdminSection({
     const items = await store.listPromotions(status === "all" ? undefined : status);
     return (
       <div>
-        <SectionTitle section="promotions">{TITLES.promotions} ({items.length}))</SectionTitle>
+        <SectionTitle section="promotions">{TITLES.promotions} ({items.length})</SectionTitle>
         <p className="mt-1 text-sm text-ink-500">Confirm M-Pesa payment to activate a boost; the listing gets its Featured badge.</p>
         <Tabs base="/admin/promotions" tabs={tabs} current={status} />
         {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">None {status}.</p> : (
@@ -264,7 +264,7 @@ export default async function AdminSection({
   const coupons = await store.listCoupons();
   return (
     <div>
-      <SectionTitle section="coupons">{TITLES.coupons} ({coupons.length}))</SectionTitle>
+      <SectionTitle section="coupons">{TITLES.coupons} ({coupons.length})</SectionTitle>
       <p className="mt-1 text-sm text-ink-500">Codes apply at cart + checkout (server-verified). Active codes are advertised on the homepage banner.</p>
       <CouponForm />
       <ul className="mt-4 space-y-2">

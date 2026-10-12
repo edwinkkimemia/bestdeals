@@ -24,9 +24,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="container-bd">
-      <div className="flex gap-0 lg:gap-8">
+      <div className="flex flex-col lg:flex-row lg:gap-8">
         <DashboardSidebar unread={unread} />
-        <div className="min-w-0 flex-1 py-6 lg:py-8">{children}</div>
+        <div className="min-w-0 flex-1 py-4 lg:py-8">{children}</div>
       </div>
     </div>
   );
