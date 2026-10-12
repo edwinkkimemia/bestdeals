@@ -1,9 +1,14 @@
 /**
  * Seed: counties, categories, plans, coupons, demo shops/listings.
  * Clearly-marked demonstration data — never presented as real transactions.
- * Run: npx prisma db seed
+ * Run: npx prisma db seed (also runs automatically on Vercel deploys).
+ *
+ * Idempotent: everything upserts by stable keys and never overwrites
+ * admin/moderator changes (prices, statuses, blog edits are left alone on
+ * re-seeds; only missing rows/images are backfilled).
  */
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import { CATEGORIES, SHOPS, LISTINGS, SHOP_PLANS, COUPONS } from "../src/data/catalog";
 
 const prisma = new PrismaClient();
@@ -97,6 +102,15 @@ const BLOG_POSTS: SeedPost[] = [
 ];
 
 async function main() {
+  // Unreachable database (e.g. preview builds without Postgres): skip loudly,
+  // don't fail the deploy — the app falls back to demo mode.
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch {
+    console.warn("[seed] no database reachable — skipping (demo mode).");
+    return;
+  }
+
   for (const c of CATEGORIES) {
     await prisma.category.upsert({
       where: { slug: c.slug },
@@ -113,10 +127,13 @@ async function main() {
     });
   }
   for (const p of SHOP_PLANS) {
+    // Plans are catalogue source-of-truth: pricing follows code on re-seed.
+    // Gold "unlimited" is stored as -1 (Prisma Int can't hold Infinity).
+    const listings = Number.isFinite(p.listings) ? p.listings : -1;
     await prisma.subscriptionPlan.upsert({
       where: { id: p.id },
-      update: {},
-      create: { id: p.id, name: p.name, monthly: p.monthly, annual: p.annual, listings: p.listings, features: p.features },
+      update: { name: p.name, monthly: p.monthly, annual: p.annual, listings, features: p.features },
+      create: { id: p.id, name: p.name, monthly: p.monthly, annual: p.annual, listings, features: p.features },
     });
   }
   for (const c of Object.values(COUPONS)) {
@@ -143,8 +160,141 @@ async function main() {
       },
     });
   }
+
+  const users = await seedUsers();
+  const shops = await seedShops(users);
+  const listings = await seedListings(users, shops);
+
   console.log(`Seeded ${CATEGORIES.length} categories, ${SHOP_PLANS.length} plans, ${Object.keys(COUPONS).length} coupons, ${BLOG_POSTS.length} blog posts.`);
+  console.log(`Seeded ${users} users, ${shops} shops, ${listings} product listings.`);
   console.log(`Demo catalogue ships in src/data/catalog.ts (${SHOPS.length} shops, ${LISTINGS.length} listings).`);
+}
+
+const slugifyName = (s: string) =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.|\.$/g, "").slice(0, 40) || "seller";
+
+/**
+ * Demo accounts: one per distinct catalogue seller name (+ a buyer).
+ * Passwords are public demo credentials — override with SEED_USER_PASSWORD.
+ * Never used for admins: claim those via signup with an ADMIN_EMAILS address.
+ */
+async function seedUsers(): Promise<Map<string, { id: string; profileId: string | null }>> {
+  const password = process.env.SEED_USER_PASSWORD || "ChapDemo123!";
+  const passwordHash = await bcrypt.hash(password, 10);
+  const names = new Map<string, { kind: "individual" | "business"; phone: string }>();
+  for (const l of LISTINGS) {
+    if (!names.has(l.sellerName)) {
+      names.set(l.sellerName, {
+        kind: l.sellerType === "business" ? "business" : "individual",
+        phone: l.sellerPhone ?? "0700000000",
+      });
+    }
+  }
+  names.set("Demo Buyer", { kind: "individual", phone: "0712345678" });
+
+  const out = new Map<string, { id: string; profileId: string | null }>();
+  for (const [name, meta] of names) {
+    const email = `${slugifyName(name)}@demo.chap.co.ke`;
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: {},
+      create: {
+        name,
+        email,
+        phone: meta.phone,
+        passwordHash,
+        role: "SELLER",
+        verified: name === "Demo Buyer" ? false : true,
+        emailVerified: true,
+        sellerKind: meta.kind,
+        seller: { create: { displayName: name } },
+      },
+    });
+    const profile = await prisma.sellerProfile.findUnique({ where: { userId: user.id } });
+    out.set(name, { id: user.id, profileId: profile?.id ?? null });
+  }
+  console.log(`[seed] demo users ready (password: ${process.env.SEED_USER_PASSWORD ? "(from SEED_USER_PASSWORD)" : "ChapDemo123!"} — e.g. ${slugifyName([...names.keys()][0])}@demo.chap.co.ke).`);
+  return out;
+}
+
+/** Demo shops with owner memberships derived from their catalogue listings. */
+async function seedShops(users: Map<string, { id: string; profileId: string | null }>): Promise<Map<string, string>> {
+  const ids = new Map<string, string>();
+  for (const s of SHOPS) {
+    const shop = await prisma.shop.upsert({
+      where: { slug: s.slug },
+      update: {},
+      create: {
+        slug: s.slug,
+        name: s.name,
+        description: s.description,
+        businessCategory: s.businessCategory,
+        county: s.county,
+        town: s.town,
+        phone: s.phone,
+        logoUrl: s.logo,
+        coverUrl: s.cover,
+        verified: s.verified,
+      },
+    });
+    ids.set(s.slug, shop.id);
+    const ownerListing = LISTINGS.find((l) => l.shopSlug === s.slug);
+    const owner = ownerListing ? users.get(ownerListing.sellerName) : undefined;
+    if (owner) {
+      await prisma.shopMember.upsert({
+        where: { shopId_userId: { shopId: shop.id, userId: owner.id } },
+        update: {},
+        create: { shopId: shop.id, userId: owner.id, role: "owner" },
+      });
+    }
+  }
+  return ids;
+}
+
+/** Demo product listings: live + moderated, images backfilled, never overwritten. */
+async function seedListings(
+  users: Map<string, { id: string; profileId: string | null }>,
+  shops: Map<string, string>
+): Promise<number> {
+  let n = 0;
+  for (const l of LISTINGS) {
+    const owner = users.get(l.sellerName);
+    const rec = await prisma.listing.upsert({
+      where: { slug: l.slug },
+      update: {},
+      create: {
+        slug: l.slug,
+        title: l.title,
+        description: l.description,
+        type: l.listingType as never,
+        status: "active" as never,
+        price: l.price,
+        compareAt: l.compareAt ?? null,
+        condition: l.condition as never,
+        txMethod: l.transactionMethod as never,
+        negotiable: l.negotiable,
+        stock: l.stock,
+        county: l.county,
+        town: l.town,
+        sellerName: l.sellerName,
+        sellerPhone: l.sellerPhone ?? null,
+        sellerProfileId: owner?.profileId ?? null,
+        shopId: (l.shopSlug && shops.get(l.shopSlug)) || null,
+        categorySlug: l.categorySlug,
+        subcategory: l.subcategory ?? null,
+        featured: l.featured ?? false,
+        attributes: l.attributes ?? {},
+      },
+    });
+    n += 1;
+    const imgCount = await prisma.listingImage.count({ where: { listingId: rec.id } });
+    if (imgCount === 0 && l.images.length > 0) {
+      await prisma.listingImage.createMany({
+        data: l.images.map((url, i) => ({ listingId: rec.id, url, position: i })),
+      });
+    }
+  }
+  return n;
 }
 
 main().catch((e) => {

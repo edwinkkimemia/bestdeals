@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "vercel-build": "prisma migrate deploy && npm run db:seed && next build",
+    "db:seed": "tsx prisma/seed.ts",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",

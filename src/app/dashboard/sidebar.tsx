@@ -79,7 +79,7 @@ export function DashboardSidebar({ unread }: { unread: number }) {
       </div>
 
       {/* Mobile: slim icon-only sidebar rail */}
-      <nav aria-label="Dashboard sections" className="sticky top-[62px] flex flex-col items-center gap-1 self-start py-4 lg:hidden">
+      <nav aria-label="Dashboard sections" className="sticky top-[62px] flex max-h-[calc(100dvh-80px)] flex-col items-center gap-1 self-start overflow-y-auto py-4 [-ms-overflow-style:none] [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden">
         {NAV.map(({ href, label, Icon, exact }) => (
           <Link
             key={href}
