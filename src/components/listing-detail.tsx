@@ -100,7 +100,7 @@ function ShareButtons({ title }: { title: string }) {
   );
 }
 
-export function ListingDetail({ listing, related, moreFromSeller, reviews, listingReviews, jsonLd, sellerPhotoUrl }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; listingReviews?: ReviewRecord[]; jsonLd: Record<string, unknown>; sellerPhotoUrl?: string | null }) {
+export function ListingDetail({ listing, related, moreFromSeller, reviews, listingReviews, jsonLd, sellerPhotoUrl, previewStatus }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; listingReviews?: ReviewRecord[]; jsonLd: Record<string, unknown>; sellerPhotoUrl?: string | null; previewStatus?: string | null }) {
   const { add } = useCart();
   const [img, setImg] = useState(0);
   const [qty, setQty] = useState(1);
@@ -166,6 +166,14 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
     <div className="overflow-x-clip pb-8">
       <ViewTracker listingId={listing.id} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      {previewStatus && previewStatus !== "active" && (
+        <div className="border-b border-amber-200 bg-amber-50" role="status">
+          <div className="container-bd flex flex-wrap items-center gap-2 py-2.5 text-sm text-amber-900">
+            <span className="font-bold">Preview — not live yet ({previewStatus}).</span>
+            <span className="text-amber-800">Only you, your shop staff and admins can see this. Share the link, but others will see it only after moderation approves it.</span>
+          </div>
+        </div>
+      )}
       <nav className="border-b border-neutral-200 bg-sand-50" aria-label="Breadcrumb">
         <div className="container-bd flex flex-wrap items-center gap-1.5 py-2.5 text-xs text-ink-400">
           <Link href="/" className="font-medium hover:text-brand-700 hover:underline">Home</Link>

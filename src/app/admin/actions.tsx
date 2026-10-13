@@ -82,6 +82,36 @@ export function AdminButtons({ kind, id, extra }: { kind: "verify" | "review" | 
   );
 }
 
+/** Admin plan payment confirmation (pending upgrade → activate). */
+export function PlanConfirmButton({ shopSlug, planId, amount }: { shopSlug: string; planId: string; amount: number }) {
+  const router = useRouter();
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    if (!confirm(`Confirm ${planId} payment for this shop and activate it?`)) return;
+    setBusy(true);
+    setMsg("");
+    const r = await fetch("/api/shops/plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shopSlug, planId, confirm: true }),
+    });
+    const j = await r.json().catch(() => ({}));
+    setMsg(r.ok ? "ok" : j.error || "Failed");
+    setBusy(false);
+    router.refresh();
+  };
+  const primary = "rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50";
+  return (
+    <span className="flex items-center gap-1.5">
+      <button disabled={busy} className={primary} onClick={run} title={`Confirm ${planId} payment (${amount} KES) and activate`}>
+        Confirm {planId} payment
+      </button>
+      {msg && msg !== "ok" && <span className="text-xs text-red-600">{msg}</span>}
+    </span>
+  );
+}
+
 /** Admin promotion actions (payment confirmed → activate; expire; cancel). */
 export function PromoButtons({ id, status }: { id: string; status: string }) {
   const router = useRouter();

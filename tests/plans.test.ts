@@ -8,6 +8,7 @@ import {
   PLAN_LISTING_LIMITS,
   PLAN_ANALYTICS_DAYS,
   planAllowsListings,
+  planChangeKind,
   getSellerPlan,
   countLiveListings,
   limitMessage,
@@ -52,6 +53,19 @@ describe("plan rules", () => {
     assert.deepEqual(PLAN_ANALYTICS_DAYS, { free: 7, silver: 30, gold: 90 });
     assert.ok(limitMessage("free", 5).includes("5"));
     assert.ok(goldRequiredMessage("Bulk CSV upload").includes("Gold"));
+  });
+});
+
+describe("plan change kinds", () => {
+  it("classifies same / upgrade / downgrade by price rank", () => {
+    assert.equal(planChangeKind("free", "free"), "same");
+    assert.equal(planChangeKind("silver", "silver"), "same");
+    assert.equal(planChangeKind("free", "silver"), "upgrade");
+    assert.equal(planChangeKind("free", "gold"), "upgrade");
+    assert.equal(planChangeKind("silver", "gold"), "upgrade");
+    assert.equal(planChangeKind("gold", "silver"), "downgrade");
+    assert.equal(planChangeKind("gold", "free"), "downgrade");
+    assert.equal(planChangeKind("silver", "free"), "downgrade");
   });
 });
 

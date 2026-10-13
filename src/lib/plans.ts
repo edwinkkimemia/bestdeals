@@ -24,6 +24,29 @@ export function planAllowsListings(plan: PlanId, liveCount: number): boolean {
   return liveCount < PLAN_LISTING_LIMITS[plan];
 }
 
+/**
+ * Classify a plan switch so billing can tell free moves (downgrade/same,
+ * applied immediately) from upgrades (require payment first). Rank follows
+ * price: free < silver < gold.
+ */
+export function planChangeKind(current: PlanId, target: PlanId): "same" | "upgrade" | "downgrade" {
+  const a = PLAN_IDS.indexOf(current);
+  const b = PLAN_IDS.indexOf(target);
+  if (b === a) return "same";
+  return b > a ? "upgrade" : "downgrade";
+}
+
+export type PendingPlan = {
+  planId: PlanId;
+  amount: number;
+  phone: string;
+  invoiceId: string;
+  at: string;
+  providerRef?: string;
+};
+
+export const pendingPlanKey = (shopSlug: string) => `plan_pending:${shopSlug}`;
+
 /** Analytics history each plan may view. */
 export const PLAN_ANALYTICS_DAYS: Record<PlanId, number> = {
   free: 7,

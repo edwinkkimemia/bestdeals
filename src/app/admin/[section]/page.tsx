@@ -5,7 +5,7 @@ import { normalizePlan } from "@/lib/plans";
 import { getStore } from "@/lib/store";
 import { formatKES } from "@/lib/format";
 import { LISTINGS } from "@/data/catalog";
-import { AdminButtons, PromoButtons } from "../actions";
+import { AdminButtons, PromoButtons, PlanConfirmButton } from "../actions";
 
 const SECTION_ICONS: Record<string, typeof Package> = {
   listings: Package,
@@ -84,6 +84,13 @@ export default async function AdminSection({
             {items.map((l) => (
               <li key={l.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
                 <span className="flex-1"><strong>{l.title}</strong> <span className="text-ink-400">· {l.type} · {formatKES(l.price)} · {l.sellerName} · {l.town}, {l.county}</span></span>
+                <Link
+                  href={`/${l.type === "classified" ? "classifieds" : l.type === "service" ? "services" : "product"}/${l.slug}`}
+                  className="link-bd text-xs"
+                  title="Open the product exactly as buyers will see it (admin preview works even before approval)"
+                >
+                  Preview →
+                </Link>
                 <AdminButtons kind="listing" id={l.id} />
               </li>
             ))}
@@ -188,10 +195,16 @@ export default async function AdminSection({
     const all = await store.listShops();
     const items = tab === "all" ? all : all.filter((s) => (tab === "verified" ? s.verified : !s.verified));
     const owners = new Map((await store.listUsers().catch(() => [])).map((u) => [u.id, u.name]));
+    const { pendingPlanKey } = await import("@/lib/plans");
+    const pendings = new Map<string, { planId: string; amount: number }>();
+    for (const s of items) {
+      const p = (await store.getSetting(pendingPlanKey(s.slug)).catch(() => null)) as { planId?: string; amount?: number } | null;
+      if (p?.planId) pendings.set(s.slug, { planId: p.planId, amount: p.amount ?? 0 });
+    }
     return (
       <div>
         <SectionTitle section="shops">{TITLES.shops} ({items.length})</SectionTitle>
-        <p className="mt-1 text-sm text-ink-500">Every seller shop: verify the business badge, check the plan, jump to the live storefront.</p>
+        <p className="mt-1 text-sm text-ink-500">Every seller shop: verify the business badge, check the plan, jump to the live storefront. Pending upgrades activate only when paid.</p>
         <Tabs base="/admin/shops" tabs={tabs} current={tab} />
         {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">No shops {tab === "all" ? "yet" : tab}.</p> : (
           <ul className="mt-4 space-y-2">
@@ -208,8 +221,14 @@ export default async function AdminSection({
                 <span className="min-w-0 flex-1">
                   <strong>{s.name}</strong> <span className="text-ink-400">· /shops/{s.slug} · {s.ownerId ? owners.get(s.ownerId) ?? "owner" : "no owner"} · {normalizePlan(s.planId)} · {s.town}, {s.county}</span>{" "}
                   <span className="chip">{s.verified ? "✓ verified" : "pending"}</span>
+                  {pendings.get(s.slug) && (
+                    <span className="chip !border-amber-500 !text-amber-700">awaiting {pendings.get(s.slug)!.planId} payment</span>
+                  )}
                 </span>
                 <Link href={`/shops/${s.slug}`} className="link-bd text-xs">View →</Link>
+                {pendings.get(s.slug) && (
+                  <PlanConfirmButton shopSlug={s.slug} planId={pendings.get(s.slug)!.planId} amount={pendings.get(s.slug)!.amount} />
+                )}
                 <AdminButtons kind="shop" id={s.slug} extra={{ verified: s.verified }} />
               </li>
             ))}

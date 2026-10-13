@@ -180,7 +180,7 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
         slug: s.slug,
         title: s.title,
         description: s.description,
-        categorySlug: s.categorySlug || "all",
+        categorySlug: s.categorySlug || "other",
         subcategory: s.subcategory,
         price: s.price,
         compareAt: s.compareAt,
@@ -191,11 +191,11 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
         town: s.town,
         negotiable: s.negotiable,
         stock: s.stock,
-        images: s.images,
+        images: s.images && s.images.length > 0 ? s.images : ["/chaplogo.png"],
         sellerName: s.sellerName,
-        sellerType: "individual" as const,
+        sellerType: (s.shopSlug ? "business" : "individual") as Listing["sellerType"],
         shopSlug: s.shopSlug,
-        verified: true,
+        verified: s.verified ?? true,
         featured: s.featured,
         createdAt: s.createdAt,
         attributes: s.attributes || {},
@@ -204,11 +204,16 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
         if (p.category && p.category !== "all" && l.categorySlug !== p.category) return false;
         if (sub && sub !== "all" && (l.subcategory ?? "").trim().toLowerCase() !== sub) return false;
         if (p.type && p.type !== "all" && l.listingType !== p.type) return false;
+        if (p.seller && p.seller !== "all" && l.sellerType !== p.seller) return false;
         if (p.condition && p.condition !== "all" && l.condition !== p.condition) return false;
         if (!countyMatches(l.county, p.county ?? "all")) return false;
         if (town && town !== "all" && l.town.trim().toLowerCase() !== town) return false;
         if (p.min != null && l.price < p.min) return false;
         if (p.max != null && l.price > p.max) return false;
+        if (p.postedWithinHours != null && p.postedWithinHours > 0) {
+          const t = +new Date(l.createdAt);
+          if (!Number.isFinite(t) || Date.now() - t > p.postedWithinHours * 3600_000) return false;
+        }
         if (tokens.length > 0 && score(l, tokens) <= 0) return false;
         return true;
       });

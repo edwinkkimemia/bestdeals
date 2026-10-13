@@ -9,6 +9,7 @@ import { formatKES } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { ListingForm } from "@/components/listing-form";
 import { ManageActions } from "./actions";
+import { CopyListingLink } from "@/components/copy-listing-link";
 
 export const metadata = { title: "Manage listing" };
 
@@ -38,6 +39,7 @@ export default async function ManageListing({ params }: { params: { id: string }
 
   const title = stored!.title;
   const meta = `${stored!.type} · ${formatKES(stored!.price)} · ${stored!.town}, ${stored!.county} · stock ${stored!.stock} · status: ${stored!.status}`;
+  const publicPath = `/${stored!.type === "classified" ? "classifieds" : stored!.type === "service" ? "services" : "product"}/${stored!.slug}`;
 
   return (
     <div>
@@ -54,9 +56,39 @@ export default async function ManageListing({ params }: { params: { id: string }
         {stored!.status === "rejected" && (
           <p className="mt-2 rounded-xl bg-red-50 p-3 text-sm text-red-700">Rejected by moderation. Fix the details below and save — it goes back for review automatically.</p>
         )}
+        {stored!.status === "active" ? (
+          <p className="mt-2 rounded-xl bg-green-50 p-3 text-sm text-green-800">
+            Live now —{" "}
+            <Link className="link-bd" href={publicPath}>
+              view public page →
+            </Link>{" "}
+            {stored!.shopSlug && (
+              <>
+                · shop:{" "}
+                <Link className="link-bd" href={`/shops/${stored!.shopSlug}`}>
+                  /shops/{stored!.shopSlug} →
+                </Link>
+              </>
+            )}
+          </p>
+        ) : (
+          <p className="mt-2 rounded-xl bg-sand-50 p-3 text-sm text-ink-700">
+            Not live yet ({stored!.status}) —{" "}
+            <Link className="link-bd" href={publicPath}>
+              open your preview →
+            </Link>{" "}
+            (only you, your shop staff and admins can see it until approved).
+          </p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link href={publicPath} className="btn-secondary !px-3 !py-1.5 text-xs">
+            {stored!.status === "active" ? "View live" : "Preview"}
+          </Link>
+          <CopyListingLink path={publicPath} />
+        </div>
         <ManageActions id={stored!.id} status={stored!.status} />
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/dashboard/promotion" className="btn-primary"><Megaphone className="h-4 w-4" /> Promote</Link>
+          <Link href={`/dashboard/promotion?listing=${stored!.id}`} className="btn-primary"><Megaphone className="h-4 w-4" /> Promote this listing</Link>
         </div>
       </div>
       <h2 className="mt-8 font-bold">Edit details</h2>

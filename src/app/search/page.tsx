@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { CATEGORIES, categoryBySlug } from "@/data/catalog";
-import { searchListings } from "@/lib/search";
+import { searchAll } from "@/lib/search";
 import { ListingCard } from "@/components/ui/listing-card";
 import { COUNTY_NAMES, resolveCounty, townsFor } from "@/lib/kenya";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 export const metadata = { title: "Search" };
 
-export default function SearchPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+export default async function SearchPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
   // Canonicalises case ("nakuru" → "Nakuru") and towns ("Eldoret" → "Uasin Gishu").
   const rawCounty = (searchParams.county ?? "").trim();
   const county = resolveCounty(rawCounty);
@@ -29,16 +29,23 @@ export default function SearchPage({ searchParams }: { searchParams: Record<stri
     sort: (searchParams.sort as "relevance" | "newest" | "price_asc" | "price_desc") ?? "relevance",
     page: searchParams.page ? Number(searchParams.page) : 1,
   };
-  const { items, total } = searchListings(params);
+  // Includes admin-approved seller listings (store `active`) merged with the
+  // static catalogue — previously static-only, so approved items never surfaced.
+  const { items, total } = await searchAll(params);
   const cat = categoryBySlug(params.category ?? "");
 
   // One combined search across shop products, classifieds and services.
   // Per-type counts power the tabs (in production this is a single faceted query).
+  const [productCount, classifiedCount, serviceCount] = await Promise.all([
+    searchAll({ ...params, type: "product", page: 1, perPage: 1 }).then((r) => r.total),
+    searchAll({ ...params, type: "classified", page: 1, perPage: 1 }).then((r) => r.total),
+    searchAll({ ...params, type: "service", page: 1, perPage: 1 }).then((r) => r.total),
+  ]);
   const counts = {
     all: total,
-    product: searchListings({ ...params, type: "product", page: 1, perPage: 1 }).total,
-    classified: searchListings({ ...params, type: "classified", page: 1, perPage: 1 }).total,
-    service: searchListings({ ...params, type: "service", page: 1, perPage: 1 }).total,
+    product: productCount,
+    classified: classifiedCount,
+    service: serviceCount,
   };
   const keep = new URLSearchParams();
   if (params.q) keep.set("q", params.q);

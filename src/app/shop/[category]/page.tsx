@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { CATEGORIES, categoryBySlug } from "@/data/catalog";
-import { searchListings, shuffleFeaturedFirst } from "@/lib/search";
+import { searchAll, shuffleFeaturedFirst } from "@/lib/search";
 import { ListingCard } from "@/components/ui/listing-card";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
@@ -23,20 +23,21 @@ export async function generateMetadata({ params }: { params: { category: string 
   };
 }
 
-export default function CategoryPage({ params }: { params: { category: string } }) {
+export default async function CategoryPage({ params }: { params: { category: string } }) {
   const c = categoryBySlug(params.category);
   if (!c) notFound();
-  const { items: found, total } = searchListings({ category: c.slug, sort: "relevance", perPage: 48 });
+  const cat = c as NonNullable<typeof c>;
+  const { items: found, total } = await searchAll({ category: cat.slug, sort: "relevance", perPage: 48 });
   const items = shuffleFeaturedFirst(found);
   return (
     <div className="container-bd py-8">
-      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { href: "/shop", label: "Shop" }, { label: c.name }]} />
-      <h1 className="section-title mt-2">{c.name} ({total})</h1>
-      <p className="text-sm text-ink-500">{c.blurb}</p>
-      {c.subcategories.length > 0 && (
+      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { href: "/shop", label: "Shop" }, { label: cat.name }]} />
+      <h1 className="section-title mt-2">{cat.name} ({total})</h1>
+      <p className="text-sm text-ink-500">{cat.blurb}</p>
+      {cat.subcategories.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-2">
-          {c.subcategories.map((s) => (
-            <Link key={s} href={`/search?category=${c.slug}&subcategory=${encodeURIComponent(s)}`} className="chip hover:border-brand-600">{s}</Link>
+          {cat.subcategories.map((s) => (
+            <Link key={s} href={`/search?category=${cat.slug}&subcategory=${encodeURIComponent(s)}`} className="chip hover:border-brand-600">{s}</Link>
           ))}
         </div>
       )}

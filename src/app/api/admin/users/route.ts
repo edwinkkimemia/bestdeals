@@ -19,10 +19,18 @@ export async function POST(req: NextRequest) {
   if (parsed.data.id === user.id) return NextResponse.json({ error: "You can't change your own verification." }, { status: 422 });
   const target = await getStore().findUserById(parsed.data.id);
   if (!target) return NextResponse.json({ error: "User not found." }, { status: 404 });
-  await getStore().setUserVerified(parsed.data.id, parsed.data.verified);
+  const store = getStore();
+  await store.setUserVerified(parsed.data.id, parsed.data.verified);
+  // Same cascade as verification-queue approval: the seller ✓ and all of
+  // their shops flip together, so shop pages never disagree with the account.
+  const owned = await store.listShopsByOwner(parsed.data.id).catch(() => []);
+  for (const s of owned) {
+    await store.setShopVerified(s.slug, parsed.data.verified).catch(() => null);
+  }
   if (parsed.data.verified) {
     await qualifyReferralsFor(parsed.data.id).catch(() => null);
   }
+  await logAudit({ actorId: user.id, actorEmail: user.email, action: parsed.data.verified ? "user.verify" : "user.unverify", entity: "user", entityId: parsed.data.id }).catch(() => {});
   return NextResponse.json({ ok: true });
 }
 

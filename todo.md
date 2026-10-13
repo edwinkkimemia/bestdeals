@@ -31,7 +31,7 @@ Evidence: `src/lib/payments.ts:32-57`, `src/app/api/payments/initiate/route.ts:1
 - [ ] Checkout UI: M-Pesa phone input + STK flow + polling/reconcile job. Today hardcoded `paymentMethod=cod`, `?pay=cod` (`checkout/page.tsx:72`).
 - [ ] Delivery fees: replace hardcoded `{standard:250, express:500, pickup:0}` (`checkout/page.tsx:13,38` + duplicate in `orders/route.ts:37`) with per-county/shop matrix + admin setting.
 - [ ] Cards: either implement `CARD_PROVIDER` or remove option (today `Card payments are not available yet`).
-- [ ] Plans/boosts: `src/app/api/shops/plan/route.ts:42-67` activates plan before payment (`Demo billing`); `src/app/api/promotions/route.ts:57-66` never auto-activates on payment. Add webhook → activate/downgrade, invoices, renewal reminders, grace period, prorate. Downgrade sweep for over-limit listings.
+- [x] Plans/boosts: upgrades now create a pending checkout — wallet debits or M-Pesa callback/admin-confirm activates (`src/app/api/shops/plan/route.ts`); downgrades apply immediately with over-limit sweep; invoices listed in PlanPanel; per-listing promote deep-links (`?listing=`). Remaining: renewal reminders, grace period, prorate.
 - [ ] Refunds/reversals: `src/app/api/admin/disputes/route.ts:1-28` only flips local status, no Daraja reversal, no `LedgerEntry`/`Refund` write.
 - [ ] Vouchers/discounts/tax engine: `discount` always 0, no coupon codes.
 - [ ] Tests: add `tests/payments.test.ts` — sandbox STK, callback idempotency, duplicate receipt, amount mismatch, promo/plan activation.

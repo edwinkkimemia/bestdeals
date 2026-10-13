@@ -2,7 +2,7 @@ import { currentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Store } from "lucide-react";
-import { normalizePlan } from "@/lib/plans";
+import { normalizePlan, PLAN_IDS } from "@/lib/plans";
 import { getStore } from "@/lib/store";
 import { PlanPanel, BulkPanel, StaffPanel, ShopHeaderForm } from "./panels";
 
@@ -20,6 +20,8 @@ export default async function ShopDash({ searchParams }: { searchParams: { plan?
   const active = owned[0] ?? null;
   const activePlan = active ? normalizePlan((active as { planId?: unknown }).planId) : "free";
   const members = active ? await store.listShopMembers(active.slug).catch(() => []) : [];
+  // ?plan=silver from /pricing preselects + highlights that plan in the checkout panel.
+  const highlightPlan = searchParams.plan && (PLAN_IDS as readonly string[]).includes(searchParams.plan) ? searchParams.plan : undefined;
   const isOwner =
     user.role === "ADMIN" ||
     active?.ownerId === user.id ||
@@ -83,6 +85,7 @@ export default async function ShopDash({ searchParams }: { searchParams: { plan?
           <PlanPanel
             shops={owned.map((s) => ({ slug: s.slug, name: s.name, planId: normalizePlan((s as { planId?: unknown }).planId) }))}
             activeSlug={active?.slug ?? ""}
+            highlightPlan={highlightPlan}
           />
           {active && (
             <StaffPanel

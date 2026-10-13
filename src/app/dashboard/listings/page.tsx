@@ -7,6 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { WmImage } from "@/components/ui/wm-image";
 import { formatKES, formatDay } from "@/lib/format";
 import { getListingsStats } from "@/lib/analytics";
+import { CopyListingLink } from "@/components/copy-listing-link";
+
+const publicPath = (l: { type: string; slug: string }) =>
+  `/${l.type === "classified" ? "classifieds" : l.type === "service" ? "services" : "product"}/${l.slug}`;
 
 const TABS = ["all", "active", "pending", "rejected", "sold", "hidden", "draft", "expired"];
 
@@ -78,6 +82,28 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
                 </p>
               </div>
               <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
+              {l.status === "active" ? (
+                <Link
+                  href={publicPath(l)}
+                  className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs"
+                >
+                  View live
+                </Link>
+              ) : (
+                <Link
+                  href={publicPath(l)}
+                  title="Only you, your shop staff and admins can see this until moderation approves it."
+                  className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs"
+                >
+                  Preview
+                </Link>
+              )}
+              <CopyListingLink path={publicPath(l)} />
+              {l.status === "active" && l.images.length > 0 && (
+                <Link href={`/dashboard/promotion?listing=${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">
+                  Promote
+                </Link>
+              )}
               <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">Manage</Link>
             </li>
           ))}
@@ -101,6 +127,14 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
                   <p className="text-xs text-ink-400">{l.type} · {formatKES(l.price)} · {shopName} · staff</p>
                 </div>
                 <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
+                <Link
+                  href={publicPath(l)}
+                  title={l.status === "active" ? "Open the live product page" : "Staff preview — public only after approval"}
+                  className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs"
+                >
+                  {l.status === "active" ? "View live" : "Preview"}
+                </Link>
+                <CopyListingLink path={publicPath(l)} />
                 <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">Manage</Link>
               </li>
             ))}

@@ -13,7 +13,7 @@ export function generateStaticParams() {
 
 export const metadata = { title: "Dashboard", robots: { index: false, follow: false } };
 
-export default async function DashPage({ params }: { params: { page: string } }) {
+export default async function DashPage({ params, searchParams }: { params: { page: string }; searchParams?: { listing?: string } }) {
   const user = await currentUser();
   if (!user) redirect(`/auth/signin?next=${encodeURIComponent(`/dashboard/${params.page}`)}`);
   if (!["profile", "promotion", "settings"].includes(params.page)) notFound();
@@ -56,7 +56,7 @@ export default async function DashPage({ params }: { params: { page: string } })
           <ul className="mt-2 list-disc space-y-1 pl-5 text-ink-700">
             <li>Only <strong>active</strong> (moderation-approved) listings with at least one photo qualify.</li>
             <li>Verified sellers rank higher in featured rails; unverified shops can still boost.</li>
-            <li>Featured slots come from Silver/Gold credits or per-boost payment — see plans.</li>
+            <li>Pay per boost from wallet balance or M-Pesa — no plan needed. Shop plans are separate — see plans.</li>
           </ul>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link href="/pricing" className="btn-primary">See plans</Link>
@@ -74,6 +74,7 @@ export default async function DashPage({ params }: { params: { page: string } })
             listings={mine.map((l) => ({ id: l.id, title: l.title, price: l.price, status: l.status, images: l.images.length }))}
             phone={fresh?.phone ?? user.phone}
             isAdmin={user.role === "ADMIN"}
+            focusListingId={searchParams?.listing && mine.some((l) => l.id === searchParams.listing) ? searchParams.listing : undefined}
           />
         )}
       </div>

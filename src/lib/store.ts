@@ -52,6 +52,8 @@ export type ListingRecord = {
   categorySlug?: string;
   subcategory?: string;
   featured?: boolean;
+  /** Resolved from the owner's account at read time (seller ✓ badge). */
+  verified?: boolean;
   createdAt: string;
 };
 
@@ -486,24 +488,28 @@ class DemoStore implements Store {
   }
   async getListing(id: string) {
     const l = this.listings.get(id) ?? null;
-    return l ? { ...l, featured: this.listingHasLivePromo(id) ? true : false } : null;
+    return l ? { ...l, featured: this.listingHasLivePromo(id) ? true : false, verified: this.ownerVerified(l.ownerId) } : null;
+  }
+  /** Owner's current seller ✓ (false when the account is gone). */
+  private ownerVerified(ownerId?: string): boolean {
+    return !!ownerId && (this.users.get(ownerId)?.verified ?? false);
   }
   async listListingsByOwner(ownerId: string) {
     return [...this.listings.values()]
       .filter((l) => l.ownerId === ownerId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
-      .map((l) => ({ ...l, featured: this.listingHasLivePromo(l.id) ? true : false }));
+      .map((l) => ({ ...l, featured: this.listingHasLivePromo(l.id) ? true : false, verified: this.ownerVerified(l.ownerId) }));
   }
   async listListingsByStatus(status: string) {
     return [...this.listings.values()]
       .filter((l) => l.status === status)
-      .map((l) => ({ ...l, featured: this.listingHasLivePromo(l.id) ? true : false }));
+      .map((l) => ({ ...l, featured: this.listingHasLivePromo(l.id) ? true : false, verified: this.ownerVerified(l.ownerId) }));
   }
   async listListingsByShop(shopSlug: string) {
     return [...this.listings.values()]
       .filter((l) => l.shopSlug === shopSlug)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
-      .map((l) => ({ ...l, featured: this.listingHasLivePromo(l.id) ? true : false }));
+      .map((l) => ({ ...l, featured: this.listingHasLivePromo(l.id) ? true : false, verified: this.ownerVerified(l.ownerId) }));
   }
   async setListingStatus(id: string, status: string) {
     const l = this.listings.get(id);
@@ -1132,13 +1138,17 @@ class PrismaStore implements Store {
       condition: l.condition, txMethod: l.txMethod, negotiable: rec.negotiable,
       stock: rec.stock, county: rec.county, town: rec.town, images: l.images ?? [],
       attributes: l.attributes ?? {}, ownerId: l.ownerId, sellerName: l.sellerName,
-      shopSlug: l.shopSlug, categorySlug: l.categorySlug, featured: false, createdAt: rec.createdAt.toISOString(),
+      shopSlug: l.shopSlug, categorySlug: l.categorySlug, featured: false,
+      verified: l.ownerId ? (await this.userVerifiedMap([l.ownerId])).get(l.ownerId) ?? false : false,
+      createdAt: rec.createdAt.toISOString(),
     };
   }
   async getListing(id: string) {
     const rec = await this.p.listing.findUnique({ where: { id }, include: { images: { orderBy: { position: "asc" } }, seller: true, shop: { select: { slug: true } } } });
     if (!rec) return null;
     const live = await this.livePromoListingIds([id]);
+    const ownerUserId = (rec.seller as { userId?: string } | null)?.userId;
+    const verified = ownerUserId ? (await this.userVerifiedMap([ownerUserId])).get(ownerUserId) ?? false : false;
     return {
       id: rec.id, slug: rec.slug, title: rec.title, description: rec.description,
       type: rec.type as ListingRecord["type"], status: rec.status as string,
@@ -1150,7 +1160,7 @@ class PrismaStore implements Store {
       ownerId: (rec.seller as { userId?: string } | null)?.userId ?? rec.sellerProfileId ?? undefined,
       sellerName: rec.sellerName ?? "Seller",
       sellerPhone: rec.sellerPhone ?? undefined,
-      shopSlug: (rec as { shop?: { slug: string } | null }).shop?.slug ?? undefined, categorySlug: (rec as { categorySlug?: string | null }).categorySlug ?? undefined, subcategory: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(id), createdAt: rec.createdAt.toISOString(),
+      shopSlug: (rec as { shop?: { slug: string } | null }).shop?.slug ?? undefined, categorySlug: (rec as { categorySlug?: string | null }).categorySlug ?? undefined, subcategory: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(id), verified, createdAt: rec.createdAt.toISOString(),
     };
   }
   /** Batch-resolve shop ids to slugs (Prisma keeps only the FK on listings). */
@@ -1169,6 +1179,22 @@ class PrismaStore implements Store {
     });
     return new Set(rows.filter((r: { endsAt: Date }) => +r.endsAt > now).map((r: { listingId: string }) => r.listingId));
   }
+  /** Owner seller-✓ flags, batched (missing accounts read as unverified). */
+  private async userVerifiedMap(userIds: (string | null | undefined)[]): Promise<Map<string, boolean>> {
+    const ids = [...new Set(userIds.filter((x): x is string => !!x))];
+    if (ids.length === 0) return new Map();
+    const rows = await this.p.user.findMany({ where: { id: { in: ids } }, select: { id: true, verified: true } }).catch(() => []);
+    return new Map((rows as { id: string; verified: boolean }[]).map((r) => [r.id, r.verified]));
+  }
+  /** Owner user ids per shop, batched via owner memberships. */
+  private async shopOwnerMap(shopIds: (string | null | undefined)[]): Promise<Map<string, string>> {
+    const ids = [...new Set(shopIds.filter((x): x is string => !!x))];
+    if (ids.length === 0) return new Map();
+    const rows = await this.p.shopMember.findMany({ where: { shopId: { in: ids }, role: "owner" }, select: { shopId: true, userId: true } }).catch(() => []);
+    const m = new Map<string, string>();
+    for (const r of rows as { shopId: string; userId: string }[]) if (!m.has(r.shopId)) m.set(r.shopId, r.userId);
+    return m;
+  }
   async listListingsByOwner(ownerId: string) {
     // ownerId is the User id — resolve to the seller profile first.
     const profile = await this.p.sellerProfile.findUnique({ where: { userId: ownerId } }).catch(() => null);
@@ -1180,6 +1206,7 @@ class PrismaStore implements Store {
     });
     const live = await this.livePromoListingIds(recs.map((r: { id: string }) => r.id));
     const slugs = await this.shopSlugMap(recs.map((r) => (r as { shopId?: string | null }).shopId));
+    const ownerVerified = (await this.userVerifiedMap([ownerId])).get(ownerId) ?? false;
     return recs.map((rec: (typeof recs)[number]) => ({
       id: rec.id, slug: rec.slug, title: rec.title, description: rec.description,
       type: rec.type as ListingRecord["type"], status: rec.status as string,
@@ -1190,7 +1217,7 @@ class PrismaStore implements Store {
       attributes: (rec as { attributes?: Record<string, string> }).attributes ?? {}, ownerId,
       sellerName: rec.sellerName ?? "Seller",
       sellerPhone: rec.sellerPhone ?? undefined,
-      shopSlug: slugs.get((rec as { shopId?: string | null }).shopId ?? "") ?? undefined, categorySlug: (rec as { categorySlug?: string | null }).categorySlug ?? undefined, subcategory: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(rec.id), createdAt: rec.createdAt.toISOString(),
+      shopSlug: slugs.get((rec as { shopId?: string | null }).shopId ?? "") ?? undefined, categorySlug: (rec as { categorySlug?: string | null }).categorySlug ?? undefined, subcategory: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(rec.id), verified: ownerVerified, createdAt: rec.createdAt.toISOString(),
     }));
   }
   async listListingsByShop(shopSlug: string) {
@@ -1202,6 +1229,7 @@ class PrismaStore implements Store {
       include: { images: { orderBy: { position: "asc" }, take: 1 }, seller: true },
     });
     const live = await this.livePromoListingIds(recs.map((r: { id: string }) => r.id));
+    const vmap = await this.userVerifiedMap(recs.map((r) => (r as { seller?: { userId?: string } | null }).seller?.userId));
     return recs.map((rec: (typeof recs)[number]) => ({
       id: rec.id, slug: rec.slug, title: rec.title, description: rec.description,
       type: rec.type as ListingRecord["type"], status: rec.status as string,
@@ -1213,7 +1241,7 @@ class PrismaStore implements Store {
       ownerId: ((rec as { seller?: { userId?: string } | null }).seller)?.userId ?? rec.sellerProfileId ?? undefined,
       sellerName: rec.sellerName ?? "Seller",
       sellerPhone: rec.sellerPhone ?? undefined,
-      shopSlug, categorySlug: (rec as { categorySlug?: string | null }).categorySlug ?? undefined, subcategory: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(rec.id), createdAt: rec.createdAt.toISOString(),
+      shopSlug, categorySlug: (rec as { categorySlug?: string | null }).categorySlug ?? undefined, subcategory: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(rec.id), verified: vmap.get(((rec as { seller?: { userId?: string } | null }).seller)?.userId ?? "") ?? false, createdAt: rec.createdAt.toISOString(),
     }));
   }
   async listListingsByStatus(status: string) {
@@ -1224,6 +1252,7 @@ class PrismaStore implements Store {
     });
     const live = await this.livePromoListingIds(recs.map((r: { id: string }) => r.id));
     const slugs = await this.shopSlugMap(recs.map((r) => (r as { shopId?: string | null }).shopId));
+    const vmap = await this.userVerifiedMap(recs.map((r) => (r as { seller?: { userId?: string } | null }).seller?.userId));
     return recs.map((rec: (typeof recs)[number]) => ({
       id: rec.id, slug: rec.slug, title: rec.title, description: rec.description,
       type: rec.type as ListingRecord["type"], status: rec.status as string,
@@ -1235,7 +1264,7 @@ class PrismaStore implements Store {
       ownerId: ((rec as { seller?: { userId?: string } | null }).seller)?.userId ?? rec.sellerProfileId ?? undefined,
       sellerName: rec.sellerName ?? "Seller",
       sellerPhone: rec.sellerPhone ?? undefined,
-      shopSlug: slugs.get((rec as { shopId?: string | null }).shopId ?? "") ?? undefined, categorySlug: (rec as { categorySlug?: string | null }).categorySlug ?? undefined, subcategory: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(rec.id), createdAt: rec.createdAt.toISOString(),
+      shopSlug: slugs.get((rec as { shopId?: string | null }).shopId ?? "") ?? undefined, categorySlug: (rec as { categorySlug?: string | null }).categorySlug ?? undefined, subcategory: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(rec.id), verified: vmap.get(((rec as { seller?: { userId?: string } | null }).seller)?.userId ?? "") ?? false, createdAt: rec.createdAt.toISOString(),
     }));
   }
   async updateListing(id: string, patch: Partial<ListingRecord>) {
@@ -1446,11 +1475,16 @@ class PrismaStore implements Store {
   async getShopBySlug(slug: string) {
     const rec = await this.p.shop.findUnique({ where: { slug } });
     if (!rec) return null;
-    return this.mapShop(rec);
+    const owners = await this.shopOwnerMap([(rec as { id: string }).id]);
+    return { ...this.mapShop(rec), ownerId: owners.get((rec as { id: string }).id) };
   }
   async listShops() {
     const recs = await this.p.shop.findMany({ orderBy: { createdAt: "desc" }, take: 200 });
-    return recs.map((rec: Parameters<PrismaStore["mapShop"]>[0]) => this.mapShop(rec));
+    const owners = await this.shopOwnerMap(recs.map((r) => (r as { id: string }).id));
+    return recs.map((rec: Parameters<PrismaStore["mapShop"]>[0]) => ({
+      ...this.mapShop(rec),
+      ownerId: owners.get((rec as unknown as { id: string }).id),
+    }));
   }
   async setShopVerified(slug: string, verified: boolean) {
     await this.p.shop.update({ where: { slug }, data: { verified } });
@@ -1548,7 +1582,11 @@ class PrismaStore implements Store {
       include: { shop: true },
       take: 50,
     });
-    return rows.map((r: { shop: Parameters<PrismaStore["mapShop"]>[0] }) => this.mapShop(r.shop));
+    const owners = await this.shopOwnerMap(rows.map((r) => (r.shop as { id: string }).id));
+    return rows.map((r: { shop: Parameters<PrismaStore["mapShop"]>[0] }) => ({
+      ...this.mapShop(r.shop),
+      ownerId: owners.get((r.shop as unknown as { id: string }).id),
+    }));
   }
 
   async createVerification(v: Omit<VerificationRecord, "id" | "status" | "createdAt">) {

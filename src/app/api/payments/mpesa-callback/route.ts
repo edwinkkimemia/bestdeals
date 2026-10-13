@@ -65,6 +65,21 @@ export async function POST(req: NextRequest) {
       }
       if (promoLink?.planShop && promoLink?.planId) {
         await store.setShopPlan(promoLink.planShop, promoLink.planId).catch(() => {});
+        // Settle the pending plan checkout so the plan can't linger as unpaid.
+        try {
+          const { pendingPlanKey } = await import("@/lib/plans");
+          const pending = (await store.getSetting(pendingPlanKey(promoLink.planShop)).catch(() => null)) as { invoiceId?: string } | null;
+          await store.setSetting(pendingPlanKey(promoLink.planShop), null).catch(() => {});
+          if (pending?.invoiceId) {
+            const inv = ((await store.getSetting("invoices").catch(() => null)) as { id: string }[] | null) ?? [];
+            await store
+              .setSetting(
+                "invoices",
+                inv.map((i) => (i.id === pending.invoiceId ? { ...i, status: "paid", providerRef: v.providerRef } : i))
+              )
+              .catch(() => {});
+          }
+        } catch {}
       }
     }
   }

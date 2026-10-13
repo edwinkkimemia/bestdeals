@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 type Listing = { id: string; title: string; price: number; status: string; images: number };
 type Promo = { id: string; listingId: string; kind: string; days: number; amount: number; status: string; endsAt: string };
 
-/** Buy Featured boosts (M-Pesa) and track receipts — replaces the eligibility-only list. */
-export function PromotePanel({ listings, phone: defaultPhone, isAdmin }: { listings: Listing[]; phone: string; isAdmin: boolean }) {
+/** Buy Featured boosts (wallet / M-Pesa) and track receipts — replaces the eligibility-only list. */
+export function PromotePanel({ listings, phone: defaultPhone, isAdmin, focusListingId }: { listings: Listing[]; phone: string; isAdmin: boolean; focusListingId?: string }) {
   const [promos, setPromos] = useState<Promo[]>([]);
   const [product, setProduct] = useState<Record<string, string>>({});
   const [phone, setPhone] = useState(defaultPhone);
@@ -24,6 +24,11 @@ export function PromotePanel({ listings, phone: defaultPhone, isAdmin }: { listi
   useEffect(() => {
     load();
   }, []);
+  useEffect(() => {
+    if (focusListingId) {
+      document.getElementById("promote-focus")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [focusListingId]);
 
   const buy = async (listingId: string) => {
     setMsg((m) => ({ ...m, [listingId]: "" }));
@@ -60,20 +65,28 @@ export function PromotePanel({ listings, phone: defaultPhone, isAdmin }: { listi
   };
 
   const promosFor = (listingId: string) => promos.filter((p) => p.listingId === listingId);
+  const ordered = [...listings].sort((a, b) => Number(b.id === focusListingId) - Number(a.id === focusListingId));
+  const focused = ordered.find((l) => l.id === focusListingId);
 
   return (
     <div>
+      {focused && (
+        <p className="mt-3 rounded-xl bg-brand-50 p-3 text-sm text-brand-700" role="status">
+          Promoting <strong>{focused.title}</strong> — pick a boost below. {focused.status !== "active" ? "It must finish moderation first; the boost unlocks once it is active." : ""}
+        </p>
+      )}
       <div className="mt-3 grid gap-2">
         <label className="text-sm font-medium" htmlFor="promo-phone">M-Pesa number for boost payments</label>
         <input id="promo-phone" className="input-bd max-w-xs" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0712345678" />
       </div>
       <ul className="mt-4 space-y-3">
-        {listings.map((l) => {
+        {ordered.map((l) => {
           const eligible = l.status === "active" && l.images > 0;
           const ps = promosFor(l.id);
           const active = ps.find((p) => p.status === "active");
+          const isFocus = l.id === focusListingId;
           return (
-            <li key={l.id} className="card p-4 text-sm">
+            <li key={l.id} id={isFocus ? "promote-focus" : undefined} className={`card scroll-mt-32 p-4 text-sm ${isFocus ? "border-2 border-brand-600" : ""}`}>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="flex-1"><strong>{l.title}</strong> <span className="text-ink-400">· {formatKES(l.price)}</span></span>
                 <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : "neutral"}>{l.status}</Badge>
@@ -117,7 +130,7 @@ export function PromotePanel({ listings, phone: defaultPhone, isAdmin }: { listi
         })}
       </ul>
       <p className="mt-3 text-xs text-ink-400">
-        Boosts are labelled Featured and never override moderation. Payment via M-Pesa STK push.
+        Boosts are labelled Featured and never override moderation. Pay per boost from wallet balance or M-Pesa STK — no plan needed.
         Cancel anytime; refunds follow the Returns policy.
       </p>
       <p className="mt-2 text-sm"><Link href="/pricing" className="link-bd">See shop plans →</Link></p>

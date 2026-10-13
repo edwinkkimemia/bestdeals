@@ -40,17 +40,20 @@ type ShopRailCard = {
 };
 
 export default async function HomePage() {
-  const deals = shuffleFeaturedFirst(LISTINGS.filter((l) => l.compareAt && l.compareAt > l.price)).slice(0, 4);
-  const featured = shuffleFeaturedFirst(LISTINGS.filter((l) => l.featured)).slice(0, 8);
-  const fresh = shuffleFeaturedFirst([...LISTINGS].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 24)).slice(0, 8);
-  const freshClassifieds = shuffleFeaturedFirst(LISTINGS.filter((l) => l.listingType === "classified")
+  const { getLiveStoreListings, mergeStaticAndLive } = await import("@/lib/live-listings");
+  const liveAll = await getLiveStoreListings();
+  const all = mergeStaticAndLive(LISTINGS, liveAll);
+  const deals = shuffleFeaturedFirst(all.filter((l) => l.compareAt && l.compareAt > l.price)).slice(0, 4);
+  const featured = shuffleFeaturedFirst(all.filter((l) => l.featured)).slice(0, 8);
+  const fresh = shuffleFeaturedFirst([...all].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 24)).slice(0, 8);
+  const freshClassifieds = shuffleFeaturedFirst(all.filter((l) => l.listingType === "classified")
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 12)).slice(0, 4);
-  const fromShops = shuffleFeaturedFirst(LISTINGS.filter((l) => l.shopSlug)
+  const fromShops = shuffleFeaturedFirst(all.filter((l) => l.shopSlug)
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 12)).slice(0, 4);
   const countiesByListings = [...KENYA_COUNTIES]
     .map((c) => ({
       ...c,
-      count: LISTINGS.filter((l) => l.county.trim().toLowerCase() === c.county.toLowerCase()).length,
+      count: all.filter((l) => l.county.trim().toLowerCase() === c.county.toLowerCase()).length,
     }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 12);

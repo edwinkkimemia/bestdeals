@@ -12,8 +12,15 @@ export const metadata = {
 // Fresh order every visit: featured/promoted lead, the rest shuffle.
 export const dynamic = "force-dynamic";
 
-export default function DealsPage() {
-  const deals = shuffleFeaturedFirst(LISTINGS.filter((l) => l.compareAt && l.compareAt > l.price));
+export default async function DealsPage() {
+  const { getLiveStoreListings, mergeStaticAndLive } = await import("@/lib/live-listings");
+  const liveDeals = (await getLiveStoreListings()).filter((l) => l.compareAt && l.compareAt > l.price);
+  const deals = shuffleFeaturedFirst(
+    mergeStaticAndLive(
+      LISTINGS.filter((l) => l.compareAt && l.compareAt > l.price),
+      liveDeals
+    )
+  );
   return (
     <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Best Deals" }]} />
