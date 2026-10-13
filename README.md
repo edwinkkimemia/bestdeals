@@ -11,7 +11,7 @@ npm run dev        # http://localhost:3000
 
 Demo mode uses the curated catalogue in `src/data/catalog.ts`. Auth uses an in-memory store (dev only).
 
-**Demo accounts:** sign up with any email. Use `admin@chap.co.ke` (or `ADMIN_EMAILS`) to get the ADMIN role and open `/admin`.
+**Demo accounts:** password `ChapDemo123!` (or `SEED_USER_PASSWORD`). Use `admin@chap.co.ke` (or `ADMIN_EMAILS`) to get the ADMIN role and open `/admin`. Full seller/shop/buyer table: `docs/DEMO_LOGINS.md`.
 
 ## Production (PostgreSQL)
 
@@ -45,6 +45,7 @@ npm run dev
 - `docs/BACKUP.md` — backup & recovery
 - `docs/PRODUCTION_CHECKLIST.md` — launch gates
 - `docs/IMPLEMENTATION_STATUS.md` — what works, what needs credentials
+- `docs/DEMO_LOGINS.md` — demo sellers/shops/buyer emails + password + lockout fixes
 
 ## Principles
 

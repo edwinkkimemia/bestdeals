@@ -128,9 +128,12 @@ async function seedUsers(): Promise<Map<string, { id: string; profileId: string 
   const out = new Map<string, { id: string; profileId: string | null }>();
   for (const [name, meta] of names) {
     const email = `${slugifyName(name)}@demo.chap.co.ke`;
+    // Demo accounts use PUBLIC credentials, so every seed re-syncs their
+    // password to SEED_USER_PASSWORD (rotations take effect). Real users are
+    // never touched — only @demo.chap.co.ke is reset here.
     const user = await prisma.user.upsert({
       where: { email },
-      update: {},
+      update: { passwordHash, verified: name === "Demo Buyer" ? false : true, emailVerified: true, phone: meta.phone },
       create: {
         name,
         email,

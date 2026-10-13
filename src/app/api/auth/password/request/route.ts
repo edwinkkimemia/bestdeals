@@ -26,12 +26,19 @@ export async function POST(req: NextRequest) {
     });
     const base = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
     const link = `${base}/auth/password/reset?token=${encodeURIComponent(token)}`;
+    const { isNotifyLive } = await import("@/lib/notify");
+    if (!isNotifyLive("email")) console.log(`[reset-link] to=${user.email} link=${link}`);
     await sendNotification({
       channel: "email",
       to: user.email,
       subject: "Reset your Chap password",
       message: `Reset your Chap password (expires in 1 hour): ${link} — if you didn't ask, ignore this.`,
     }).catch(() => null);
+    // Demo/dev: email never arrives (console-log provider), so hand the link
+    // back to the requester instead of stranding them. Production stays generic.
+    if (process.env.NODE_ENV !== "production" && !isNotifyLive("email")) {
+      return NextResponse.json({ ok: true, message: "Demo mode: email is logged — use the link below.", demoLink: link });
+    }
   }
   return NextResponse.json({ ok: true, message: "If that email has an account, a reset link is on its way." });
 }
