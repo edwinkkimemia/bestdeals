@@ -27,9 +27,11 @@ export async function POST(req: NextRequest) {
   const form = await req.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: "No file." }, { status: 400 });
   const isPrivate = form.get("private") === "1";
+  let privateUserId: string | null = null;
   if (isPrivate) {
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+    privateUserId = user.id;
   }
   const files = form.getAll("files").filter((f): f is File => f instanceof File).slice(0, 8);
   if (files.length === 0) return NextResponse.json({ error: "No files selected." }, { status: 400 });
@@ -75,6 +77,18 @@ export async function POST(req: NextRequest) {
       continue;
     }
     if (isPrivate) {
+      // Serverless without S3 shares nothing but the database: stage bytes in
+      // the shared store so the verify POST + admin viewer on any instance
+      // can reach them. Disk stays for local dev / single-server, S3 above.
+      if (!useS3 && isServerlessUploads()) {
+        const { stageDbDoc } = await import("@/lib/privdocs");
+        const ref = await stageDbDoc(getStore(), {
+          name, stamp, mime: f.type, base64: buf.toString("base64"), by: privateUserId ?? "",
+        });
+        if (!ref) return NextResponse.json({ error: "Upload failed. Try a smaller photo." }, { status: 502 });
+        urls.push(ref);
+        continue;
+      }
       // Never web-served: only readable via the admin verification endpoint.
       const dir = join(privateBaseDir(), stamp);
       await mkdir(dir, { recursive: true });

@@ -20,6 +20,20 @@ export async function GET(
   }
   const rel = v.docPath.slice("private:".length).replace(/[^a-zA-Z0-9\-_./]/g, "");
   if (rel.includes("..")) return NextResponse.json({ error: "Invalid path." }, { status: 400 });
+  // DB-staged docs (serverless without S3) live in shared storage, not /tmp.
+  if (rel.startsWith("db/")) {
+    const { readDbDoc } = await import("@/lib/privdocs");
+    const staged = await readDbDoc(await getStore(), v.docPath).catch(() => null);
+    if (!staged) return NextResponse.json({ error: "Document not found." }, { status: 404 });
+    await logAudit({ actorId: user.id, actorEmail: user.email, action: "verify.doc_view", entity: "verification", entityId: v.id }).catch(() => {});
+    return new NextResponse(new Uint8Array(staged.bytes), {
+      headers: {
+        "Content-Type": staged.mime,
+        "Content-Disposition": `inline; filename="${(v.fileName ?? "document").replace(/"/g, "")}"`,
+        "Cache-Control": "no-store",
+      },
+    });
+  }
   try {
     const buf = await readFile(join(privateBaseDir(), rel));
     await logAudit({ actorId: user.id, actorEmail: user.email, action: "verify.doc_view", entity: "verification", entityId: v.id }).catch(() => {});

@@ -40,9 +40,22 @@ export async function POST(req: NextRequest) {
   }
   // Prove the file exists and was uploaded (not a forged private: string).
   const { privateBaseDir } = await import("@/lib/storage");
+  const { isDbDocRef, dbDocKey } = await import("@/lib/privdocs");
   const { join } = await import("path");
   const { existsSync } = await import("fs");
   for (const p of [docPath, docPath2].filter(Boolean) as string[]) {
+    // DB-staged docs (serverless without S3): must exist in shared storage
+    // and have been uploaded by this same account.
+    if (isDbDocRef(p)) {
+      const key = dbDocKey(p);
+      const staged = key
+        ? ((await store.getSetting(key).catch(() => null)) as { by?: string; base64?: string } | null)
+        : null;
+      if (!staged?.base64 || staged.by !== user.id) {
+        return NextResponse.json({ error: "Document upload not found. Upload again." }, { status: 400 });
+      }
+      continue;
+    }
     const rel = p.replace(/^private:/, "");
     if (rel.includes("..")) return NextResponse.json({ error: "Invalid document path." }, { status: 400 });
     if ((process.env.UPLOAD_DRIVER || "local") !== "s3" && !existsSync(join(privateBaseDir(), rel))) {
