@@ -229,6 +229,11 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
     else items = [...items].sort((a, b) => score(b, tokens) - score(a, tokens) || +new Date(b.createdAt) - +new Date(a.createdAt));
     // TOP/featured lead deterministically.
     items = rankDeterministic(items.map((l) => ({ ...l, topPinned: (l as { kind?: string }).kind === "top" }))) as typeof items;
+    // Badges follow the live user record, not the catalogue flag.
+    try {
+      const { withLiveVerification } = await import("./live-listings");
+      items = await withLiveVerification(items);
+    } catch {}
     const perPage = Math.min(Math.max(p.perPage ?? 24, 1), 60);
     const page = Math.max(p.page ?? 1, 1);
     return { items: items.slice((page - 1) * perPage, page * perPage), total: items.length, page, perPage };

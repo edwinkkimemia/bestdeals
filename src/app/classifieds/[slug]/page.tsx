@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { LISTINGS, getListing } from "@/data/catalog";
-import { getRelated } from "@/lib/related";
 import { storeRead } from "@/lib/store";
 import { ListingDetail } from "@/components/listing-detail";
 import { breadcrumbJsonLd } from "@/lib/seo";
@@ -36,10 +35,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function ClassifiedDetail({ params }: { params: { slug: string } }) {
-  const { resolveSellerPhoto, resolveShopInfo } = await import("@/lib/live-listings");
-  const staticHit = getListing(params.slug);
-  if (staticHit) {
-    const { fromOthers, fromSeller } = getRelated(staticHit);
+  const { resolveSellerPhoto, resolveShopInfo, relatedWithLive } = await import("@/lib/live-listings");
+  const rawHit = getListing(params.slug);
+  if (rawHit) {
+    const { main: staticHit, fromOthers, fromSeller } = await relatedWithLive(rawHit);
     const reviews = await storeRead((s) => s.listApprovedReviewsForSeller(staticHit.sellerName), []);
     const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(staticHit.id), []);
     const sellerPhotoUrl = await resolveSellerPhoto(staticHit);
@@ -54,8 +53,8 @@ export default async function ClassifiedDetail({ params }: { params: { slug: str
   const { resolveStoreDetail } = await import("@/lib/live-listings");
   const resolved = await resolveStoreDetail(params.slug);
   if (!resolved) notFound();
-  const { listing: l, previewStatus } = resolved as NonNullable<typeof resolved>;
-  const { fromOthers, fromSeller } = getRelated(l);
+  const { previewStatus } = resolved;
+  const { main: l, fromOthers, fromSeller } = await relatedWithLive(resolved.listing);
   const reviews = await storeRead((s) => s.listApprovedReviewsForSeller(l.sellerName), []);
   const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(l.id), []);
   const sellerPhotoUrl = await resolveSellerPhoto(l);

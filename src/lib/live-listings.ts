@@ -71,7 +71,7 @@ export async function getLiveStoreListings(): Promise<Listing[]> {
     (st) => st.listListingsByStatus("active"),
     []
   );
-  return live.map(storeRecordToListing);
+  return withLiveVerification(live.map(storeRecordToListing));
 }
 
 /** Active listings for one shop (used by `/shops/[slug]` community branch). */
@@ -82,9 +82,11 @@ export async function getLiveShopListings(
     (st) => st.listListingsByShop(shopSlug),
     []
   );
-  return items
-    .filter((l) => l.status === "active")
-    .map(storeRecordToListing);
+  return withLiveVerification(
+    items
+      .filter((l) => l.status === "active")
+      .map(storeRecordToListing)
+  );
 }
 
 /**
@@ -311,4 +313,51 @@ export function mergeStaticAndLive(
   const slugSeen = new Set(staticItems.map((l) => l.slug));
   const extra = live.filter((l) => !seen.has(l.id) && !slugSeen.has(l.slug));
   return [...staticItems, ...extra];
+}
+
+/**
+ * Single source of truth for the ✓ badge: the LIVE user record wins over the
+ * hardcoded catalogue flag. Demo listings ship with `verified: false` in
+ * `catalog.ts`, but once the seller verifies (admin approval), every badge —
+ * detail pages, cards, rails — must flip without editing the catalogue.
+ * One `listUsers` call per invocation; safe fallback keeps the static flag.
+ */
+export async function withLiveVerification<T extends Pick<Listing, "ownerId" | "sellerName" | "verified">>(
+  items: T[]
+): Promise<T[]> {
+  if (items.length === 0) return items;
+  const users = await storeRead(
+    (st) => st.listUsers(),
+    []
+  ).catch(() => []);
+  if (users.length === 0) return items;
+  const byId = new Map(users.map((u) => [u.id, u.verified]));
+  const byName = new Map<string, boolean>();
+  for (const u of users) {
+    byName.set(u.name.trim().toLowerCase(), u.verified);
+    if (u.businessName) byName.set(u.businessName.trim().toLowerCase(), u.verified);
+  }
+  return items.map((l) => {
+    if (l.ownerId && byId.has(l.ownerId)) return { ...l, verified: byId.get(l.ownerId)! };
+    const hit = byName.get(l.sellerName.trim().toLowerCase());
+    if (hit !== undefined) return { ...l, verified: hit };
+    return l;
+  });
+}
+
+/**
+ * Detail-page bundle: cross-seller rails + live ✓ flags in one `listUsers`
+ * call. Returns the main listing plus its rails with badges resolved.
+ */
+export async function relatedWithLive(
+  main: Listing
+): Promise<{ main: Listing; fromOthers: Listing[]; fromSeller: Listing[] }> {
+  const { getRelated } = await import("./related");
+  const { fromOthers, fromSeller } = getRelated(main);
+  const all = await withLiveVerification([main, ...fromOthers, ...fromSeller]);
+  return {
+    main: all[0],
+    fromOthers: all.slice(1, 1 + fromOthers.length),
+    fromSeller: all.slice(1 + fromOthers.length),
+  };
 }

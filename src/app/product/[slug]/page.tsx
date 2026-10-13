@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { LISTINGS, getListing } from "@/data/catalog";
-import { getRelated } from "@/lib/related";
 import { storeRead } from "@/lib/store";
 import { ListingDetail } from "@/components/listing-detail";
 import { productJsonLd, breadcrumbJsonLd } from "@/lib/seo";
@@ -36,10 +35,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function ProductPage({ params }: { params: { slug: string } }) {
-  const { resolveSellerPhoto, resolveShopInfo } = await import("@/lib/live-listings");
-  const l = getListing(params.slug);
-  if (l) {
-    const { fromOthers, fromSeller } = getRelated(l);
+  const { resolveSellerPhoto, resolveShopInfo, relatedWithLive } = await import("@/lib/live-listings");
+  const hit = getListing(params.slug);
+  if (hit) {
+    const { main: l, fromOthers, fromSeller } = await relatedWithLive(hit);
     const reviews = await storeRead((s) => s.listApprovedReviewsForSeller(l.sellerName), []);
     const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(l.id), []);
     const sellerPhotoUrl = await resolveSellerPhoto(l);
@@ -62,8 +61,8 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const { resolveStoreDetail } = await import("@/lib/live-listings");
   const resolved = await resolveStoreDetail(params.slug);
   if (!resolved) notFound();
-  const { listing, previewStatus } = resolved as NonNullable<typeof resolved>;
-  const { fromOthers, fromSeller } = getRelated(listing);
+  const { previewStatus } = resolved;
+  const { main: listing, fromOthers, fromSeller } = await relatedWithLive(resolved.listing);
   const reviews = await storeRead((s) => s.listApprovedReviewsForSeller(listing.sellerName), []);
   const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(listing.id), []);
   const sellerPhotoUrl = await resolveSellerPhoto(listing);
