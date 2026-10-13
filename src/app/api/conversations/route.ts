@@ -75,6 +75,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "You blocked this seller." }, { status: 403 });
     }
   } catch {}
+  // WhatsApp-style: same buyer + seller + listing reuses the one thread —
+  // the message lands in it instead of spawning a duplicate chat.
+  try {
+    const buyerIds = viewerId.startsWith("phone:")
+      ? [viewerId]
+      : [viewerId, ...(user?.phone ? [`phone:${user.phone}`] : [])];
+    const existing = await store.findConversationMatch({
+      buyerIds,
+      sellerId,
+      sellerName: directName ?? seller,
+      listingId: d.listingId,
+    });
+    if (existing) {
+      await store.addMessage({
+        conversationId: existing.id, senderId: viewerId, senderLabel: name,
+        body: plain, bodyHtml: toSafeHtml(plain),
+      });
+      return NextResponse.json({ ok: true, id: existing.id, reused: true });
+    }
+  } catch {}
   const convo = await store.createConversation({
     listingId: d.listingId,
     listingTitle: directName && d.listingId === "general" ? "Direct message" : title,

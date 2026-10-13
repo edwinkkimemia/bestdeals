@@ -383,6 +383,8 @@ export interface Store {
   markConversationRead(conversationId: string, viewerId: string): Promise<void>;
   /** Link guest chats started with this phone to the signed-in account. Returns chats claimed. */
   claimGuestConversations(userId: string, phone: string): Promise<number>;
+  /** Find an existing thread for the same buyer + seller + listing (WhatsApp-style: no dupes). */
+  findConversationMatch(m: { buyerIds: string[]; sellerId?: string; sellerName: string; listingId: string }): Promise<ConversationRecord | null>;
 }
 
 const now = () => new Date().toISOString();
@@ -981,6 +983,15 @@ class DemoStore implements Store {
       }
     }
     return n;
+  }
+  async findConversationMatch(m: { buyerIds: string[]; sellerId?: string; sellerName: string; listingId: string }) {
+    const hit = [...this.conversations.values()].find(
+      (c) =>
+        c.listingId === m.listingId &&
+        m.buyerIds.includes(c.buyerId ?? "") &&
+        ((m.sellerId != null && c.sellerId != null && m.sellerId === c.sellerId) || c.sellerName === m.sellerName)
+    );
+    return hit ?? null;
   }
 }
 
@@ -2038,6 +2049,18 @@ class PrismaStore implements Store {
       data: { buyerId: userId },
     });
     return r.count;
+  }
+  async findConversationMatch(m: { buyerIds: string[]; sellerId?: string; sellerName: string; listingId: string }) {
+    const ors: Record<string, string>[] = [];
+    if (m.sellerId) ors.push({ sellerId: m.sellerId });
+    ors.push({ sellerId: `seller:${m.sellerName}` });
+    const hit = await this.p.conversation.findFirst({
+      where: { listingId: m.listingId, buyerId: { in: m.buyerIds }, OR: ors },
+      orderBy: { createdAt: "desc" },
+    }).catch(() => null);
+    if (!hit) return null;
+    const h = hit as { id: string; listingId: string | null; buyerId: string; sellerId: string; createdAt: Date };
+    return { id: h.id, listingId: h.listingId ?? undefined, buyerId: h.buyerId, sellerId: h.sellerId, sellerName: m.sellerName, createdAt: h.createdAt.toISOString() };
   }
 }
 

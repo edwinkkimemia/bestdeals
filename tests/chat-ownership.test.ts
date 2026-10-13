@@ -116,6 +116,34 @@ describe("chat ownership (sender lockout regression)", () => {
     assert.equal(vague.name, "Seller");
     assert.equal(vague.phone, undefined);
   });
+  it("same pair + listing reuses one thread (no duplicate chats)", async () => {
+    const store = freshDemoStore();
+    const buyer = "phone:0710000301";
+    const first = await store.createConversation({
+      listingId: "p1", listingTitle: "Phone", sellerName: "Seller Sam",
+      sellerId: undefined, buyerId: buyer, buyerName: "Guest", buyerPhone: "0710000301",
+      firstMessage: { senderId: buyer, senderLabel: "Guest", body: "Hi", bodyHtml: "Hi" },
+    });
+    const match = await store.findConversationMatch({
+      buyerIds: [buyer], sellerId: undefined, sellerName: "Seller Sam", listingId: "p1",
+    });
+    assert.equal(match?.id, first.id, "same triple matches");
+    assert.equal(
+      await store.findConversationMatch({ buyerIds: [buyer], sellerName: "Seller Sam", listingId: "p2" }),
+      null,
+      "different listing is a new thread"
+    );
+    assert.equal(
+      await store.findConversationMatch({ buyerIds: ["phone:0799999999"], sellerName: "Seller Sam", listingId: "p1" }),
+      null,
+      "different buyer is a new thread"
+    );
+    // Seller account linked later still matches by stored name.
+    const linked = await store.findConversationMatch({
+      buyerIds: [buyer], sellerId: "u_seller1", sellerName: "Seller Sam", listingId: "p1",
+    });
+    assert.equal(linked?.id, first.id, "name fallback bridges pre-link threads");
+  });
   it("two accounts message each other directly (explicit target, no name match needed)", async () => {
     const store = freshDemoStore();
     const a = await store.createUser({
