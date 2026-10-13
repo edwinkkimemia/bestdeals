@@ -13,7 +13,11 @@
 
 ## Email / SMS / WhatsApp
 
-- Set `EMAIL_PROVIDER` (e.g. resend/sendgrid) + `EMAIL_API_KEY`, or `SMS_PROVIDER` (e.g. africastalking) + key.
+- Set `EMAIL_PROVIDER` (resend/sendgrid) + `EMAIL_API_KEY` + `EMAIL_FROM="info@chap.co.ke"`, or `SMS_PROVIDER` (e.g. africastalking) + key.
+- The sending domain must be verified in the provider first: add Resend/SendGrid's
+  SPF + DKIM records to chap.co.ke DNS, otherwise `info@chap.co.ke` sends are
+  rejected. Then add the three vars in Vercel → Project → Settings → Environment
+  Variables (Production) and redeploy. `/api/health` shows `email: live` when active.
 - Without keys, `src/lib/notify.ts` logs to console (demo mode).
 - WhatsApp contact uses only seller-approved numbers; arbitrary user links are never rendered.
 - Bulk messaging requires explicit opt-in; honour unsubscribe + consent records.

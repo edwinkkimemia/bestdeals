@@ -18,7 +18,7 @@ async function sendEmail(to: string, subject: string, message: string): Promise<
       const r = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: process.env.EMAIL_FROM || "Chap <noreply@chap.co.ke>", to, subject, text: message }),
+        body: JSON.stringify({ from: process.env.EMAIL_FROM || "Chap <info@chap.co.ke>", to, subject, text: message }),
       });
       return { ok: r.ok, provider: "resend" };
     }
@@ -26,7 +26,7 @@ async function sendEmail(to: string, subject: string, message: string): Promise<
       const r = await fetch("https://api.sendgrid.com/v3/mail/send", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ personalizations: [{ to: [{ email: to }] }], from: { email: process.env.EMAIL_FROM || "noreply@chap.co.ke" }, subject, content: [{ type: "text/plain", value: message }] }),
+        body: JSON.stringify({ personalizations: [{ to: [{ email: to }] }], from: { email: process.env.EMAIL_FROM || "info@chap.co.ke" }, subject, content: [{ type: "text/plain", value: message }] }),
       });
       return { ok: r.ok, provider: "sendgrid" };
     }
