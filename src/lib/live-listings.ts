@@ -228,10 +228,47 @@ export async function resolveSellerPhoto(l: Pick<Listing, "ownerId" | "sellerNam
   );
 }
 
-/** Logo for seller-created (community) shops — static catalogue misses these. */
-export async function resolveCommunityShopLogo(shopSlug?: string): Promise<string | null> {
+export type ShopInfo = {
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  verified: boolean;
+  businessCategory: string;
+  town: string;
+  county: string;
+};
+
+/**
+ * Shop identity for product pages: static catalogue first, then
+ * seller-created stores. Lets shop listings show the shop (logo, name,
+ * business badge) instead of the owner's personal profile.
+ */
+export async function resolveShopInfo(shopSlug?: string): Promise<ShopInfo | null> {
   if (!shopSlug) return null;
-  return storeRead((st) => st.getShopBySlug(shopSlug).then((s) => s?.logoUrl ?? null), null);
+  const { getShop } = await import("@/data/catalog");
+  const demo = getShop(shopSlug);
+  if (demo) {
+    return {
+      slug: demo.slug,
+      name: demo.name,
+      logoUrl: demo.logo,
+      verified: demo.verified,
+      businessCategory: demo.businessCategory,
+      town: demo.town,
+      county: demo.county,
+    };
+  }
+  const stored = await storeRead((st) => st.getShopBySlug(shopSlug), null);
+  if (!stored) return null;
+  return {
+    slug: stored.slug,
+    name: stored.name,
+    logoUrl: stored.logoUrl ?? null,
+    verified: stored.verified,
+    businessCategory: stored.businessCategory,
+    town: stored.town,
+    county: stored.county,
+  };
 }
 
 /** Canonical public path for a listing (used for share/copy links). */

@@ -36,14 +36,14 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function ProductPage({ params }: { params: { slug: string } }) {
-  const { resolveSellerPhoto, resolveCommunityShopLogo } = await import("@/lib/live-listings");
+  const { resolveSellerPhoto, resolveShopInfo } = await import("@/lib/live-listings");
   const l = getListing(params.slug);
   if (l) {
     const { fromOthers, fromSeller } = getRelated(l);
     const reviews = await storeRead((s) => s.listApprovedReviewsForSeller(l.sellerName), []);
     const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(l.id), []);
     const sellerPhotoUrl = await resolveSellerPhoto(l);
-    const communityShopLogoUrl = await resolveCommunityShopLogo(l.shopSlug);
+    const shopInfo = await resolveShopInfo(l.shopSlug);
     const jsonLd = {
       "@context": "https://schema.org",
       "@graph": [
@@ -55,7 +55,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
         ]),
       ],
     };
-    return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} communityShopLogoUrl={communityShopLogoUrl} jsonLd={jsonLd} />;
+    return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} jsonLd={jsonLd} />;
   }
   // Seller-posted listing: `active` is public, anything else previews only
   // for admins / the owner / shop staff (banner inside ListingDetail).
@@ -67,7 +67,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const reviews = await storeRead((s) => s.listApprovedReviewsForSeller(listing.sellerName), []);
   const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(listing.id), []);
   const sellerPhotoUrl = await resolveSellerPhoto(listing);
-  const communityShopLogoUrl = await resolveCommunityShopLogo(listing.shopSlug);
+  const shopInfo = await resolveShopInfo(listing.shopSlug);
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -79,5 +79,5 @@ export default async function ProductPage({ params }: { params: { slug: string }
       ]),
     ],
   };
-  return <ListingDetail listing={listing} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} communityShopLogoUrl={communityShopLogoUrl} jsonLd={jsonLd} previewStatus={previewStatus} />;
+  return <ListingDetail listing={listing} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} jsonLd={jsonLd} previewStatus={previewStatus} />;
 }

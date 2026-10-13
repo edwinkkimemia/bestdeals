@@ -100,7 +100,7 @@ function ShareButtons({ title }: { title: string }) {
   );
 }
 
-export function ListingDetail({ listing, related, moreFromSeller, reviews, listingReviews, jsonLd, sellerPhotoUrl, previewStatus, communityShopLogoUrl }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; listingReviews?: ReviewRecord[]; jsonLd: Record<string, unknown>; sellerPhotoUrl?: string | null; previewStatus?: string | null; communityShopLogoUrl?: string | null }) {
+export function ListingDetail({ listing, related, moreFromSeller, reviews, listingReviews, jsonLd, sellerPhotoUrl, previewStatus, shopInfo }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; listingReviews?: ReviewRecord[]; jsonLd: Record<string, unknown>; sellerPhotoUrl?: string | null; previewStatus?: string | null; shopInfo?: { name: string; logoUrl: string | null; verified: boolean; businessCategory: string; town: string; county: string } | null }) {
   const { add } = useCart();
   const [img, setImg] = useState(0);
   const [qty, setQty] = useState(1);
@@ -110,9 +110,10 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
   const [recent, setRecent] = useState<Listing[]>([]);
 
   const shop = listing.shopSlug ? getShop(listing.shopSlug) : undefined;
-  // Seller avatar: uploaded profile photo first, shop logo as fallback
-  // (community-shop logo when the static catalogue misses it).
-  const avatarUrl = sellerPhotoUrl ?? shop?.logo ?? communityShopLogoUrl ?? null;
+  // Shop listings show the shop identity, not the owner's personal profile.
+  const shopCard = shopInfo ?? (shop ? { name: shop.name, logoUrl: shop.logo, verified: shop.verified, businessCategory: shop.businessCategory, town: shop.town, county: shop.county } : null);
+  // Avatar: owner's photo for individual sellers, shop logo for shop listings.
+  const avatarUrl = shopCard ? shopCard.logoUrl : (sellerPhotoUrl ?? null);
   // WhatsApp ordering always uses the verified number: the snapshot taken at
   // posting time first, then the shop's approved contact. No number, no button.
   const waPhone = listing.sellerPhone
@@ -337,14 +338,27 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
               ) : (
-                listing.sellerName.charAt(0).toUpperCase()
+                (shopCard ? shopCard.name : listing.sellerName).charAt(0).toUpperCase()
               )}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <VerifiedBadge verified={listing.verified} /></p>
-              <p className="truncate text-xs text-ink-500">
-                {listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}, {listing.county} · Enquiries go straight to their inbox
-              </p>
+              {shopCard ? (
+                <>
+                  <p className="flex flex-wrap items-center gap-2 font-bold">
+                    {shopCard.name} {shopCard.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}
+                  </p>
+                  <p className="truncate text-xs text-ink-500">
+                    {shopCard.businessCategory} · {shopCard.town}, {shopCard.county} · Enquiries go straight to their inbox
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <VerifiedBadge verified={listing.verified} /></p>
+                  <p className="truncate text-xs text-ink-500">
+                    {listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}, {listing.county} · Enquiries go straight to their inbox
+                  </p>
+                </>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
