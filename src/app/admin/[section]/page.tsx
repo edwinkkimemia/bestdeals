@@ -27,11 +27,13 @@ export default async function AdminSection({
   searchParams,
 }: {
   params: { section: string };
-  searchParams: { status?: string };
+  searchParams: { status?: string; role?: string; sort?: string };
 }) {
   const { section } = params;
   if (!(SECTIONS as readonly string[]).includes(section)) notFound();
   const status = searchParams.status ?? "";
+  const role = searchParams.role ?? "all";
+  const sort = searchParams.sort ?? "newest";
 
   switch (section) {
     case "listings":
@@ -39,9 +41,9 @@ export default async function AdminSection({
     case "verifications":
       return <VerificationsSection status={status} />;
     case "users":
-      return <UsersSection />;
+      return <UsersSection status={status} role={role} sort={sort} />;
     case "shops":
-      return <ShopsSection status={status} />;
+      return <ShopsSection status={status} sort={sort} />;
     case "orders":
       return <OrdersSection />;
     case "disputes":

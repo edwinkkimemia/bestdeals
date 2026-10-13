@@ -7,12 +7,20 @@ import { AdminTable, Td, SectionHeading, SectionTabs } from "../table";
 import { Badge } from "@/components/ui/badge";
 
 const TABS = ["all", "verified", "pending"];
+const SORTS = ["newest", "oldest", "name"];
 
-export async function ShopsSection({ status }: { status: string }) {
+export async function ShopsSection({ status, sort }: { status: string; sort: string }) {
   const store = getStore();
   const tab = TABS.includes(status) ? status : "all";
+  const sortTab = SORTS.includes(sort) ? sort : "newest";
   const all = await store.listShops();
-  const items = tab === "all" ? all : all.filter((s) => (tab === "verified" ? s.verified : !s.verified));
+  const items = (tab === "all" ? all : all.filter((s) => (tab === "verified" ? s.verified : !s.verified))).sort((a, b) =>
+    sortTab === "name"
+      ? a.name.localeCompare(b.name)
+      : sortTab === "oldest"
+        ? +new Date(a.createdAt) - +new Date(b.createdAt)
+        : +new Date(b.createdAt) - +new Date(a.createdAt)
+  );
   const owners = new Map((await store.listUsers().catch(() => [])).map((u) => [u.id, u.name]));
   const { pendingPlanKey } = await import("@/lib/plans");
   const pendings = new Map<string, { planId: string; amount: number }>();
@@ -27,6 +35,12 @@ export async function ShopsSection({ status }: { status: string }) {
         Every seller shop: verify the business badge, check the plan, jump to the live storefront. Pending upgrades activate only when paid.
       </p>
       <SectionTabs base="/admin/shops" tabs={TABS} current={tab} />
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+        <span className="font-semibold text-ink-500">Sort:</span>
+        {SORTS.map((s) => (
+          <Link key={s} href={`/admin/shops?status=${tab}&sort=${s}`} className={`chip ${sortTab === s ? "!border-brand-600 !text-brand-700" : ""}`}>{s}</Link>
+        ))}
+      </div>
       <AdminTable
         columns={["Shop", "Owner", "Plan", "Verified", "Location", "Storefront", "Payment", "Actions"]}
         empty={`No shops ${tab === "all" ? "yet" : tab}.`}
