@@ -1,23 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
-import { getStore } from "@/lib/store";
+import { getStore, type Store } from "@/lib/store";
 import { toSafeHtml } from "@/lib/richtext";
+import { identityOf, isParticipant, mineOf, isChatSeller, type ChatUser } from "@/lib/chat-access";
 
-function identityOf(user: { id: string; phone: string } | null, phone: string) {
-  return user ? { userId: user.id, phone: user.phone } : /^(\+254|0)[17]\d{8}$/.test(phone) ? { phone } : null;
-}
-
-type Convo = { buyerId?: string; sellerId?: string; buyerPhone?: string; sellerName?: string };
-
-function isParticipant(
-  c: Convo,
-  id: { userId?: string; phone?: string },
-  user?: { id: string; name: string; role: string } | null
-): string | null {
-  if (id.userId && (c.buyerId === id.userId || c.sellerId === id.userId)) return id.userId;
-  if (id.phone && (c.buyerPhone === id.phone || c.buyerId === `phone:${id.phone}`)) return `phone:${id.phone}`;
-  // Signed-in seller whose display name matches the listing's seller, plus admins.
-  if (user && (user.name === c.sellerName || user.role === "ADMIN")) return user.id;
+/** Participant check + seller-side fallback (listing owner / shop staff / admin). */
+async function resolveViewer(
+  store: Store,
+  convo: { buyerId?: string; sellerId?: string; buyerPhone?: string; sellerName?: string; listingId?: string },
+  id: { userId?: string; phone?: string; altPhone?: string },
+  user: ChatUser
+): Promise<string | null> {
+  const direct = isParticipant(convo, id, user);
+  if (direct) return direct;
+  if (user && (await isChatSeller(store, convo, user).catch(() => false))) return user.id;
   return null;
 }
 
@@ -34,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const folder = new URL(req.url).searchParams.get("folder") ?? "";
   const spam = (await store.getSetting(`spam:${params.id}`).catch(() => null)) as { by?: string } | null;
   if (spam && folder !== "spam") return NextResponse.json({ error: "Chat is in spam." }, { status: 410 });
-  const viewer = isParticipant(convo, id, user);
+  const viewer = await resolveViewer(store, convo, id, user);
   if (!viewer) return NextResponse.json({ error: "Not your chat." }, { status: 403 });
   await store.markConversationRead(params.id, viewer);
   const url = new URL(req.url);
@@ -43,7 +39,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const all = (await store.listMessages(params.id)).map((m) => ({
     ...m,
     bodyHtml: m.bodyHtml ?? toSafeHtml(m.body),
-    mine: m.senderId === viewer,
+    mine: mineOf(m.senderId, viewer, user?.phone),
   }));
   return NextResponse.json({ convo, messages: all.slice((page - 1) * per, page * per), total: all.length, page, per });
 }
@@ -63,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const store = getStore();
   const convo = await store.getConversation(params.id);
   if (!convo) return NextResponse.json({ error: "Chat not found." }, { status: 404 });
-  const viewer = isParticipant(convo, id, user);
+  const viewer = await resolveViewer(store, convo, id, user);
   if (!viewer) return NextResponse.json({ error: "Not your chat." }, { status: 403 });
   const label = user?.name ?? name ?? convo.buyerPhone ?? "Guest";
   const rec = await store.addMessage({
@@ -87,7 +83,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const store = getStore();
   const convo = await store.getConversation(params.id);
   if (!convo) return NextResponse.json({ error: "Chat not found." }, { status: 404 });
-  const viewer = isParticipant(convo, id, user);
+  const viewer = await resolveViewer(store, convo, id, user);
   if (!viewer) return NextResponse.json({ error: "Not your chat." }, { status: 403 });
   if (action === "spam") {
     await store.setSetting(`spam:${params.id}`, { by: viewer, at: new Date().toISOString() }).catch(() => {});
@@ -127,7 +123,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const store = getStore();
   const convo = await store.getConversation(params.id);
   if (!convo) return NextResponse.json({ error: "Chat not found." }, { status: 404 });
-  const viewer = isParticipant(convo, id, user);
+  const viewer = await resolveViewer(store, convo, id, user);
   if (!viewer) return NextResponse.json({ error: "Not your chat." }, { status: 403 });
   await store.setSetting(`left:${params.id}:${viewer}`, { at: new Date().toISOString() }).catch(() => {});
   return NextResponse.json({ ok: true });

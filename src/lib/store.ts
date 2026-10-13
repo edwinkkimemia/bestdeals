@@ -374,6 +374,8 @@ export interface Store {
   listMessages(conversationId: string): Promise<MessageRecord[]>;
   addMessage(m: Omit<MessageRecord, "id" | "read" | "createdAt">): Promise<MessageRecord>;
   markConversationRead(conversationId: string, viewerId: string): Promise<void>;
+  /** Link guest chats started with this phone to the signed-in account. Returns chats claimed. */
+  claimGuestConversations(userId: string, phone: string): Promise<number>;
 }
 
 const now = () => new Date().toISOString();
@@ -956,6 +958,16 @@ class DemoStore implements Store {
     for (const m of this.messages.get(conversationId) ?? []) {
       if (m.senderId !== viewerId) m.read = true;
     }
+  }
+  async claimGuestConversations(userId: string, phone: string) {
+    let n = 0;
+    for (const c of this.conversations.values()) {
+      if ((c.buyerPhone === phone || c.buyerId === `phone:${phone}`) && c.buyerId !== userId) {
+        c.buyerId = userId;
+        n += 1;
+      }
+    }
+    return n;
   }
 }
 
@@ -1940,7 +1952,11 @@ class PrismaStore implements Store {
   async getConversation(id: string) {
     const c = await this.p.conversation.findUnique({ where: { id } });
     if (!c) return null;
-    return { id: c.id, listingId: c.listingId ?? undefined, createdAt: c.createdAt.toISOString() };
+    return {
+      id: c.id, listingId: c.listingId ?? undefined,
+      buyerId: (c as { buyerId?: string }).buyerId, sellerId: (c as { sellerId?: string }).sellerId,
+      createdAt: c.createdAt.toISOString(),
+    };
   }
   async listConversations(identity: { userId?: string; phone?: string; sellerName?: string }) {
     const ors = [];
@@ -1987,6 +2003,13 @@ class PrismaStore implements Store {
       where: { conversationId, NOT: { senderId: viewerId }, readAt: null },
       data: { readAt: new Date() },
     });
+  }
+  async claimGuestConversations(userId: string, phone: string) {
+    const r = await this.p.conversation.updateMany({
+      where: { buyerId: `phone:${phone}` },
+      data: { buyerId: userId },
+    });
+    return r.count;
   }
 }
 

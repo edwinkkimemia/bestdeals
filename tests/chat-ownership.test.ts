@@ -1,0 +1,101 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+
+delete process.env.DATABASE_URL;
+
+import { freshDemoStore } from "../src/lib/store.ts";
+import { identityOf, isParticipant, mineOf, isChatSeller } from "../src/lib/chat-access.ts";
+
+const ME = { id: "u_me", name: "Buyer Bob", role: "SELLER", phone: "0712345678" };
+const OTHER_PHONE = "0799999999";
+
+async function guestChat(store: ReturnType<typeof freshDemoStore>, phone: string) {
+  return store.createConversation({
+    listingId: "general",
+    listingTitle: "General enquiry",
+    sellerName: "Seller Sam",
+    sellerId: undefined,
+    buyerId: `phone:${phone}`,
+    buyerName: "Guest",
+    buyerPhone: phone,
+    firstMessage: { senderId: `phone:${phone}`, senderLabel: "Guest", body: "Hi, is this available?", bodyHtml: "Hi, is this available?" },
+  });
+}
+
+describe("chat ownership (sender lockout regression)", () => {
+  it("guest sender keeps history via phone identity", async () => {
+    const store = freshDemoStore();
+    const c = await guestChat(store, ME.phone);
+    const id = identityOf(null, ME.phone)!;
+    assert.ok(id, "guest identity resolves");
+    assert.equal(isParticipant(c, id, null), `phone:${ME.phone}`);
+    const inbox = await store.listConversations({ phone: ME.phone });
+    assert.equal(inbox.length, 1, "inbox shows the chat");
+    const msgs = await store.listMessages(c.id);
+    assert.equal(msgs.length, 1, "first message persisted");
+    assert.equal(mineOf(msgs[0].senderId, `phone:${ME.phone}`), true);
+  });
+  it("signed-in sender with a different chat phone is NOT locked out via altPhone", async () => {
+    const store = freshDemoStore();
+    const c = await guestChat(store, OTHER_PHONE);
+    // Signed in, no phone hint: correctly unknown (can't prove the number).
+    const bare = identityOf({ id: ME.id, phone: ME.phone }, "")!;
+    assert.equal(isParticipant(c, bare, ME), null);
+    // With the chat phone supplied (?phone= or remembered): access granted.
+    const withAlt = identityOf({ id: ME.id, phone: ME.phone }, OTHER_PHONE)!;
+    assert.deepEqual(withAlt.altPhone, OTHER_PHONE);
+    assert.equal(isParticipant(c, withAlt, ME), ME.id);
+    // Own pre-sign-in message still renders as mine.
+    assert.equal(mineOf(`phone:${OTHER_PHONE}`, ME.id, ME.phone), false);
+    assert.equal(mineOf(`phone:${OTHER_PHONE}`, ME.id, OTHER_PHONE), true);
+  });
+  it("sign-in claims guest chats on the account number", async () => {
+    const store = freshDemoStore();
+    const user = await store.createUser({
+      name: ME.name, email: "bob@x.co.ke", phone: ME.phone,
+      role: "SELLER", verified: false, passwordHash: "h",
+    });
+    await guestChat(store, ME.phone);
+    assert.equal((await store.listConversations({ userId: user.id })).length, 0, "not linked before claim");
+    assert.equal(await store.claimGuestConversations(user.id, ME.phone), 1);
+    const inbox = await store.listConversations({ userId: user.id, phone: ME.phone, sellerName: ME.name });
+    assert.equal(inbox.length, 1, "chat survives sign-in");
+    const id = identityOf({ id: user.id, phone: ME.phone }, "")!;
+    const convo = await store.getConversation(inbox[0].id);
+    assert.equal(isParticipant(convo!, id, ME), user.id);
+  });
+  it("strangers are still rejected, admins pass", async () => {
+    const store = freshDemoStore();
+    const c = await guestChat(store, ME.phone);
+    const stranger = identityOf({ id: "u_stranger", phone: "0711111111" }, "")!;
+    assert.equal(isParticipant(c, stranger, { id: "u_stranger", name: "Stranger", role: "SELLER" }), null);
+    const admin = identityOf({ id: "u_admin", phone: "0711111111" }, "")!;
+    assert.equal(isParticipant(c, admin, { id: "u_admin", name: "Admin", role: "ADMIN" }), "u_admin");
+  });
+  it("seller fallback resolves via listing owner", async () => {
+    const store = freshDemoStore();
+    const seller = await store.createUser({
+      name: "Seller Sam", email: "sam@x.co.ke", phone: "0722000000",
+      role: "SELLER", verified: true, passwordHash: "h",
+    });
+    const listing = await store.createListing({
+      title: "Test sofa for chat sellers", description: "A sofa used to test seller chat access end to end",
+      type: "classified", price: 5000, compareAt: null, condition: "used_good", txMethod: "contact_seller",
+      negotiable: false, stock: 1, county: "Nairobi", town: "CBD", images: [], attributes: {},
+      ownerId: seller.id, sellerName: "Seller Sam",
+    });
+    await store.setListingStatus(listing.id, "active");
+    const convo = await store.createConversation({
+      listingId: listing.id, listingTitle: listing.title, sellerName: "Seller Sam",
+      sellerId: undefined, buyerId: "phone:0712345678", buyerName: "Guest", buyerPhone: "0712345678",
+      firstMessage: { senderId: "phone:0712345678", senderLabel: "Guest", body: "Hi", bodyHtml: "Hi" },
+    });
+    const sellerId = identityOf({ id: seller.id, phone: "0722000000" }, "")!;
+    assert.equal(isParticipant(convo, sellerId, { id: seller.id, name: "Seller Sam", role: "SELLER" }), seller.id, "display-name link works where stored");
+    // Backend without a persisted sellerName (Prisma): listing owner still counts.
+    const bare = { ...convo, sellerName: undefined };
+    assert.equal(isParticipant(bare, sellerId, { id: seller.id, name: "Seller Sam", role: "SELLER" }), null, "no raw link without sellerName");
+    assert.equal(await isChatSeller(store, bare, { id: seller.id, name: "Seller Sam", role: "SELLER" }), true, "listing owner counts as seller");
+    assert.equal(await isChatSeller(store, bare, { id: "u_nope", name: "Nope", role: "SELLER" }), false);
+  });
+});

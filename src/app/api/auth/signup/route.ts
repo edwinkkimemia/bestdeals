@@ -51,6 +51,8 @@ export async function POST(req: NextRequest) {
     } catch {}
   }
   const token = await createSessionToken({ id: user.id, name, email, phone, role, verified: false });
+  // Link any guest chats started with this number before registering.
+  await store.claimGuestConversations(user.id, phone).catch(() => null);
   // Welcome email-verification link. Awaited (not queued): serverless functions
   // can freeze before background work finishes, silently dropping the email.
   try {

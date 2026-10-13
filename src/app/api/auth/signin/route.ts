@@ -36,6 +36,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
   }
   clearLoginFailures(email);
+  // Link guest chats started with this number to the account so history survives sign-in.
+  await store.claimGuestConversations(found.id, found.phone).catch(() => null);
   const token = await createSessionToken({ id: found.id, name: found.name, email: found.email, phone: found.phone, role: found.role, verified: found.verified });
   const res = NextResponse.json({ ok: true, role: found.role });
   res.cookies.set(SESSION_COOKIE, token, sessionCookieAttrs());

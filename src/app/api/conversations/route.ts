@@ -76,6 +76,15 @@ export async function GET(req: NextRequest) {
       ? { phone: q }
       : undefined;
   if (!identity) return NextResponse.json({ error: "Sign in or provide your phone." }, { status: 401 });
-  const items = await getStore().listConversations(identity);
+  const store = getStore();
+  const items = await store.listConversations(identity);
+  // Signed-in with a different ?phone= (chat started as guest with another
+  // number): merge that phone's inbox so history never vanishes.
+  if (user && /^(\+254|0)[17]\d{8}$/.test(q) && q !== user.phone) {
+    const extra = await store.listConversations({ phone: q }).catch(() => []);
+    const seen = new Set(items.map((c) => c.id));
+    for (const c of extra) if (!seen.has(c.id)) items.push(c);
+    items.sort((a, b) => +new Date(b.lastAt ?? b.createdAt) - +new Date(a.lastAt ?? a.createdAt));
+  }
   return NextResponse.json({ items });
 }
