@@ -123,6 +123,9 @@ model Shop {
   verified         Boolean              @default(false)
   deliveryInfo     String?
   hours            String?
+  website          String?
+  email            String?
+  socials          Json?
   planId           String?
   plan             SubscriptionPlan?    @relation(fields: [planId], references: [id])
   createdAt        DateTime             @default(now())

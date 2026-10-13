@@ -41,7 +41,26 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     bodyHtml: m.bodyHtml ?? toSafeHtml(m.body),
     mine: mineOf(m.senderId, viewer, user?.phone),
   }));
-  return NextResponse.json({ convo, messages: all.slice((page - 1) * per, page * per), total: all.length, page, per });
+  // Recipient + contact details for the chat header: the OTHER party, not you.
+  const viewerIsSeller =
+    (convo.sellerId && viewer === convo.sellerId) ||
+    (user?.id === viewer && user?.name === convo.sellerName);
+  let peer: { name: string; phone?: string; role: string };
+  if (viewerIsSeller) {
+    peer = { name: convo.buyerName || "Buyer", phone: convo.buyerPhone || undefined, role: "buyer" };
+  } else {
+    let sellerPhone: string | undefined;
+    if (convo.listingId) {
+      const s = await store.getListing(convo.listingId).catch(() => null);
+      sellerPhone = s?.sellerPhone || undefined;
+      if (!sellerPhone) {
+        const { getListing } = await import("@/data/catalog");
+        sellerPhone = getListing(convo.listingId)?.sellerPhone;
+      }
+    }
+    peer = { name: convo.sellerName || "Seller", phone: sellerPhone, role: "seller" };
+  }
+  return NextResponse.json({ convo, messages: all.slice((page - 1) * per, page * per), total: all.length, page, per, peer });
 }
 
 /** Reply (participant only, rate-limited, sanitized). */

@@ -13,6 +13,29 @@ import { localBusinessJsonLd, breadcrumbJsonLd } from "@/lib/seo";
 import { ratingLabel } from "@/lib/ratings";
 import { ShareRow } from "@/components/share-row";
 
+const SOCIAL_LABELS: Record<string, string> = {
+  facebook: "Facebook",
+  instagram: "Instagram",
+  x: "X",
+  tiktok: "TikTok",
+  youtube: "YouTube",
+};
+
+/** Seller-managed social profile pills (website/email render alongside). */
+function SocialLinks({ socials }: { socials?: Record<string, string> | null }) {
+  const entries = Object.entries(socials ?? {}).filter(([, v]) => typeof v === "string" && v.trim());
+  if (entries.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {entries.map(([k, v]) => (
+        <a key={k} href={v} target="_blank" rel="noopener" className="rounded-full border border-neutral-300 px-3 py-1 text-xs font-semibold hover:bg-sand-50">
+          {SOCIAL_LABELS[k] ?? k}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 export function generateStaticParams() {
   return SHOPS.map((s) => ({ slug: s.slug }));
 }
@@ -84,7 +107,13 @@ export default async function ShopPage({ params }: { params: { slug: string } })
           <div className="mt-3"><ShareRow title={`${nonNull.name} on Chap`} text={`${nonNull.name} — ${nonNull.businessCategory} in ${nonNull.town}, ${nonNull.county}`} /></div>
           <div className="mt-4 grid gap-3 lg:grid-cols-3">
             <div className="card p-4 text-sm"><p className="font-bold">Delivery</p><p className="text-ink-500">{nonNull.deliveryInfo || "Delivery arranged with the shop — confirm fee and timeline before paying."}</p></div>
-            <div className="card p-4 text-sm"><p className="font-bold">Contact</p><p className="text-ink-500">{nonNull.phone} · {nonNull.town}, {nonNull.county}</p></div>
+            <div className="card p-4 text-sm">
+              <p className="font-bold">Contact</p>
+              <p className="text-ink-500">{nonNull.phone} · {nonNull.town}, {nonNull.county}</p>
+              {nonNull.website && <p className="mt-1"><a href={nonNull.website} target="_blank" rel="noopener" className="link-bd break-all">{nonNull.website.replace(/^https?:\/\//, "")}</a></p>}
+              {nonNull.email && <p className="mt-1"><a href={`mailto:${nonNull.email}`} className="link-bd break-all">{nonNull.email}</a></p>}
+              <SocialLinks socials={nonNull.socials} />
+            </div>
             <div className="card p-4 text-sm"><p className="font-bold">Policies</p><p className="text-ink-500">Bulk quotes within 24h. Inspect before paying.</p></div>
           </div>
           <h2 className="section-title mt-8">Catalogue ({catalogue.length})</h2>
@@ -111,6 +140,8 @@ export default async function ShopPage({ params }: { params: { slug: string } })
   const liveForShop = await getLiveForStatic(s.slug);
   const items = mergeStaticAndLive(staticItems, liveForShop);
   const reviews = await storeRead((st) => st.listApprovedReviewsForShop(s.slug), []);
+  // Seller-managed contacts live on the store twin (seeded shops have one).
+  const contacts = await storeRead((st) => st.getShopBySlug(s.slug), null);
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -142,7 +173,13 @@ export default async function ShopPage({ params }: { params: { slug: string } })
         <div className="mt-3"><ShareRow title={`${s.name} on Chap`} text={`${s.name} — ${s.businessCategory} in ${s.town}, ${s.county}`} /></div>
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
           <div className="card p-4 text-sm"><p className="font-bold">Delivery</p><p className="text-ink-500">{s.deliveryInfo}</p></div>
-          <div className="card p-4 text-sm"><p className="font-bold">Contact</p><p className="text-ink-500">{s.phone} · {s.town}, {s.county}</p></div>
+          <div className="card p-4 text-sm">
+            <p className="font-bold">Contact</p>
+            <p className="text-ink-500">{s.phone} · {s.town}, {s.county}</p>
+            {contacts?.website && <p className="mt-1"><a href={contacts.website} target="_blank" rel="noopener" className="link-bd break-all">{contacts.website.replace(/^https?:\/\//, "")}</a></p>}
+            {contacts?.email && <p className="mt-1"><a href={`mailto:${contacts.email}`} className="link-bd break-all">{contacts.email}</a></p>}
+            <SocialLinks socials={contacts?.socials} />
+          </div>
           <div className="card p-4 text-sm"><p className="font-bold">Policies</p><p className="text-ink-500">7-day returns on sealed electronics. Bulk quotes within 24h.</p></div>
         </div>
         <h2 className="section-title mt-8">Catalogue ({items.length})</h2>

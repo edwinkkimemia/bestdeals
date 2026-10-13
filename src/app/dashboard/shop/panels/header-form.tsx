@@ -16,7 +16,18 @@ export type ShopHeader = {
   coverUrl?: string | null;
   deliveryInfo?: string | null;
   hours?: string | null;
+  website?: string | null;
+  email?: string | null;
+  socials?: Record<string, string> | null;
 };
+
+const SOCIAL_FIELDS = [
+  { key: "facebook", label: "Facebook URL" },
+  { key: "instagram", label: "Instagram URL" },
+  { key: "x", label: "X (Twitter) URL" },
+  { key: "tiktok", label: "TikTok URL" },
+  { key: "youtube", label: "YouTube URL" },
+] as const;
 
 /** Editable shop header — logo, cover + public storefront info. Owner only. */
 export function ShopHeaderForm({ shop }: { shop: ShopHeader }) {
@@ -29,6 +40,9 @@ export function ShopHeaderForm({ shop }: { shop: ShopHeader }) {
   const [phone, setPhone] = useState(shop.phone);
   const [deliveryInfo, setDeliveryInfo] = useState(shop.deliveryInfo ?? "");
   const [hours, setHours] = useState(shop.hours ?? "");
+  const [website, setWebsite] = useState(shop.website ?? "");
+  const [email, setEmail] = useState(shop.email ?? "");
+  const [socials, setSocials] = useState<Record<string, string>>({ ...(shop.socials ?? {}) });
   const [logoUrl, setLogoUrl] = useState<string | null>(shop.logoUrl ?? null);
   const [coverUrl, setCoverUrl] = useState<string | null>(shop.coverUrl ?? null);
   const [busy, setBusy] = useState(false);
@@ -76,6 +90,9 @@ export function ShopHeaderForm({ shop }: { shop: ShopHeader }) {
           phone,
           deliveryInfo,
           hours,
+          website,
+          email,
+          socials,
           logoUrl,
           coverUrl,
         }),
@@ -171,6 +188,33 @@ export function ShopHeaderForm({ shop }: { shop: ShopHeader }) {
         <div>
           <label className="label-bd" htmlFor="sh-hours">Opening hours</label>
           <input id="sh-hours" className="input-bd" value={hours} onChange={(e) => setHours(e.target.value)} maxLength={200} placeholder="Mon–Sat 8am–7pm" />
+        </div>
+        <div>
+          <label className="label-bd" htmlFor="sh-website">Website</label>
+          <input id="sh-website" className="input-bd" value={website} onChange={(e) => setWebsite(e.target.value)} inputMode="url" maxLength={500} placeholder="yourshop.co.ke" />
+        </div>
+        <div>
+          <label className="label-bd" htmlFor="sh-email">Shop email</label>
+          <input id="sh-email" className="input-bd" type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={320} placeholder="hello@yourshop.co.ke" />
+        </div>
+      </div>
+      <div>
+        <span className="label-bd">Social links (shown on your storefront)</span>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {SOCIAL_FIELDS.map((f) => (
+            <div key={f.key}>
+              <label className="label-bd" htmlFor={`sh-social-${f.key}`}>{f.label}</label>
+              <input
+                id={`sh-social-${f.key}`}
+                className="input-bd"
+                value={socials[f.key] ?? ""}
+                onChange={(e) => setSocials((s) => ({ ...s, [f.key]: e.target.value }))}
+                inputMode="url"
+                maxLength={500}
+                placeholder="https://…"
+              />
+            </div>
+          ))}
         </div>
       </div>
       <button className="btn-primary w-full" disabled={busy || uploading !== null}>{busy ? "Saving…" : "Save shop header"}</button>

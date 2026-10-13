@@ -125,6 +125,9 @@ export default async function ShopDash({ searchParams }: { searchParams: { new?:
                 coverUrl: active.coverUrl ?? null,
                 deliveryInfo: active.deliveryInfo ?? null,
                 hours: active.hours ?? null,
+                website: active.website ?? null,
+                email: active.email ?? null,
+                socials: active.socials ?? null,
               }}
             />
           )}

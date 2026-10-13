@@ -120,6 +120,10 @@ export type ShopRecord = {
   coverUrl?: string | null;
   deliveryInfo?: string | null;
   hours?: string | null;
+  /** Public contacts (seller-managed): website, email + social profile links. */
+  website?: string | null;
+  email?: string | null;
+  socials?: Record<string, string> | null;
   createdAt: string;
 };
 
@@ -136,6 +140,9 @@ export type ShopHeaderPatch = Partial<
     | "coverUrl"
     | "deliveryInfo"
     | "hours"
+    | "website"
+    | "email"
+    | "socials"
   >
 >;
 
@@ -636,8 +643,14 @@ class DemoStore implements Store {
     if (patch.county !== undefined) s.county = patch.county.trim().slice(0, 80);
     if (patch.town !== undefined) s.town = patch.town.trim().slice(0, 80);
     if (patch.phone !== undefined && /^(\+254|0)[17]\d{8}$/.test(patch.phone)) s.phone = patch.phone;
-    for (const k of ["logoUrl", "coverUrl", "deliveryInfo", "hours"] as const) {
+    for (const k of ["logoUrl", "coverUrl", "deliveryInfo", "hours", "website", "email"] as const) {
       if (patch[k] !== undefined) (s as Record<string, unknown>)[k] = patch[k] ? String(patch[k]).slice(0, 2000) : null;
+    }
+    if (patch.socials !== undefined) {
+      s.socials =
+        patch.socials && typeof patch.socials === "object"
+          ? Object.fromEntries(Object.entries(patch.socials).slice(0, 10).map(([k, v]) => [String(k).slice(0, 40), String(v).slice(0, 500)]))
+          : null;
     }
     return { ...s };
   }
@@ -1449,6 +1462,9 @@ class PrismaStore implements Store {
         businessCategory: s.businessCategory, county: s.county, town: s.town, phone: s.phone,
         logoUrl: s.logoUrl ?? null, coverUrl: s.coverUrl ?? null,
         deliveryInfo: s.deliveryInfo ?? null, hours: s.hours ?? null,
+        website: (s as { website?: string | null }).website ?? null,
+        email: (s as { email?: string | null }).email ?? null,
+        socials: ((s as { socials?: unknown }).socials as never) ?? null,
       },
     });
     if (s.ownerId) {
@@ -1464,6 +1480,9 @@ class PrismaStore implements Store {
       phone: rec.phone, ownerId: s.ownerId, planId: "free", verified: rec.verified,
       logoUrl: rec.logoUrl ?? null, coverUrl: rec.coverUrl ?? null,
       deliveryInfo: rec.deliveryInfo ?? null, hours: rec.hours ?? null,
+      website: (rec as { website?: string | null }).website ?? null,
+      email: (rec as { email?: string | null }).email ?? null,
+      socials: ((rec as { socials?: unknown }).socials as Record<string, string> | null) ?? null,
       createdAt: rec.createdAt.toISOString(),
     };
   }
@@ -1473,6 +1492,7 @@ class PrismaStore implements Store {
     verified: boolean; createdAt: Date;
     logoUrl?: string | null; coverUrl?: string | null;
     deliveryInfo?: string | null; hours?: string | null;
+    website?: string | null; email?: string | null; socials?: unknown;
   }): ShopRecord {
     return {
       slug: rec.slug, name: rec.name, description: rec.description,
@@ -1481,6 +1501,8 @@ class PrismaStore implements Store {
       verified: rec.verified,
       logoUrl: rec.logoUrl ?? null, coverUrl: rec.coverUrl ?? null,
       deliveryInfo: rec.deliveryInfo ?? null, hours: rec.hours ?? null,
+      website: rec.website ?? null, email: rec.email ?? null,
+      socials: (rec.socials as Record<string, string> | null) ?? null,
       createdAt: rec.createdAt.toISOString(),
     };
   }
@@ -1527,8 +1549,14 @@ class PrismaStore implements Store {
     if (patch.county !== undefined) data.county = patch.county.trim().slice(0, 80);
     if (patch.town !== undefined) data.town = patch.town.trim().slice(0, 80);
     if (patch.phone !== undefined && /^(\+254|0)[17]\d{8}$/.test(patch.phone)) data.phone = patch.phone;
-    for (const k of ["logoUrl", "coverUrl", "deliveryInfo", "hours"] as const) {
+    for (const k of ["logoUrl", "coverUrl", "deliveryInfo", "hours", "website", "email"] as const) {
       if (patch[k] !== undefined) data[k] = patch[k] ? String(patch[k]).slice(0, 2000) : null;
+    }
+    if (patch.socials !== undefined) {
+      data.socials =
+        patch.socials && typeof patch.socials === "object"
+          ? Object.fromEntries(Object.entries(patch.socials).slice(0, 10).map(([k, v]) => [String(k).slice(0, 40), String(v).slice(0, 500)]))
+          : null;
     }
     if (Object.keys(data).length === 0) return this.getShopBySlug(slug);
     try {

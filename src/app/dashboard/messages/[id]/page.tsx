@@ -40,7 +40,9 @@ export default function ThreadPage({ params }: { params: { id: string } }) {
 function ThreadInner({ id }: { id: string }) {
   const sp = useSearchParams();
   const [convo, setConvo] = useState<{ listingTitle?: string; sellerName?: string; listingId?: string } | null>(null);
+  const [peer, setPeer] = useState<{ name: string; phone?: string; role: string } | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([]);
+  // Guest chats keep working via the remembered number (no visible phone box).
   const [phone, setPhone] = useState(sp.get("phone") ?? "");
   const [err, setErr] = useState("");
   const [ready, setReady] = useState(false);
@@ -66,6 +68,7 @@ function ThreadInner({ id }: { id: string }) {
       }
       const j = await r.json();
       setConvo(j.convo);
+      setPeer(j.peer ?? null);
       setMsgs(j.messages);
       setReady(true);
       if (!quiet) firstLoad.current = true;
@@ -127,7 +130,8 @@ function ThreadInner({ id }: { id: string }) {
     );
   }
 
-  const otherName = convo?.sellerName ?? "Chat";
+  const otherName = peer?.name ?? convo?.sellerName ?? "Chat";
+  const otherPhone = peer?.phone;
   let lastDay = "";
 
   return (
@@ -141,8 +145,10 @@ function ThreadInner({ id }: { id: string }) {
           {otherName.charAt(0).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-bold leading-tight">{otherName}</p>
+          <p className="truncate text-[15px] font-bold leading-tight">{otherName} <span className="ml-1 rounded-full bg-sand-100 px-2 py-0.5 text-[11px] font-semibold text-ink-500">{peer?.role === "buyer" ? "Buyer" : "Seller"}</span></p>
           <p className="truncate text-xs text-ink-500">
+            {otherPhone ? <a href={`tel:${otherPhone.replace(/\s/g, "")}`} className="link-bd">{otherPhone}</a> : null}
+            {otherPhone ? " · " : ""}
             {convo?.listingTitle ? (
               convo.listingId ? (
                 <>about <span className="font-semibold">{convo.listingTitle}</span></>
@@ -204,19 +210,9 @@ function ThreadInner({ id }: { id: string }) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Composer */}
+      {/* Composer (guest number remembered silently — no phone box) */}
       <div className="shrink-0 bg-sand-50 px-3 py-2.5">
         <div>
-          <div className="mb-2 flex gap-2">
-            <label htmlFor="t-phone" className="sr-only">Your phone (guests)</label>
-            <input
-              id="t-phone"
-              className="input-bd !rounded-full !py-2 text-sm"
-              placeholder="Guest phone? e.g. 0712345678"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </div>
           <ChatComposer
             onSend={send}
             whatsapp

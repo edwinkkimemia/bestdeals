@@ -26,6 +26,19 @@ export async function POST(req: NextRequest) {
   if (SHOPS.some((s) => s.slug === slug) || (await store.getShopBySlug(slug))) {
     slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
   }
+  let contacts: Record<string, unknown> = {};
+  if (get("website") || get("email") || get("socials")) {
+    let socials: unknown;
+    try {
+      socials = get("socials") ? JSON.parse(get("socials")) : undefined;
+    } catch {
+      return NextResponse.json({ error: "Social links must be valid JSON." }, { status: 400 });
+    }
+    const { normalizeShopContacts } = await import("@/lib/shop-contacts");
+    const res = normalizeShopContacts({ website: get("website") || undefined, email: get("email") || undefined, socials });
+    if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
+    contacts = res.patch;
+  }
   await store.createShop({
     slug,
     name,
@@ -35,6 +48,7 @@ export async function POST(req: NextRequest) {
     town: get("town"),
     phone,
     ownerId: user.id,
+    ...contacts,
   });
   return NextResponse.redirect(new URL(`/shops/${encodeURIComponent(slug)}`, req.url), 303);
 }
@@ -113,6 +127,12 @@ export async function PATCH(req: NextRequest) {
     const h = String(body.hours ?? "");
     if (h.length > 200) return NextResponse.json({ error: "Hours are too long (max 200)." }, { status: 400 });
     patch.hours = h.trim() ? h.trim() : null;
+  }
+  if (body.website !== undefined || body.email !== undefined || body.socials !== undefined) {
+    const { normalizeShopContacts } = await import("@/lib/shop-contacts");
+    const res = normalizeShopContacts({ website: body.website, email: body.email, socials: body.socials });
+    if (!res.ok) return NextResponse.json({ error: res.error }, { status: 400 });
+    Object.assign(patch, res.patch);
   }
   if (Object.keys(patch).length === 0) return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
   const updated = await store.updateShop(slug, patch);
