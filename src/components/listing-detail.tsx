@@ -36,6 +36,18 @@ function toWhatsApp(phone: string): string {
   return digits.startsWith("0") ? `254${digits.slice(1)}` : digits;
 }
 
+/** Seller profile URL: stable account id when known, else the name slug. */
+function sellerProfileUrl(ownerId: string | undefined, sellerName: string): string {
+  if (ownerId) return `/seller/${encodeURIComponent(ownerId)}`;
+  const slug =
+    sellerName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "seller";
+  return `/seller/${encodeURIComponent(slug)}`;
+}
+
 function XIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
@@ -353,7 +365,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
                 </>
               ) : (
                 <>
-                  <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <VerifiedBadge verified={listing.verified} /></p>
+                  <p className="flex flex-wrap items-center gap-2 font-bold"><Link href={sellerProfileUrl(listing.ownerId, listing.sellerName)} className="hover:text-brand-700 hover:underline">{listing.sellerName}</Link> <VerifiedBadge verified={listing.verified} /></p>
                   <p className="truncate text-xs text-ink-500">
                     {listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}, {listing.county} · Enquiries go straight to their inbox
                   </p>

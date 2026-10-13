@@ -361,3 +361,105 @@ export async function relatedWithLive(
     fromSeller: all.slice(1 + fromOthers.length),
   };
 }
+
+/** URL slug for a seller display name (`FonZone Nairobi` → `fonzone-nairobi`). */
+export function sellerSlug(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 60) || "seller"
+  );
+}
+
+export type SellerProfileView = {
+  key: string;
+  userId?: string;
+  name: string;
+  businessName?: string;
+  photoUrl?: string | null;
+  verified: boolean;
+  sellerKind: string;
+  memberSince?: string;
+  hasAccount: boolean;
+};
+
+/**
+ * Public seller profile lookup for `/seller/[slug]`: stable user id first,
+ * then account display/business name, then catalogue fallback (sellers with
+ * listings but no registered account yet). Never exposes phone/email.
+ */
+export async function resolveSellerProfile(slug: string): Promise<SellerProfileView | null> {
+  const needle = decodeURIComponent(slug).trim().toLowerCase();
+  if (!needle) return null;
+  const byId = await storeRead(
+    (st) => st.findUserById(decodeURIComponent(slug).trim()).catch(() => null),
+    null
+  );
+  if (byId) {
+    return {
+      key: byId.id,
+      userId: byId.id,
+      name: byId.name,
+      businessName: byId.businessName,
+      photoUrl: byId.photoUrl ?? null,
+      verified: byId.verified,
+      sellerKind: byId.sellerKind,
+      memberSince: byId.createdAt,
+      hasAccount: true,
+    };
+  }
+  const users = await storeRead(
+    (st) => st.listUsers().catch(() => []),
+    []
+  ).catch(() => []);
+  const hit = users.find(
+    (u) => sellerSlug(u.name) === needle || (u.businessName && sellerSlug(u.businessName) === needle)
+  );
+  if (hit) {
+    return {
+      key: hit.id,
+      userId: hit.id,
+      name: hit.name,
+      businessName: hit.businessName,
+      photoUrl: hit.photoUrl ?? null,
+      verified: hit.verified,
+      sellerKind: hit.sellerKind,
+      memberSince: hit.createdAt,
+      hasAccount: true,
+    };
+  }
+  const { LISTINGS } = await import("@/data/catalog");
+  const names = [...new Set(LISTINGS.map((l) => l.sellerName))];
+  const name = names.find((n) => sellerSlug(n) === needle);
+  if (!name) return null;
+  const items = LISTINGS.filter((l) => l.sellerName === name);
+  return {
+    key: sellerSlug(name),
+    name,
+    photoUrl: null,
+    verified: items.some((l) => l.verified),
+    sellerKind: items[0]?.sellerType ?? "individual",
+    hasAccount: false,
+  };
+}
+
+/** Public listings for a seller profile: live store items + catalogue, badges resolved. */
+export async function getSellerListings(profile: Pick<SellerProfileView, "userId" | "name" | "businessName">): Promise<Listing[]> {
+  const names = new Set(
+    [profile.name, profile.businessName].filter(Boolean).map((n) => (n as string).toLowerCase())
+  );
+  const live = await storeRead(
+    (st) => st.listListingsByStatus("active"),
+    []
+  ).catch(() => []);
+  const mine = live.filter(
+    (l) =>
+      (profile.userId && l.ownerId === profile.userId) ||
+      names.has((l.sellerName || "").toLowerCase())
+  );
+  const { LISTINGS } = await import("@/data/catalog");
+  const staticOnes = LISTINGS.filter((l) => names.has(l.sellerName.toLowerCase()));
+  return withLiveVerification(mergeStaticAndLive(staticOnes, mine.map(storeRecordToListing)));
+}
