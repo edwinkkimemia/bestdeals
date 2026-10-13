@@ -51,11 +51,22 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   } else {
     let sellerPhone: string | undefined;
     if (convo.listingId) {
-      const s = await store.getListing(convo.listingId).catch(() => null);
-      sellerPhone = s?.sellerPhone || undefined;
-      if (!sellerPhone) {
-        const { getListing } = await import("@/data/catalog");
-        sellerPhone = getListing(convo.listingId)?.sellerPhone;
+      if (convo.listingId.startsWith("shop:")) {
+        const slug = convo.listingId.slice(5);
+        const storedShop = await store.getShopBySlug(slug).catch(() => null);
+        if (storedShop) {
+          sellerPhone = storedShop.phone;
+        } else {
+          const { getShop } = await import("@/data/catalog");
+          sellerPhone = getShop(slug)?.phone;
+        }
+      } else {
+        const s = await store.getListing(convo.listingId).catch(() => null);
+        sellerPhone = s?.sellerPhone || undefined;
+        if (!sellerPhone) {
+          const { getListing } = await import("@/data/catalog");
+          sellerPhone = getListing(convo.listingId)?.sellerPhone;
+        }
       }
     }
     peer = { name: convo.sellerName || "Seller", phone: sellerPhone, role: "seller" };

@@ -32,11 +32,21 @@ export async function POST(req: NextRequest) {
   if (!plain) return NextResponse.json({ error: "Message can't be empty." }, { status: 400 });
 
   const store = getStore();
-  const { getListing } = await import("@/data/catalog");
+  const { getListing, getShop } = await import("@/data/catalog");
   const catalog = getListing(d.listingId);
-  const stored = !catalog && d.listingId !== "general" ? await store.getListing(d.listingId) : null;
-  const title = catalog?.title ?? stored?.title ?? "General enquiry";
-  const seller = catalog?.sellerName ?? stored?.sellerName ?? "Seller";
+  const stored = !catalog && d.listingId !== "general" && !d.listingId.startsWith("shop:") ? await store.getListing(d.listingId) : null;
+  // Shop chats (`shop:<slug>` from storefront Message buttons) resolve the real shop name.
+  let shopName: string | undefined;
+  let shopPhone: string | undefined;
+  if (d.listingId.startsWith("shop:")) {
+    const slug = d.listingId.slice(5);
+    const demoShop = getShop(slug);
+    const storedShop = await store.getShopBySlug(slug).catch(() => null);
+    shopName = storedShop?.name ?? demoShop?.name;
+    shopPhone = storedShop?.phone ?? demoShop?.phone;
+  }
+  const title = shopName ? `Shop enquiry: ${shopName}` : (catalog?.title ?? stored?.title ?? "General enquiry");
+  const seller = shopName ?? catalog?.sellerName ?? stored?.sellerName ?? "Seller";
 
   const viewerId = user?.id ?? `phone:${phone}`;
   // Link the seller side via exact display-name match (name + businessName).
