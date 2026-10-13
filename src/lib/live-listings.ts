@@ -446,7 +446,9 @@ export async function resolveSellerProfile(slug: string): Promise<SellerProfileV
 }
 
 /** Public listings for a seller profile: live store items + catalogue, badges resolved. */
-export async function getSellerListings(profile: Pick<SellerProfileView, "userId" | "name" | "businessName">): Promise<Listing[]> {
+export async function getSellerListings(
+  profile: Pick<SellerProfileView, "userId" | "name" | "businessName">
+): Promise<Listing[]> {
   const names = new Set(
     [profile.name, profile.businessName].filter(Boolean).map((n) => (n as string).toLowerCase())
   );
@@ -462,4 +464,22 @@ export async function getSellerListings(profile: Pick<SellerProfileView, "userId
   const { LISTINGS } = await import("@/data/catalog");
   const staticOnes = LISTINGS.filter((l) => names.has(l.sellerName.toLowerCase()));
   return withLiveVerification(mergeStaticAndLive(staticOnes, mine.map(storeRecordToListing)));
+}
+
+export type SellerContact = { phone: string; whatsapp: string };
+
+/**
+ * Public contact for Call/WhatsApp buttons: first owned shop's approved
+ * number, else the verified phone snapshot from their listings (already
+ * public on every listing). Null when no public number exists.
+ */
+export function resolveSellerContact(
+  listings: Pick<Listing, "sellerPhone">[],
+  shops: { phone?: string }[]
+): SellerContact | null {
+  const raw = shops.find((s) => s.phone)?.phone ?? listings.map((l) => l.sellerPhone).find(Boolean);
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return null;
+  return { phone: raw, whatsapp: digits.startsWith("0") ? `254${digits.slice(1)}` : digits };
 }

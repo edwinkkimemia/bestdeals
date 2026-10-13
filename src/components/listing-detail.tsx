@@ -23,6 +23,7 @@ import { getListing, getShop, type Listing } from "@/data/catalog";
 import { listingHref } from "@/lib/related";
 import type { ReviewRecord } from "@/lib/store";
 import { ReviewsBlock } from "./reviews-block";
+import { ReviewForm } from "./review-form";
 import { ViewTracker } from "./view-tracker";
 import { ViewCount } from "./view-count";
 import { Badge, ConditionBadge, VerifiedBadge } from "@/components/ui/badge";
@@ -37,7 +38,7 @@ function toWhatsApp(phone: string): string {
 }
 
 /** Seller profile URL: stable account id when known, else the name slug. */
-function sellerProfileUrl(ownerId: string | undefined, sellerName: string): string {
+function sellerPageUrl(ownerId: string | undefined, sellerName: string): string {
   if (ownerId) return `/seller/${encodeURIComponent(ownerId)}`;
   const slug =
     sellerName
@@ -365,7 +366,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
                 </>
               ) : (
                 <>
-                  <p className="flex flex-wrap items-center gap-2 font-bold"><Link href={sellerProfileUrl(listing.ownerId, listing.sellerName)} className="hover:text-brand-700 hover:underline">{listing.sellerName}</Link> <VerifiedBadge verified={listing.verified} /></p>
+                  <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <VerifiedBadge verified={listing.verified} /></p>
                   <p className="truncate text-xs text-ink-500">
                     {listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}, {listing.county} · Enquiries go straight to their inbox
                   </p>
@@ -382,9 +383,9 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
                 <Store className="h-4 w-4" /> Visit shop
               </Link>
             ) : (
-              <a href="#more-from-seller" className="btn-secondary !px-3">
-                <Store className="h-4 w-4" /> More items
-              </a>
+              <Link href={sellerPageUrl(listing.ownerId, listing.sellerName)} className="btn-secondary !px-3">
+                <Store className="h-4 w-4" /> Visit seller
+              </Link>
             )}
           </div>
         </div>
@@ -460,6 +461,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
       {(listingReviews ?? []).length > 0 && (
         <ReviewsBlock reviews={listingReviews ?? []} title={`Reviews for this listing`} />
       )}
+      <ReviewForm listingId={listing.id} shopSlug={listing.shopSlug} sellerName={listing.sellerName} />
       </div>
     </div>
   );

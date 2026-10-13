@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 delete process.env.DATABASE_URL;
 
 import { getStore } from "../src/lib/store.ts";
-import { sellerSlug, resolveSellerProfile, getSellerListings } from "../src/lib/live-listings.ts";
+import { sellerSlug, resolveSellerProfile, getSellerListings, resolveSellerContact } from "../src/lib/live-listings.ts";
 import { LISTINGS } from "../src/data/catalog.ts";
 
 describe("seller profile page", () => {
@@ -44,5 +44,12 @@ describe("seller profile page", () => {
     const items = await getSellerListings({ name });
     assert.ok(items.length > 0, "catalogue items found");
     assert.ok(items.every((l) => l.sellerName === name), "only this seller");
+  });
+  it("resolves public contact (shop first, then listing snapshot)", () => {
+    assert.equal(resolveSellerContact([], []), null);
+    const fromListing = resolveSellerContact([{ sellerPhone: "0712345678" }], []);
+    assert.deepEqual(fromListing, { phone: "0712345678", whatsapp: "254712345678" });
+    const fromShop = resolveSellerContact([{ sellerPhone: "0712345678" }], [{ phone: "0733000000" }]);
+    assert.deepEqual(fromShop, { phone: "0733000000", whatsapp: "254733000000" });
   });
 });

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { MessageCircle, Phone } from "lucide-react";
 import { LISTINGS } from "@/data/catalog";
 import { storeRead } from "@/lib/store";
-import { resolveSellerProfile, getSellerListings, sellerSlug, withLiveVerification } from "@/lib/live-listings";
+import { resolveSellerProfile, getSellerListings, sellerSlug, withLiveVerification, resolveSellerContact } from "@/lib/live-listings";
 import { ReviewsBlock } from "@/components/reviews-block";
+import { ReviewForm } from "@/components/review-form";
 import { ListingCard } from "@/components/ui/listing-card";
 import { Badge } from "@/components/ui/badge";
 import { ratingLabel } from "@/lib/ratings";
@@ -49,6 +51,8 @@ export default async function SellerPage({ params }: { params: { slug: string } 
   const shops = profile.userId
     ? await storeRead((s) => s.listShopsByOwner(profile.userId as string), [])
     : [];
+  const contact = resolveSellerContact(items, shops);
+  const waText = encodeURIComponent(`Hello ${profile.name}! I found you on Chap and have a question.`);
   const liveItems = await withLiveVerification(items);
 
   return (
@@ -73,9 +77,15 @@ export default async function SellerPage({ params }: { params: { slug: string } 
             {ratingLabel(reviews)}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href={`/search?q=${encodeURIComponent(profile.name)}`} className="btn-secondary">All listings</Link>
-          <Link href="/dashboard/messages/new" className="btn-primary">Message seller</Link>
+          {contact && (
+            <>
+              <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="btn-secondary"><Phone className="h-4 w-4" /> Call</a>
+              <a href={`https://wa.me/${contact.whatsapp}?text=${waText}`} target="_blank" rel="noopener" className="btn-secondary">WhatsApp</a>
+            </>
+          )}
+          <Link href="/dashboard/messages/new" className="btn-primary"><MessageCircle className="h-4 w-4" /> Message seller</Link>
         </div>
       </div>
       <div className="mt-3">
@@ -109,6 +119,7 @@ export default async function SellerPage({ params }: { params: { slug: string } 
         </div>
       )}
       <ReviewsBlock reviews={reviews} title={`Reviews for ${profile.name}`} />
+      <ReviewForm sellerName={profile.name} />
     </div>
   );
 }

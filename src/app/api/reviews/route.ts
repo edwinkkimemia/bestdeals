@@ -5,13 +5,22 @@ import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { currentUser } from "@/lib/auth";
 
 /**
- * Reviews. verifiedPurchase is computed SERVER-side: only orders this server
- * created that are paid or delivered earn the badge. Everything else shows as
- * an unverified community review — never fabricated.
+ * Reviews. Posting requires a verified account (fresh flag, never the token);
+ * verifiedPurchase is computed SERVER-side: only orders this server created
+ * that are paid or delivered earn the badge.
  */
 export async function POST(req: NextRequest) {
   const rl = rateLimit(clientKey(req, "review"), { limit: 10, windowMs: 3600_000 });
   if (!rl.ok) return NextResponse.json({ error: "Too many reviews. Try again later." }, { status: 429 });
+  const user = await currentUser().catch(() => null);
+  if (!user) return NextResponse.json({ error: "Sign in to review." }, { status: 401 });
+  const fresh = await getStore().findUserById(user.id).catch(() => null);
+  if (!(fresh?.verified ?? user.verified)) {
+    return NextResponse.json(
+      { error: "Only verified accounts can review. Verify at /dashboard/verify first.", code: "NOT_VERIFIED" },
+      { status: 403 }
+    );
+  }
   const body = await req.json().catch(() => ({}));
   const parsed = reviewSchema.safeParse(body);
   if (!parsed.success) {
@@ -37,7 +46,7 @@ export async function POST(req: NextRequest) {
     listingId: d.listingId,
     shopSlug: d.shopSlug,
     sellerName: d.sellerName,
-    authorName: d.authorName,
+    authorName: fresh?.name ?? user.name,
     rating: d.rating,
     body: d.body || undefined,
     verifiedPurchase,
