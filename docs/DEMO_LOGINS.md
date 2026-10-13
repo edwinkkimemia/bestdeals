@@ -54,8 +54,8 @@ Shops (storefronts at `/shops/<slug>`, owned by the seller in the same row above
 ## Why "Invalid email or password" happens
 
 1. **Wrong password** — demo password is `ChapDemo123!` unless `SEED_USER_PASSWORD`
-   is set in your env. After changing `SEED_USER_PASSWORD`, re-run the seed
-   (`npx prisma db seed` or Admin → Seed); demo accounts re-sync, real users don't.
+   is set in your env. Re-seeds never overwrite an existing demo password, so a
+   changed demo password survives redeploys (rotate via `PUT /api/admin/users`).
 2. **Demo mode restart** — without `DATABASE_URL` the store is in-memory and wipes
    on restart. Sign-in now re-seeds missing `@demo.chap.co.ke` accounts on demand,
    so just retry with the default password.

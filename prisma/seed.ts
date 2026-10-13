@@ -128,12 +128,14 @@ async function seedUsers(): Promise<Map<string, { id: string; profileId: string 
   const out = new Map<string, { id: string; profileId: string | null }>();
   for (const [name, meta] of names) {
     const email = `${slugifyName(name)}@demo.chap.co.ke`;
-    // Demo accounts use PUBLIC credentials, so every seed re-syncs their
-    // password to SEED_USER_PASSWORD (rotations take effect). Real users are
-    // never touched — only @demo.chap.co.ke is reset here.
+    // Demo accounts use PUBLIC credentials, so new ones are created with the
+    // current SEED_USER_PASSWORD — but existing passwords are NEVER touched:
+    // re-seeding (every deploy) must not revert password changes, otherwise
+    // logins mysteriously say "wrong password" right after a redeploy.
+    // To rotate a demo password, use PUT /api/admin/users as an admin.
     const user = await prisma.user.upsert({
       where: { email },
-      update: { passwordHash, verified: name === "Demo Buyer" ? false : true, emailVerified: true, phone: meta.phone },
+      update: { verified: name === "Demo Buyer" ? false : true, emailVerified: true, phone: meta.phone },
       create: {
         name,
         email,
