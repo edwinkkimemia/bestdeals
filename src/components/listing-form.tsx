@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { listingSchema, type ListingInput } from "@/lib/validators";
 import { CATEGORIES, categoryBySlug } from "@/data/catalog";
 import { COUNTY_NAMES, townsFor } from "@/lib/kenya";
+import { parseImageLinks } from "@/lib/image-urls";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { RichTextField } from "./rich-text-field";
+import { WmImage } from "./ui/wm-image";
 
 const TYPES = ["product", "classified", "service"] as const;
 
@@ -25,8 +27,40 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
   const [notVerified, setNotVerified] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(listingId ?? null);
   const [urls, setUrls] = useState<string[]>(initialValues?.images ?? []);
-  const [picked, setPicked] = useState<File[]>([]);
+  const [picked, setPicked] = useState<{ file: File; url: string }[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [linkText, setLinkText] = useState((initialValues?.images ?? []).join(", "));
+  // URLs currently contributed by the links box, so typing there merges
+  // instead of wiping uploaded photos (the old bug).
+  const linkUrls = useRef<string[]>(parseImageLinks((initialValues?.images ?? []).join(", ")));
+
+  const setPickedFiles = (files: File[]) => {
+    setPicked((prev) => {
+      prev.forEach((p) => URL.revokeObjectURL(p.url));
+      return files.map((file) => ({ file, url: URL.createObjectURL(file) }));
+    });
+  };
+
+  const removeUrl = (u: string) => {
+    setUrls((prev) => prev.filter((x) => x !== u));
+    linkUrls.current = linkUrls.current.filter((x) => x !== u);
+    setLinkText((prev) => {
+      const keep = parseImageLinks(prev).filter((x) => x !== u);
+      return keep.join(", ");
+    });
+  };
+
+  const makeCover = (u: string) => {
+    setUrls((prev) => [u, ...prev.filter((x) => x !== u)]);
+  };
+
+  const onLinksChange = (text: string) => {
+    setLinkText(text);
+    const next = parseImageLinks(text).slice(0, 8);
+    const prevLinks = linkUrls.current;
+    linkUrls.current = next;
+    setUrls((prev) => [...prev.filter((x) => !prevLinks.includes(x)), ...next].slice(0, 8));
+  };
 
   const say = (tone: "ok" | "err", text: string) => {
     setMsgTone(tone);
@@ -69,16 +103,19 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
           setUploading(true);
           try {
             const fd = new FormData();
-            picked.forEach((f) => fd.append("files", f));
+            picked.forEach((p) => fd.append("files", p.file));
             const up = await fetch("/api/upload", { method: "POST", body: fd });
             const uj = await up.json();
             if (!up.ok) {
               say("err", uj.error || "Image upload failed.");
               return;
             }
-            images = [...images, ...(uj.urls ?? [])].slice(0, 8);
+            images = [...images, ...((uj.urls ?? []) as string[])].slice(0, 8);
             setUrls(images);
-            setPicked([]);
+            setPicked((prev) => {
+              prev.forEach((p) => URL.revokeObjectURL(p.url));
+              return [];
+            });
           } finally {
             setUploading(false);
           }
@@ -161,11 +198,7 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
       </div>
       <div>
         <label className="label-bd" htmlFor="l-img">Image links (optional, comma-separated https links)</label>
-        <input id="l-img" className="input-bd" placeholder="https://…" defaultValue={(initialValues?.images ?? []).join(", ")} onChange={(e) => {
-          const v = e.target.value.split(/[\n,]+/).map((s) => s.trim()).filter((s) => s.startsWith("https://") || s.startsWith("/uploads/"));
-          setUrls(v);
-        }} />
-        {urls.length > 0 && <p className="mt-1 text-xs text-ink-400">{urls.length} image link(s) attached.</p>}
+        <input id="l-img" className="input-bd" placeholder="https://…" value={linkText} onChange={(e) => onLinksChange(e.target.value)} />
         <label className="label-bd mt-2" htmlFor="l-files">Or upload photos (JPG/PNG/WebP, ≤5MB each, max 8)</label>
         <input id="l-files" type="file" accept="image/jpeg,image/png,image/webp" multiple className="text-sm"
           onChange={(e) => {
@@ -173,10 +206,57 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
             const bad = files.find((f) => f.size > 5 * 1024 * 1024);
             if (bad) say("err", `"${bad.name}" exceeds 5MB — pick a smaller file.`);
             else {
-              setPicked(files);
+              setPickedFiles(files);
               if (files.length) say("ok", `${files.length} photo(s) ready — they upload when you submit.`);
             }
+            e.target.value = "";
           }} />
+        {(urls.length > 0 || picked.length > 0) && (
+          <div className="mt-2">
+            <p className="text-xs text-ink-400">
+              {urls.length + picked.length}/8 photo(s){urls.length > 0 ? " — first photo is the cover." : ""}{picked.length > 0 ? ` ${picked.length} waiting to upload on submit.` : ""}
+            </p>
+            <ul className="mt-2 grid grid-cols-4 gap-2">
+              {urls.map((u) => (
+                <li key={u} className="group relative overflow-hidden rounded-lg border border-neutral-200 bg-sand-100">
+                  <WmImage src={u} alt="Listing photo" className="aspect-square w-full object-cover" />
+                  {urls[0] === u && (
+                    <span className="absolute left-1 top-1 rounded-md bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold text-white">Cover</span>
+                  )}
+                  <span className="absolute inset-x-0 bottom-0 flex gap-1 bg-black/55 p-1 transition sm:opacity-0 sm:group-hover:opacity-100">
+                    {urls[0] !== u && (
+                      <button type="button" onClick={() => makeCover(u)} className="flex-1 rounded bg-white/90 px-1 py-0.5 text-[10px] font-bold text-ink-900" title="Make cover photo">
+                        Cover
+                      </button>
+                    )}
+                    <button type="button" onClick={() => removeUrl(u)} className="flex-1 rounded bg-white/90 px-1 py-0.5 text-[10px] font-bold text-red-700" title="Remove photo">
+                      Remove
+                    </button>
+                  </span>
+                </li>
+              ))}
+              {picked.map((p) => (
+                <li key={p.url} className="relative overflow-hidden rounded-lg border border-dashed border-brand-600/60 bg-sand-50">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.url} alt="New photo waiting to upload" className="aspect-square w-full object-cover opacity-90" />
+                  <span className="absolute left-1 top-1 rounded-md bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-brand-700">New</span>
+                  <button
+                    type="button"
+                    onClick={() => setPicked((prev) => {
+                      const next = prev.filter((x) => x.url !== p.url);
+                      URL.revokeObjectURL(p.url);
+                      return next;
+                    })}
+                    className="absolute bottom-1 right-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-red-700"
+                    title="Remove photo"
+                  >
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
       <label className="flex items-center gap-2 text-sm"><input type="checkbox" {...register("negotiable")} /> Price is negotiable</label>
       {msg && <p role="status" className={`rounded-lg p-2 text-sm ${msgTone === "err" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-800"}`}>{msg}</p>}

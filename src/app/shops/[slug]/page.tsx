@@ -42,9 +42,8 @@ export default async function ShopPage({ params }: { params: { slug: string } })
     if (!stored) notFound();
     const nonNull = stored as NonNullable<typeof stored>;
     const storedReviews = await storeRead((st) => st.listApprovedReviewsForShop(nonNull.slug), []);
-    const owner = nonNull.ownerId
-      ? await storeRead((st) => st.findUserById(nonNull.ownerId as string), null)
-      : null;
+    // Shop identity only here: the owner's personal profile (name/photo)
+    // conflicts with the shop/brand identity, so it stays in the dashboard.
     // Approved catalogue for this shop — previously never fetched, so
     // seller products looked "not live" even after admin approval.
     const { getLiveShopListings } = await import("@/lib/live-listings");
@@ -71,20 +70,6 @@ export default async function ShopPage({ params }: { params: { slug: string } })
               <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{nonNull.name} {nonNull.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</h1>
               <p className="text-sm text-ink-500">{nonNull.businessCategory} · {nonNull.town}, {nonNull.county} · {ratingLabel(storedReviews)}{nonNull.hours ? ` · 🕒 ${nonNull.hours}` : ""}</p>
               <p className="mt-1 text-sm">{nonNull.description}</p>
-              {owner && (
-                <p className="mt-2 flex items-center gap-2 text-xs text-ink-500">
-                  <span className="flex h-6 w-6 items-center justify-center overflow-hidden rounded-full bg-sand-100 font-bold text-ink-700">
-                    {owner.photoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={owner.photoUrl} alt="" className="h-full w-full object-cover" />
-                    ) : (
-                      owner.name.charAt(0).toUpperCase()
-                    )}
-                  </span>
-                  Shop owner: <strong className="text-ink-700">{owner.name}</strong>
-                  {owner.verified && <Badge tone="green">✓</Badge>}
-                </p>
-              )}
             </div>
             <div className="flex gap-2">
               <Link href={`/search?q=${encodeURIComponent(nonNull.name)}`} className="btn-secondary">All products</Link>

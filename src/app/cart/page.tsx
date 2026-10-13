@@ -1,20 +1,44 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/components/cart-provider";
 import { getListing } from "@/data/catalog";
 import { formatKES, cartTotals } from "@/lib/format";
 import { WmImage } from "@/components/ui/wm-image";
 
+type Resolved = { id: string; slug: string; title: string; price: number; stock: number; seller: string; images: string[]; txMethod: string };
+
 export default function CartPage() {
   const { lines, setQty, remove, clear } = useCart();
+  const [storeItems, setStoreItems] = useState<Resolved[]>([]);
 
-  const detailed = lines
-    .map((l) => ({ ...l, listing: getListing(l.id)! }))
-    .filter((l) => l.listing && l.listing.transactionMethod === "buy_online");
+  const missing = useMemo(() => lines.filter((l) => !getListing(l.id)).map((l) => l.id), [lines]);
+  const missingKey = missing.join(",");
+  useEffect(() => {
+    if (missing.length === 0) {
+      setStoreItems([]);
+      return;
+    }
+    fetch(`/api/listings/resolve?ids=${encodeURIComponent(missingKey)}`)
+      .then((r) => r.json())
+      .then((j) => setStoreItems(j.items ?? []))
+      .catch(() => setStoreItems([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [missingKey]);
+
+  const detailed = [
+    ...lines
+      .map((l) => {
+        const c = getListing(l.id);
+        return c ? { ...l, slug: c.slug, title: c.title, price: c.price, stock: c.stock, seller: c.sellerName, images: c.images, txMethod: c.transactionMethod } : null;
+      })
+      .filter((x): x is { id: string; qty: number; slug: string; title: string; price: number; stock: number; seller: string; images: string[]; txMethod: string } => Boolean(x)),
+    ...storeItems.map((s) => ({ id: s.id, qty: lines.find((l) => l.id === s.id)?.qty ?? 1, slug: s.slug, title: s.title, price: s.price, stock: s.stock, seller: s.seller, images: s.images, txMethod: s.txMethod })),
+  ].filter((l) => l.txMethod === "buy_online");
 
   const totals = cartTotals(
-    detailed.map((l) => ({ unitPrice: l.listing.price, qty: l.qty }))
+    detailed.map((l) => ({ unitPrice: l.price, qty: l.qty }))
   );
 
   return (
@@ -34,14 +58,14 @@ export default function CartPage() {
           <ul className="space-y-3">
             {detailed.map((l) => (
               <li key={l.id} className="card flex gap-3 p-3">
-                <WmImage src={l.listing.images[0]} alt={l.listing.title} className="h-20 w-24 rounded-lg object-cover" />
+                <WmImage src={l.images[0]} alt={l.title} className="h-20 w-24 rounded-lg object-cover" />
                 <div className="flex-1">
-                  <Link href={`/product/${l.listing.slug}`} className="clamp-2 text-sm font-semibold hover:text-brand-700">{l.listing.title}</Link>
-                  <p className="text-sm font-bold">{formatKES(l.listing.price)} <span className="font-normal text-ink-400">· {l.listing.sellerName}</span></p>
+                  <Link href={`/product/${l.slug}`} className="clamp-2 text-sm font-semibold hover:text-brand-700">{l.title}</Link>
+                  <p className="text-sm font-bold">{formatKES(l.price)} <span className="font-normal text-ink-400">· {l.seller}</span></p>
                   <div className="mt-1 flex items-center gap-2">
                     <button aria-label="Decrease quantity" className="rounded-lg border px-2 py-0.5" onClick={() => setQty(l.id, l.qty - 1)}>−</button>
                     <span className="text-sm font-semibold" aria-live="polite">{l.qty}</span>
-                    <button aria-label="Increase quantity" className="rounded-lg border px-2 py-0.5" onClick={() => setQty(l.id, Math.min(l.listing.stock, l.qty + 1))}>+</button>
+                    <button aria-label="Increase quantity" className="rounded-lg border px-2 py-0.5" onClick={() => setQty(l.id, Math.min(l.stock, l.qty + 1))}>+</button>
                     <button className="link-bd ml-2" onClick={() => remove(l.id)}>Remove</button>
                   </div>
                 </div>

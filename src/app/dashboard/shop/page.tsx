@@ -1,15 +1,21 @@
 import { currentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Store } from "lucide-react";
-import { normalizePlan, PLAN_IDS } from "@/lib/plans";
+import { Package, Store } from "lucide-react";
+import { normalizePlan } from "@/lib/plans";
 import { getStore } from "@/lib/store";
-import { PlanPanel, BulkPanel, StaffPanel, ShopHeaderForm } from "./panels";
+import { Badge } from "@/components/ui/badge";
+import { WmImage } from "@/components/ui/wm-image";
+import { formatKES } from "@/lib/format";
+import { BulkPanel, StaffPanel, ShopHeaderForm } from "./panels";
 
 export const metadata = { title: "My Shop" };
 export const dynamic = "force-dynamic";
 
-export default async function ShopDash({ searchParams }: { searchParams: { plan?: string; new?: string } }) {
+const publicPath = (l: { type: string; slug: string }) =>
+  `/${l.type === "classified" ? "classifieds" : l.type === "service" ? "services" : "product"}/${l.slug}`;
+
+export default async function ShopDash({ searchParams }: { searchParams: { new?: string } }) {
   const user = await currentUser();
   if (!user) redirect("/auth/signin?next=/dashboard/shop");
   const store = getStore();
@@ -20,8 +26,8 @@ export default async function ShopDash({ searchParams }: { searchParams: { plan?
   const active = owned[0] ?? null;
   const activePlan = active ? normalizePlan((active as { planId?: unknown }).planId) : "free";
   const members = active ? await store.listShopMembers(active.slug).catch(() => []) : [];
-  // ?plan=silver from /pricing preselects + highlights that plan in the checkout panel.
-  const highlightPlan = searchParams.plan && (PLAN_IDS as readonly string[]).includes(searchParams.plan) ? searchParams.plan : undefined;
+  const catalogue = active ? await store.listListingsByShop(active.slug).catch(() => []) : [];
+  const liveCount = catalogue.filter((l) => l.status === "active").length;
   const isOwner =
     user.role === "ADMIN" ||
     active?.ownerId === user.id ||
@@ -50,19 +56,61 @@ export default async function ShopDash({ searchParams }: { searchParams: { plan?
         </div>
       )}
       <div className="mt-4 grid items-start gap-3 lg:grid-cols-2">
-        <div className="card p-5">
-          <p className="font-bold">Storefront{active ? ` · ${active.name}` : ""}</p>
-          <p className="text-sm text-ink-500">Your public URL will be <code>chap.co.ke/shops/your-name</code> with availability check & safe slugs.</p>
-          {active ? (
-            <p className="mt-2 text-sm"><Link href={`/shops/${active.slug}`} className="link-bd">View your storefront →</Link></p>
-          ) : (
-            <Link href="/shops/fon-zone-nairobi" className="link-bd text-sm">See an example storefront →</Link>
+        <div>
+          <div className="card p-5">
+            <p className="font-bold">Storefront{active ? ` · ${active.name}` : ""}</p>
+            <p className="text-sm text-ink-500">Your public URL will be <code>chap.co.ke/shops/your-name</code> with availability check & safe slugs.</p>
+            {active ? (
+              <p className="mt-2 text-sm"><Link href={`/shops/${active.slug}`} className="link-bd">View your storefront →</Link></p>
+            ) : (
+              <Link href="/shops/fon-zone-nairobi" className="link-bd text-sm">See an example storefront →</Link>
+            )}
+            <form action="/api/shops" method="post" className="mt-3 space-y-2">
+              <input name="name" required placeholder="Business name" defaultValue={fresh?.businessName ?? ""} className="input-bd" aria-label="Business name" />
+              <button className="btn-primary w-full" formAction="/api/shops" type="submit">Check availability & create</button>
+            </form>
+            {active && <BulkPanel shopName={active.name} isGold={activePlan === "gold"} />}
+          </div>
+          {active && (
+            <div className="card mt-3 p-5">
+              <p className="font-bold">Shop listings ({catalogue.length} · {liveCount} live)</p>
+              <p className="mt-0.5 text-xs text-ink-500">Everything attached to this storefront — pending items go live after moderation.</p>
+              {catalogue.length === 0 ? (
+                <p className="mt-3 text-sm text-ink-500">Nothing here yet. <Link href="/sell" className="link-bd">List your first item →</Link></p>
+              ) : (
+                <ul className="mt-3 space-y-2">
+                  {catalogue.slice(0, 20).map((l) => (
+                    <li key={l.id} className="flex items-center gap-2.5 rounded-xl border border-neutral-200 p-2">
+                      {l.images[0] ? (
+                        <WmImage src={l.images[0]} alt="" className="h-11 w-14 shrink-0 rounded-lg bg-sand-100 object-cover" />
+                      ) : (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src="/chaplogo.png" alt="" className="h-11 w-14 shrink-0 rounded-lg bg-sand-100 object-cover" />
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold">{l.title}</span>
+                        <span className="block text-xs text-ink-400">{formatKES(l.price)}</span>
+                      </span>
+                      <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
+                      <Link href={publicPath(l)} className="btn-secondary shrink-0 !px-2.5 !py-1 text-xs">
+                        {l.status === "active" ? "View" : "Preview"}
+                      </Link>
+                      <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-2.5 !py-1 text-xs">Manage</Link>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {catalogue.length > 20 && (
+                <p className="mt-2 text-xs"><Link href="/dashboard/listings" className="link-bd">All listings in My listings →</Link></p>
+              )}
+            </div>
           )}
-          <form action="/api/shops" method="post" className="mt-3 space-y-2">
-            <input name="name" required placeholder="Business name" defaultValue={fresh?.businessName ?? ""} className="input-bd" aria-label="Business name" />
-            <button className="btn-primary w-full" formAction="/api/shops" type="submit">Check availability & create</button>
-          </form>
-          {active && <BulkPanel shopName={active.name} isGold={activePlan === "gold"} />}
+        </div>
+        <div>
+          <div className="card p-5">
+            <p className="font-bold">Settings</p>
+            <p className="mt-0.5 text-xs text-ink-500">Shop details buyers see. Plans & billing live on the <Link href="/dashboard/plan" className="link-bd">Plan page →</Link></p>
+          </div>
           {active && isOwner && (
             <ShopHeaderForm
               shop={{
@@ -80,13 +128,6 @@ export default async function ShopDash({ searchParams }: { searchParams: { plan?
               }}
             />
           )}
-        </div>
-        <div>
-          <PlanPanel
-            shops={owned.map((s) => ({ slug: s.slug, name: s.name, planId: normalizePlan((s as { planId?: unknown }).planId) }))}
-            activeSlug={active?.slug ?? ""}
-            highlightPlan={highlightPlan}
-          />
           {active && (
             <StaffPanel
               shopSlug={active.slug}
@@ -95,6 +136,12 @@ export default async function ShopDash({ searchParams }: { searchParams: { plan?
               isOwner={isOwner}
               initial={members.map((m) => ({ userId: m.userId, role: m.role, name: m.name, email: m.email }))}
             />
+          )}
+          {!active && (
+            <p className="card mt-3 flex items-center gap-2 p-5 text-sm text-ink-500">
+              <Package className="h-4 w-4 shrink-0 text-brand-600" />
+              Create your storefront first — settings unlock here.
+            </p>
           )}
         </div>
       </div>

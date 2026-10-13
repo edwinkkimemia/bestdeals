@@ -100,7 +100,7 @@ function ShareButtons({ title }: { title: string }) {
   );
 }
 
-export function ListingDetail({ listing, related, moreFromSeller, reviews, listingReviews, jsonLd, sellerPhotoUrl, previewStatus }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; listingReviews?: ReviewRecord[]; jsonLd: Record<string, unknown>; sellerPhotoUrl?: string | null; previewStatus?: string | null }) {
+export function ListingDetail({ listing, related, moreFromSeller, reviews, listingReviews, jsonLd, sellerPhotoUrl, previewStatus, communityShopLogoUrl }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; listingReviews?: ReviewRecord[]; jsonLd: Record<string, unknown>; sellerPhotoUrl?: string | null; previewStatus?: string | null; communityShopLogoUrl?: string | null }) {
   const { add } = useCart();
   const [img, setImg] = useState(0);
   const [qty, setQty] = useState(1);
@@ -110,8 +110,9 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
   const [recent, setRecent] = useState<Listing[]>([]);
 
   const shop = listing.shopSlug ? getShop(listing.shopSlug) : undefined;
-  // Seller avatar: uploaded profile photo first, shop logo as fallback.
-  const avatarUrl = sellerPhotoUrl ?? shop?.logo ?? null;
+  // Seller avatar: uploaded profile photo first, shop logo as fallback
+  // (community-shop logo when the static catalogue misses it).
+  const avatarUrl = sellerPhotoUrl ?? shop?.logo ?? communityShopLogoUrl ?? null;
   // WhatsApp ordering always uses the verified number: the snapshot taken at
   // posting time first, then the shop's approved contact. No number, no button.
   const waPhone = listing.sellerPhone

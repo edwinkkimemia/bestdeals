@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { formatKES } from "@/lib/format";
+import { DataTable, Td, StatusChip, fmtDate } from "@/components/ui/data-table";
 
 type Order = {
   id: string;
@@ -96,19 +97,26 @@ export default function OrdersPage() {
           <Link href="/shop" className="btn-primary mt-4">Start shopping</Link>
         </div>
       ) : (
-        <ul className="mt-4 space-y-3">
+        <DataTable columns={["Order", "Items", "Total", "Status", "Payment", "Date", "Track"]} empty="No orders yet">
           {orders.map((o) => (
-            <li key={o.id} className="card p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-bold">{o.id} · {formatKES(o.total)}</p>
-                <span className="chip">{o.status} · {o.paymentStatus}</span>
-              </div>
-              <p className="text-xs text-ink-400">{new Date(o.createdAt).toLocaleString("en-KE")} · {o.paymentMethod}</p>
-              <ul className="mt-2 text-sm">{o.items.map((i, k) => <li key={k}>· {i.title} × {i.qty}</li>)}</ul>
-              <Link href={`/orders/${o.id}${lookup ? `?phone=${encodeURIComponent(lookup)}` : o.phone ? `?phone=${encodeURIComponent(o.phone)}` : ""}`} className="link-bd mt-2 inline-block text-sm">Track order →</Link>
-            </li>
+            <tr key={o.id} className="transition hover:bg-sand-50">
+              <Td>
+                <strong className="block whitespace-nowrap">{o.id}</strong>
+                <span className="block text-xs text-ink-400">{o.paymentMethod}</span>
+              </Td>
+              <Td className="max-w-64">
+                {o.items.map((i, k) => <span key={k} className="block truncate" title={i.title}>· {i.title} × {i.qty}</span>)}
+              </Td>
+              <Td className="whitespace-nowrap font-semibold">{formatKES(o.total)}</Td>
+              <Td><StatusChip status={o.status} /></Td>
+              <Td><StatusChip status={o.paymentStatus} /></Td>
+              <Td className="whitespace-nowrap text-ink-500">{fmtDate(o.createdAt)}</Td>
+              <Td>
+                <Link href={`/orders/${o.id}${lookup ? `?phone=${encodeURIComponent(lookup)}` : o.phone ? `?phone=${encodeURIComponent(o.phone)}` : ""}`} className="link-bd whitespace-nowrap text-xs">Track →</Link>
+              </Td>
+            </tr>
           ))}
-        </ul>
+        </DataTable>
       )}
     </div>
   );

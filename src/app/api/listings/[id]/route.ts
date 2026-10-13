@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { listingSchema } from "@/lib/validators";
 import { currentUser } from "@/lib/auth";
 import { canManageListing } from "@/lib/gate";
+import { normalizeListingImages } from "@/lib/image-urls";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 
@@ -44,8 +45,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (banned.some((w) => hay.includes(w))) {
     return NextResponse.json({ error: "This listing needs manual review due to a flagged term. Our team will check it." }, { status: 422 });
   }
-  // Sanitize image URLs — only https or server-uploaded paths.
-  const images = (d.images ?? []).filter((u) => u.startsWith("https://") || u.startsWith("/uploads/")).slice(0, 8);
+  // Sanitize image URLs — only https or server-uploaded paths (incl. serverless /api/files/).
+  const images = normalizeListingImages(d.images);
 
   const store = getStore();
   const updated = await store.updateListing(params.id, {

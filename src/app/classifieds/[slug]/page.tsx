@@ -36,21 +36,20 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function ClassifiedDetail({ params }: { params: { slug: string } }) {
+  const { resolveSellerPhoto, resolveCommunityShopLogo } = await import("@/lib/live-listings");
   const staticHit = getListing(params.slug);
   if (staticHit) {
     const { fromOthers, fromSeller } = getRelated(staticHit);
     const reviews = await storeRead((s) => s.listApprovedReviewsForSeller(staticHit.sellerName), []);
     const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(staticHit.id), []);
-    const sellerPhotoUrl = await storeRead(
-      (s) => s.findUserByDisplayName(staticHit.sellerName).then((u) => u?.photoUrl ?? null),
-      null
-    );
+    const sellerPhotoUrl = await resolveSellerPhoto(staticHit);
+    const communityShopLogoUrl = await resolveCommunityShopLogo(staticHit.shopSlug);
     const jsonLd = breadcrumbJsonLd([
       { name: "Home", url: "https://chap.co.ke/" },
       { name: "Classifieds", url: "https://chap.co.ke/classifieds" },
       { name: staticHit.title, url: `https://chap.co.ke/classifieds/${staticHit.slug}` },
     ]);
-    return <ListingDetail listing={staticHit} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} jsonLd={jsonLd} />;
+    return <ListingDetail listing={staticHit} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} communityShopLogoUrl={communityShopLogoUrl} jsonLd={jsonLd} />;
   }
   const { resolveStoreDetail } = await import("@/lib/live-listings");
   const resolved = await resolveStoreDetail(params.slug);
@@ -59,14 +58,12 @@ export default async function ClassifiedDetail({ params }: { params: { slug: str
   const { fromOthers, fromSeller } = getRelated(l);
   const reviews = await storeRead((s) => s.listApprovedReviewsForSeller(l.sellerName), []);
   const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(l.id), []);
-  const sellerPhotoUrl = await storeRead(
-    (s) => s.findUserByDisplayName(l.sellerName).then((u) => u?.photoUrl ?? null),
-    null
-  );
+  const sellerPhotoUrl = await resolveSellerPhoto(l);
+  const communityShopLogoUrl = await resolveCommunityShopLogo(l.shopSlug);
   const jsonLd = breadcrumbJsonLd([
     { name: "Home", url: "https://chap.co.ke/" },
     { name: "Classifieds", url: "https://chap.co.ke/classifieds" },
     { name: l.title, url: `https://chap.co.ke/classifieds/${l.slug}` },
   ]);
-  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} jsonLd={jsonLd} previewStatus={previewStatus} />;
+  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} communityShopLogoUrl={communityShopLogoUrl} jsonLd={jsonLd} previewStatus={previewStatus} />;
 }

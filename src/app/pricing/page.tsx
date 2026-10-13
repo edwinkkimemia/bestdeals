@@ -49,7 +49,7 @@ export default function PricingPage() {
             <ul className="mt-4 flex-1 space-y-1.5 text-sm">
               {p.features.map((f) => <li key={f}>✓ {f}</li>)}
             </ul>
-            <Link href={`/dashboard/shop?plan=${p.id}`} className={p.id === "silver" ? "btn-primary mt-5 w-full" : "btn-secondary mt-5 w-full"}>Choose {p.name}</Link>
+            <Link href={`/dashboard/plan?plan=${p.id}`} className={p.id === "silver" ? "btn-primary mt-5 w-full" : "btn-secondary mt-5 w-full"}>Choose {p.name}</Link>
           </div>
         ))}
       </div>

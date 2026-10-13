@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BadgeCheck,
   BarChart3,
+  CreditCard,
   Eye,
   Mail,
   Megaphone,
@@ -123,10 +124,11 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           { href: "/dashboard/promotion", label: "Promote", d: "Boost a listing", Icon: Megaphone },
-          { href: "/dashboard/shop", label: "My shop", d: "Storefront & plans", Icon: Store },
+          { href: "/dashboard/shop", label: "My shop", d: "Storefront, listings & settings", Icon: Store },
+          { href: "/dashboard/plan", label: "Plan & billing", d: "Upgrade, wallet & invoices", Icon: CreditCard },
           { href: "/dashboard/analytics", label: "Analytics", d: "Views & funnel", Icon: BarChart3 },
         ].map(({ href, label, d, Icon }) => (
           <Link key={href} href={href} className="card flex items-center gap-2.5 p-4 hover:border-brand-600">

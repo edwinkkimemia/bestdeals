@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ShieldCheck } from "lucide-react";
+import { DataTable, Td, StatusChip, fmtDate } from "@/components/ui/data-table";
 
 type Item = { id: string; kind: string; status: string; fileName?: string; createdAt: string };
 type Who = { verified: boolean; emailVerified: boolean; sellerKind: string; businessName?: string };

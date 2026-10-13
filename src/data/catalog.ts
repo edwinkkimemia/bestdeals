@@ -30,6 +30,8 @@ export type Listing = {
   images: string[];
   sellerName: string;
   sellerType: "individual" | "business";
+  /** Store owner id for seller-posted listings (avatar lookup survives renames). */
+  ownerId?: string;
   sellerPhone?: string; // verified snapshot — WhatsApp ordering always uses this first
   shopSlug?: string;
   verified: boolean;

@@ -193,6 +193,7 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
         stock: s.stock,
         images: s.images && s.images.length > 0 ? s.images : ["/chaplogo.png"],
         sellerName: s.sellerName,
+        ownerId: s.ownerId,
         sellerType: (s.shopSlug ? "business" : "individual") as Listing["sellerType"],
         shopSlug: s.shopSlug,
         verified: s.verified ?? true,

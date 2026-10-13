@@ -5,6 +5,7 @@ import { requireVerifiedSeller } from "@/lib/gate";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { getSellerPlan, countLiveListings, planAllowsListings, limitMessage } from "@/lib/plans";
+import { normalizeListingImages } from "@/lib/image-urls";
 
 /** Listing intake: verified sellers only; validates, spam-checks, queues for moderation. */
 export async function POST(req: NextRequest) {
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
     stock: d.stock,
     county: d.county,
     town: d.town,
-    images: (d.images ?? []).filter((u) => u.startsWith("https://") || u.startsWith("/uploads/")).slice(0, 8),
+    images: normalizeListingImages(d.images),
     attributes: d.attributes ?? {},
     ownerId: user.id,
     sellerName: user.name,

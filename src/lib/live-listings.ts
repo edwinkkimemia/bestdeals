@@ -53,6 +53,7 @@ export function storeRecordToListing(s: ListingRecord): Listing {
     images:
       s.images && s.images.length > 0 ? s.images : ["/chaplogo.png"],
     sellerName: s.sellerName || "Seller",
+    ownerId: s.ownerId,
     // Store listings are individual accounts unless they belong to a shop.
     sellerType: s.shopSlug ? "business" : "individual",
     sellerPhone: s.sellerPhone,
@@ -209,6 +210,28 @@ export async function canPreviewListing(
     if (members.some((m) => m.userId === user.id)) return true;
   }
   return false;
+}
+
+/**
+ * Seller avatar for detail pages. Looks up by stable owner id first (the
+ * sellerName snapshot goes stale when sellers rename), then falls back to
+ * the legacy display-name match.
+ */
+export async function resolveSellerPhoto(l: Pick<Listing, "ownerId" | "sellerName">): Promise<string | null> {
+  if (l.ownerId) {
+    const byId = await storeRead((st) => st.findUserById(l.ownerId as string).then((u) => u?.photoUrl ?? null), null);
+    if (byId) return byId;
+  }
+  return storeRead(
+    (st) => st.findUserByDisplayName(l.sellerName).then((u) => u?.photoUrl ?? null),
+    null
+  );
+}
+
+/** Logo for seller-created (community) shops — static catalogue misses these. */
+export async function resolveCommunityShopLogo(shopSlug?: string): Promise<string | null> {
+  if (!shopSlug) return null;
+  return storeRead((st) => st.getShopBySlug(shopSlug).then((s) => s?.logoUrl ?? null), null);
 }
 
 /** Canonical public path for a listing (used for share/copy links). */
