@@ -12,7 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const health = await getStorageHealth().catch(() => null);
 
   return (
-    <div className="container-bd">
+    <div className="w-full px-4 sm:px-6 lg:px-8">
       {health && (health.mode === "demo" || !health.reachable) && (
         <p role="alert" className={`mt-4 rounded-xl p-3 text-sm font-semibold ${health.reachable ? "bg-amber-50 text-amber-800" : "bg-red-50 text-red-700"}`}>
           {health.reachable

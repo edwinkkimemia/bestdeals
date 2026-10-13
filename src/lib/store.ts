@@ -4,7 +4,7 @@
  * - PrismaStore (PostgreSQL): used automatically once DATABASE_URL is set and
  *   `prisma migrate deploy` has run. Swap is transparent to API routes.
  */
-import { db, isDbConfigured } from "./db";
+import { db, dbLoadError, isDbConfigured } from "./db";
 import type { PrismaClient } from "@prisma/client";
 import { uid, slugify } from "./utils";
 import { SHOP_PLANS } from "../data/catalog";
@@ -1999,6 +1999,16 @@ export async function getStorageHealth(): Promise<StorageHealth> {
       mode: "demo",
       reachable: true,
       note: "In-memory demo storage — data resets between server restarts and doesn't sync across instances.",
+    };
+  }
+  // DATABASE_URL is set but the client failed to load: getStore() is serving
+  // ephemeral demo memory. Report it as DOWN (not healthy) so admin banners
+  // and monitors fire instead of showing fake empty queues.
+  if (!db()) {
+    return {
+      mode: "postgres",
+      reachable: false,
+      note: `DATABASE_URL is set but the Prisma client failed to load (${(dbLoadError() ?? "unknown error").slice(0, 140)}). Showing ephemeral demo memory, NOT real data.`,
     };
   }
   try {

@@ -23,7 +23,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   } catch {}
 
   return (
-    <div className="container-bd">
+    <div className="w-full px-4 sm:px-6 lg:px-8">
       <div className="flex flex-row gap-3 lg:gap-8">
         <DashboardSidebar unread={unread} />
         <div className="min-w-0 flex-1 py-4 lg:py-8">{children}</div>
