@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { MessageCircle, Phone } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { SHOPS, getShop, shopListings } from "@/data/catalog";
 import { storeRead } from "@/lib/store";
 import { ReviewsBlock } from "@/components/reviews-block";
@@ -75,8 +76,8 @@ export default async function ShopPage({ params }: { params: { slug: string } })
             <div className="flex flex-wrap gap-2">
               <Link href={`/search?q=${encodeURIComponent(nonNull.name)}`} className="btn-secondary">All products</Link>
               <a href={`tel:${nonNull.phone.replace(/\s/g, "")}`} className="btn-secondary"><Phone className="h-4 w-4" /> Call</a>
-              <a href={`https://wa.me/${nonNull.phone.replace(/\D/g, "").replace(/^0/, "254")}?text=${encodeURIComponent(`Hello ${nonNull.name}! I found your shop on Chap.`)}`} target="_blank" rel="noopener" className="btn-secondary">WhatsApp</a>
-              <Link href={`/dashboard/messages/new?shop=${nonNull.slug}`} className="btn-primary"><MessageCircle className="h-4 w-4" /> Bulk enquiry</Link>
+              <a href={`https://wa.me/${nonNull.phone.replace(/\D/g, "").replace(/^0/, "254")}?text=${encodeURIComponent(`Hello ${nonNull.name}! I found your shop on Chap.`)}`} target="_blank" rel="noopener" className="btn-whatsapp"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
+              <Link href={`/dashboard/messages/new?shop=${nonNull.slug}`} className="btn-primary"><MessageCircle className="h-4 w-4" /> Message shop</Link>
             </div>
           </div>
           <div className="mt-3"><ShareRow title={`${nonNull.name} on Chap`} text={`${nonNull.name} — ${nonNull.businessCategory} in ${nonNull.town}, ${nonNull.county}`} /></div>
@@ -132,8 +133,8 @@ export default async function ShopPage({ params }: { params: { slug: string } })
           <div className="flex flex-wrap gap-2">
             <Link href={`/search?q=${encodeURIComponent(s.name)}`} className="btn-secondary">All products</Link>
             <a href={`tel:${s.phone.replace(/\s/g, "")}`} className="btn-secondary"><Phone className="h-4 w-4" /> Call</a>
-            <a href={`https://wa.me/${s.phone.replace(/\D/g, "").replace(/^0/, "254")}?text=${encodeURIComponent(`Hello ${s.name}! I found your shop on Chap.`)}`} target="_blank" rel="noopener" className="btn-secondary">WhatsApp</a>
-            <Link href={`/dashboard/messages/new?shop=${s.slug}`} className="btn-primary"><MessageCircle className="h-4 w-4" /> Bulk enquiry</Link>
+            <a href={`https://wa.me/${s.phone.replace(/\D/g, "").replace(/^0/, "254")}?text=${encodeURIComponent(`Hello ${s.name}! I found your shop on Chap.`)}`} target="_blank" rel="noopener" className="btn-whatsapp"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
+            <Link href={`/dashboard/messages/new?shop=${s.slug}`} className="btn-primary"><MessageCircle className="h-4 w-4" /> Message shop</Link>
           </div>
         </div>
         <div className="mt-3"><ShareRow title={`${s.name} on Chap`} text={`${s.name} — ${s.businessCategory} in ${s.town}, ${s.county}`} /></div>

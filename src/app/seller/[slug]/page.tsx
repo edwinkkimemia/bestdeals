@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { MessageCircle, Phone } from "lucide-react";
+import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { LISTINGS } from "@/data/catalog";
 import { storeRead } from "@/lib/store";
 import { resolveSellerProfile, getSellerListings, sellerSlug, withLiveVerification, resolveSellerContact } from "@/lib/live-listings";
@@ -82,7 +83,7 @@ export default async function SellerPage({ params }: { params: { slug: string } 
           {contact && (
             <>
               <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="btn-secondary"><Phone className="h-4 w-4" /> Call</a>
-              <a href={`https://wa.me/${contact.whatsapp}?text=${waText}`} target="_blank" rel="noopener" className="btn-secondary">WhatsApp</a>
+              <a href={`https://wa.me/${contact.whatsapp}?text=${waText}`} target="_blank" rel="noopener" className="btn-whatsapp"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
             </>
           )}
           <Link href="/dashboard/messages/new" className="btn-primary"><MessageCircle className="h-4 w-4" /> Message seller</Link>
