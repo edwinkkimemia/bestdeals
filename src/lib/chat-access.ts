@@ -75,3 +75,46 @@ export async function isChatSeller(
   const hit = await store.findUserByDisplayName(c.sellerName).catch(() => null);
   return !!hit && hit.id === user.id;
 }
+
+/**
+ * Heal legacy threads stored with a generic seller ("Seller") before shop-chat
+ * naming existed: resolve the real seller or shop name + contact from the
+ * listing/shop. Returns the stored name untouched when it already looks real.
+ */
+export async function resolveThreadSeller(
+  store: Store,
+  convo: { listingId?: string; sellerName?: string }
+): Promise<{ name: string; phone?: string }> {
+  const stored = (convo.sellerName || "").trim();
+  const needsHeal = !stored || stored.toLowerCase() === "seller";
+  const lid = (convo.listingId || "").trim();
+  if (!needsHeal || !lid || lid === "general") {
+    return { name: stored || "Seller" };
+  }
+  if (lid.startsWith("shop:")) {
+    const slug = lid.slice(5);
+    const s = await store.getShopBySlug(slug).catch(() => null);
+    if (s) return { name: s.name, phone: s.phone };
+    const { getShop } = await import("@/data/catalog");
+    const d = getShop(slug);
+    if (d) return { name: d.name, phone: d.phone };
+    return { name: stored || "Seller" };
+  }
+  const s = await store.getListing(lid).catch(() => null);
+  if (s) {
+    if (s.shopSlug) {
+      const shop = await store.getShopBySlug(s.shopSlug).catch(() => null);
+      if (shop) return { name: shop.name, phone: shop.phone };
+    }
+    return { name: s.sellerName || stored || "Seller", phone: s.sellerPhone || undefined };
+  }
+  const { getListing } = await import("@/data/catalog");
+  const c = getListing(lid);
+  if (!c) return { name: stored || "Seller" };
+  if (c.shopSlug) {
+    const { getShop } = await import("@/data/catalog");
+    const d = getShop(c.shopSlug);
+    if (d) return { name: d.name, phone: d.phone };
+  }
+  return { name: c.sellerName, phone: c.sellerPhone };
+}

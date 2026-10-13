@@ -96,5 +96,17 @@ export async function GET(req: NextRequest) {
     for (const c of extra) if (!seen.has(c.id)) items.push(c);
     items.sort((a, b) => +new Date(b.lastAt ?? b.createdAt) - +new Date(a.lastAt ?? a.createdAt));
   }
+  // Heal legacy threads stored as "Seller" before shop-chat naming existed.
+  const { resolveThreadSeller } = await import("@/lib/chat-access");
+  for (const c of items) {
+    const nm = (c.sellerName || "").trim().toLowerCase();
+    if ((!nm || nm === "seller") && c.listingId && c.listingId !== "general") {
+      const h = await resolveThreadSeller(store, c).catch(() => null);
+      if (h && h.name.toLowerCase() !== "seller") {
+        c.sellerName = h.name;
+        if ((c.listingTitle || "") === "General enquiry") c.listingTitle = `Shop enquiry: ${h.name}`;
+      }
+    }
+  }
   return NextResponse.json({ items });
 }

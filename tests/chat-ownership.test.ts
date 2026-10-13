@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 delete process.env.DATABASE_URL;
 
 import { freshDemoStore } from "../src/lib/store.ts";
-import { identityOf, isParticipant, mineOf, isChatSeller } from "../src/lib/chat-access.ts";
+import { identityOf, isParticipant, mineOf, isChatSeller, resolveThreadSeller } from "../src/lib/chat-access.ts";
 
 const ME = { id: "u_me", name: "Buyer Bob", role: "SELLER", phone: "0712345678" };
 const OTHER_PHONE = "0799999999";
@@ -72,8 +72,7 @@ describe("chat ownership (sender lockout regression)", () => {
     const admin = identityOf({ id: "u_admin", phone: "0711111111" }, "")!;
     assert.equal(isParticipant(c, admin, { id: "u_admin", name: "Admin", role: "ADMIN" }), "u_admin");
   });
-  it("seller fallback resolves via listing owner", async () => {
-    const store = freshDemoStore();
+  it("seller fallback resolves via listing owner", async () => {    const store = freshDemoStore();
     const seller = await store.createUser({
       name: "Seller Sam", email: "sam@x.co.ke", phone: "0722000000",
       role: "SELLER", verified: true, passwordHash: "h",
@@ -97,5 +96,24 @@ describe("chat ownership (sender lockout regression)", () => {
     assert.equal(isParticipant(bare, sellerId, { id: seller.id, name: "Seller Sam", role: "SELLER" }), null, "no raw link without sellerName");
     assert.equal(await isChatSeller(store, bare, { id: seller.id, name: "Seller Sam", role: "SELLER" }), true, "listing owner counts as seller");
     assert.equal(await isChatSeller(store, bare, { id: "u_nope", name: "Nope", role: "SELLER" }), false);
+  });
+  it("heals legacy generic threads to the real seller/shop", async () => {
+    const store = freshDemoStore();
+    // Catalogue listing chat stored pre-fix as "Seller".
+    const legacy = await store.createConversation({
+      listingId: "p4", listingTitle: "General enquiry", sellerName: "Seller",
+      sellerId: undefined, buyerId: "phone:0712345678", buyerName: "Guest", buyerPhone: "0712345678",
+      firstMessage: { senderId: "phone:0712345678", senderLabel: "Guest", body: "Hi", bodyHtml: "Hi" },
+    });
+    const healed = await resolveThreadSeller(store, legacy);
+    assert.equal(healed.name, "Mama Fua Styles", "ankara listing resolves to its seller");
+    assert.equal(healed.phone, "0733987654", "snapshot contact resolves too");
+    // Real names are left untouched.
+    const kept = await resolveThreadSeller(store, { ...legacy, sellerName: "Mama Fua Styles" });
+    assert.equal(kept.name, "Mama Fua Styles");
+    // Unresolvable stays generic (never fabricates).
+    const vague = await resolveThreadSeller(store, { listingId: "general", sellerName: "Seller" });
+    assert.equal(vague.name, "Seller");
+    assert.equal(vague.phone, undefined);
   });
 });

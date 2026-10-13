@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { getStore, type Store } from "@/lib/store";
 import { toSafeHtml } from "@/lib/richtext";
-import { identityOf, isParticipant, mineOf, isChatSeller, type ChatUser } from "@/lib/chat-access";
+import { identityOf, isParticipant, mineOf, isChatSeller, resolveThreadSeller, type ChatUser } from "@/lib/chat-access";
 
 /** Participant check + seller-side fallback (listing owner / shop staff / admin). */
 async function resolveViewer(
@@ -49,27 +49,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   if (viewerIsSeller) {
     peer = { name: convo.buyerName || "Buyer", phone: convo.buyerPhone || undefined, role: "buyer" };
   } else {
-    let sellerPhone: string | undefined;
-    if (convo.listingId) {
-      if (convo.listingId.startsWith("shop:")) {
-        const slug = convo.listingId.slice(5);
-        const storedShop = await store.getShopBySlug(slug).catch(() => null);
-        if (storedShop) {
-          sellerPhone = storedShop.phone;
-        } else {
-          const { getShop } = await import("@/data/catalog");
-          sellerPhone = getShop(slug)?.phone;
-        }
-      } else {
-        const s = await store.getListing(convo.listingId).catch(() => null);
-        sellerPhone = s?.sellerPhone || undefined;
-        if (!sellerPhone) {
-          const { getListing } = await import("@/data/catalog");
-          sellerPhone = getListing(convo.listingId)?.sellerPhone;
-        }
-      }
-    }
-    peer = { name: convo.sellerName || "Seller", phone: sellerPhone, role: "seller" };
+    // Heals legacy threads stored as "Seller"/"General enquiry" to the real
+    // seller or shop name + contact.
+    const healed = await resolveThreadSeller(store, convo).catch((): { name: string; phone?: string } => ({ name: convo.sellerName || "Seller" }));
+    peer = { name: healed.name, phone: healed.phone, role: "seller" };
   }
   return NextResponse.json({ convo, messages: all.slice((page - 1) * per, page * per), total: all.length, page, per, peer });
 }
