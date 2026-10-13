@@ -10,7 +10,7 @@ export const metadata = { title: "Blog editor", robots: { index: false, follow: 
 export default async function AdminBlogEdit({ params }: { params: { id: string } }) {
   if (params.id === "new") {
     return (
-      <div className="max-w-3xl">
+      <div>
         <h1 className="section-title flex items-center gap-2"><Newspaper className="h-6 w-6 text-brand-600" /> New post</h1>
         <div className="mt-4">
           <BlogForm initial={{ slug: "", title: "", excerpt: null, coverUrl: null, bodyHtml: "", status: "draft" }} />
@@ -21,7 +21,7 @@ export default async function AdminBlogEdit({ params }: { params: { id: string }
   const post = await getStore().getBlogPost(params.id);
   if (!post) notFound();
   return (
-    <div className="max-w-3xl">
+    <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="section-title flex items-center gap-2"><Newspaper className="h-6 w-6 text-brand-600" /> Edit post</h1>
         {post.status === "published" && (

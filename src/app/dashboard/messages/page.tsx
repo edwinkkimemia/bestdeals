@@ -91,7 +91,7 @@ export default function InboxPage() {
   }, []);
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="section-title">Messages</h1>
       <p className="mt-1 text-sm text-ink-500">Buyer–seller chats with rich text. Abusive users can be blocked and reported.</p>
 

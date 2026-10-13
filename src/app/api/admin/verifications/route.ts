@@ -30,10 +30,16 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-/** Verification queue (admin). */
+/** Verification queue (admin) — rows carry their uploader profile. */
 export async function GET(req: NextRequest) {
   const user = await currentUser().catch(() => null);
   if (!user || user.role !== "ADMIN") return NextResponse.json({ error: "Admin only." }, { status: 403 });
   const status = new URL(req.url).searchParams.get("status") || undefined;
-  return NextResponse.json({ items: await getStore().listVerifications(status).catch(() => []) });
+  const store = getStore();
+  const [items, users] = await Promise.all([
+    store.listVerifications(status).catch(() => []),
+    store.listUsers().catch(() => []),
+  ]);
+  const { attachVerificationUsers } = await import("@/lib/verifications");
+  return NextResponse.json({ items: attachVerificationUsers(items, users) });
 }

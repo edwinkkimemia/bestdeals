@@ -24,7 +24,7 @@ export default async function ManageListing({ params }: { params: { id: string }
 
   if (!stored && demo) {
     return (
-      <div className="max-w-2xl">
+      <div>
         <h1 className="section-title">Manage listing</h1>
         <div className="card mt-4 p-5">
           <p className="font-bold">{demo.title}</p>
@@ -40,7 +40,7 @@ export default async function ManageListing({ params }: { params: { id: string }
   const meta = `${stored!.type} · ${formatKES(stored!.price)} · ${stored!.town}, ${stored!.county} · stock ${stored!.stock} · status: ${stored!.status}`;
 
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="section-title">Manage listing</h1>
       <div className="card mt-4 p-5">
         <div className="flex flex-wrap items-center gap-2">

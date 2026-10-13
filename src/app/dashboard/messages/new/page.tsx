@@ -9,7 +9,7 @@ import { ChatComposer } from "@/components/chat-composer";
 
 export default function NewMessagePage() {
   return (
-    <Suspense fallback={<div className="container-bd py-12 text-sm">Loading…</div>}>
+    <Suspense fallback={<div className="py-12 text-sm">Loading…</div>}>
       <NewMessageInner />
     </Suspense>
   );
@@ -44,7 +44,7 @@ function NewMessageInner() {
   };
 
   return (
-    <div className="max-w-xl">
+    <div>
       <Link href="/dashboard/messages" className="link-bd inline-flex items-center gap-1 text-sm"><ChevronLeft className="h-4 w-4" /> Inbox</Link>
       <h1 className="section-title mt-1">Message seller</h1>
       {listing ? (

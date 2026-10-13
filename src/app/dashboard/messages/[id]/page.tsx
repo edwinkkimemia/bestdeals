@@ -110,7 +110,7 @@ function ThreadInner({ id }: { id: string }) {
 
   if (!ready) {
     return (
-      <div className="max-w-2xl">
+      <div>
         <p className="py-12 text-center text-sm text-ink-500">Loading chat…</p>
       </div>
     );
@@ -118,7 +118,7 @@ function ThreadInner({ id }: { id: string }) {
 
   if (err) {
     return (
-      <div className="max-w-2xl">
+      <div>
         <div className="card mt-4 p-6 text-center">
           <p className="font-bold">{err}</p>
           <Link href="/dashboard/messages" className="btn-primary mt-4">Back to inbox</Link>
@@ -131,7 +131,7 @@ function ThreadInner({ id }: { id: string }) {
   let lastDay = "";
 
   return (
-    <div className="mx-auto flex max-w-2xl flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-sand-50 shadow-card" style={{ height: "min(72dvh, 640px)" }}>
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-sand-50 shadow-card" style={{ height: "min(72dvh, 640px)" }}>
       {/* Chat header */}
       <div className="flex shrink-0 items-center gap-2.5 bg-sand-50 px-3 py-2.5">
         <Link href="/dashboard/messages" aria-label="Back to inbox" className="rounded-full p-1.5 hover:bg-sand-100">
@@ -206,7 +206,7 @@ function ThreadInner({ id }: { id: string }) {
 
       {/* Composer */}
       <div className="shrink-0 bg-sand-50 px-3 py-2.5">
-        <div className="mx-auto max-w-2xl">
+        <div>
           <div className="mb-2 flex gap-2">
             <label htmlFor="t-phone" className="sr-only">Your phone (guests)</label>
             <input

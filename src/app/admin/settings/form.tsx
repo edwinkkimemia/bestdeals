@@ -54,7 +54,7 @@ export function SettingsForm({ initial }: { initial: SettingsInitial }) {
   };
 
   return (
-    <form onSubmit={save} className="grid max-w-2xl gap-3">
+    <form onSubmit={save} className="grid gap-3">
       <div className="card space-y-3 p-5">
         <p className="font-bold">Storefront announcement</p>
         <p className="text-sm text-ink-500">A dismissible bar above the header on every public page. Keep it short.</p>

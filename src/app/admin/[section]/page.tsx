@@ -96,18 +96,60 @@ export default async function AdminSection({
   if (section === "verifications") {
     const tabs = ["pending", "approved", "rejected", "all"];
     const status = tabs.includes(searchParams.status ?? "") ? searchParams.status! : "pending";
-    const items = await store.listVerifications(status === "all" ? undefined : status);
+    const { attachVerificationUsers } = await import("@/lib/verifications");
+    const [verifications, allUsers] = await Promise.all([
+      store.listVerifications(status === "all" ? undefined : status),
+      store.listUsers().catch(() => []),
+    ]);
+    const items = attachVerificationUsers(verifications, allUsers);
+    const fmtDate = (iso?: string) => {
+      if (!iso) return "—";
+      try {
+        return new Date(iso).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" });
+      } catch {
+        return iso.slice(0, 10);
+      }
+    };
     return (
       <div>
         <SectionTitle section="verifications">{TITLES.verifications} ({items.length})</SectionTitle>
+        <p className="mt-1 text-sm text-ink-500">Each row shows who uploaded the document — approve grants the seller ✓ and verifies their shops.</p>
         <Tabs base="/admin/verifications" tabs={tabs} current={status} />
         {items.length === 0 ? <p className="mt-4 text-sm text-ink-500">None {status}.</p> : (
           <ul className="mt-4 space-y-2">
             {items.map((v) => (
-              <li key={v.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
-                <span className="flex-1"><strong>{v.kind}</strong> · user {v.userId} · ☎ {v.phone ?? "no phone"} · {v.fileName ?? "document"} · <span className="chip">{v.status}</span></span>
-                {v.docPath && <Link href={`/api/admin/verifications/${v.id}/doc`} target="_blank" className="link-bd">View doc</Link>}
-                {v.status === "pending" && <AdminButtons kind="verify" id={v.id} />}
+              <li key={v.id} className="card flex flex-wrap items-start gap-3 p-3 text-sm">
+                {v.docPath && (
+                  <Link
+                    href={`/api/admin/verifications/${v.id}/doc`}
+                    target="_blank"
+                    className="shrink-0 overflow-hidden rounded-lg border border-neutral-200"
+                    title={`Open ${v.fileName ?? "document"}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/api/admin/verifications/${v.id}/doc`} alt="" className="h-20 w-20 object-cover" loading="lazy" />
+                  </Link>
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-1.5">
+                    <strong>{v.user?.name ?? "Deleted account"}</strong>
+                    {v.user?.businessName ? <span className="text-ink-500">· 🏪 {v.user.businessName}</span> : null}
+                    <span className="chip">{v.kind === "business" ? "permit" : "ID"}</span>
+                    <span className="chip">{v.user?.sellerKind === "business" ? "business" : "individual"}</span>
+                    <span className="chip">{v.status}</span>
+                    {v.user?.verified ? <span className="chip">✓ seller</span> : null}
+                  </span>
+                  <span className="mt-0.5 block truncate text-xs text-ink-500">
+                    {v.user ? `${v.user.email} · ${v.user.phone} · joined ${fmtDate(v.user.createdAt)}` : `user ${v.userId} (account deleted)`}
+                  </span>
+                  <span className="block text-xs text-ink-400">
+                    ☎ {v.phone ?? "no phone"} · {v.fileName ?? "document"} · submitted {fmtDate(v.createdAt)}
+                  </span>
+                </span>
+                <span className="flex shrink-0 flex-wrap items-center gap-2">
+                  {v.docPath && <Link href={`/api/admin/verifications/${v.id}/doc`} target="_blank" className="link-bd text-xs">View doc →</Link>}
+                  {v.status === "pending" && <AdminButtons kind="verify" id={v.id} />}
+                </span>
               </li>
             ))}
           </ul>
@@ -127,7 +169,7 @@ export default async function AdminSection({
           {users.map((u) => (
             <li key={u.id} className="card flex flex-wrap items-center gap-2 p-3 text-sm">
               <span className="flex-1">
-                <strong>{u.name}</strong>{u.businessName ? <span> · 🏪 {u.businessName}</span> : null} <span className="text-ink-400">· {u.email} · {u.phone} · {u.role}</span>
+                <strong>{u.name}</strong>{u.businessName ? <span> · 🏪 {u.businessName}</span> : null} <span className="text-ink-400">· {u.email} · {u.phone} · {u.role} · joined {u.createdAt.slice(0, 10)}</span>
                 <span className="ml-2 chip">{u.sellerKind === "business" ? "business" : "individual"}</span>
                 <span className="chip">{u.verified ? "✓ seller" : "unverified"}</span>
                 <span className="chip">{u.emailVerified ? "✓ email" : "no email ✓"}</span>

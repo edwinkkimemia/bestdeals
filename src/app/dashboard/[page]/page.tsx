@@ -22,7 +22,7 @@ export default async function DashPage({ params }: { params: { page: string } })
 
   if (params.page === "profile") {
     return (
-      <div className="max-w-2xl">
+      <div>
         <h1 className="section-title flex items-center gap-2"><User className="h-6 w-6 text-brand-600" /> Profile</h1>
         <p className="mt-1 text-sm text-ink-500">This is what buyers see on your listings. Verification is handled separately and can&rsquo;t be self-awarded.</p>
         <div className="mt-4"><EmailVerifyPanel verified={fresh?.emailVerified ?? false} email={user.email} /></div>
@@ -48,7 +48,7 @@ export default async function DashPage({ params }: { params: { page: string } })
   if (params.page === "promotion") {
     const mine = await store.listListingsByOwner(user.id);
     return (
-      <div className="max-w-2xl">
+      <div>
         <h1 className="section-title flex items-center gap-2"><Megaphone className="h-6 w-6 text-brand-600" /> Promotion</h1>
         <p className="mt-1 text-sm text-ink-500">Paid visibility is always labelled Featured/Sponsored and never overrides moderation. Eligibility is checked live below.</p>
         <div className="card mt-4 p-5 text-sm">
@@ -82,7 +82,7 @@ export default async function DashPage({ params }: { params: { page: string } })
 
   // settings
   return (
-    <div className="max-w-2xl">
+    <div>
       <h1 className="section-title flex items-center gap-2"><Settings className="h-6 w-6 text-brand-600" /> Account settings</h1>
       <p className="mt-1 text-sm text-ink-500">Notifications, your data rights, and account deletion — all self-serve.</p>
       <div className="card mt-4 p-5">

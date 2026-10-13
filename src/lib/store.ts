@@ -1004,6 +1004,8 @@ class PrismaStore implements Store {
       data: {
         name: u.name, businessName: u.businessName ?? null, email: u.email.toLowerCase(), phone: u.phone,
         passwordHash: u.passwordHash, role: u.role as never, verified: u.verified,
+        emailVerified: u.emailVerified ?? false,
+        sellerKind: u.sellerKind ?? "individual",
         seller: { create: { displayName: u.businessName || u.name } },
       },
     });

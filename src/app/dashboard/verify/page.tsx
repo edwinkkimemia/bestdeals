@@ -147,7 +147,7 @@ export default function VerifyPage() {
   const needsForm = !approved && (!docsDone || (hasRejected && !hasPending));
 
   return (
-    <div className="max-w-xl">
+    <div>
       <h1 className="section-title flex items-center gap-2"><ShieldCheck className="h-6 w-6 text-brand-600" /> Verification progress</h1>
       <p className="mt-1 text-sm text-ink-500">
         Posting unlocks only after admin verification{who.businessName ? <> · trading as <strong>{who.businessName}</strong></> : null}.
