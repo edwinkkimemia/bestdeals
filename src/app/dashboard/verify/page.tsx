@@ -178,19 +178,16 @@ export default function VerifyPage() {
       ) : items.length === 0 ? (
         <p className="mt-2 text-sm text-ink-500">Nothing submitted yet — use the form below.</p>
       ) : (
-        <ul className="mt-2 space-y-2">
+        <DataTable columns={["Document", "File", "Submitted", "Status"]} empty="Nothing submitted yet.">
           {items.map((v) => (
-            <li key={v.id} className="card flex items-center justify-between gap-2 p-3 text-sm">
-              <span className="min-w-0">
-                <strong>{v.kind === "business" ? "Business permit" : "ID"}</strong>
-                <span className="block truncate text-xs text-ink-400">{v.fileName ?? "document"} · {new Date(v.createdAt).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })}</span>
-              </span>
-              <span className={`chip shrink-0 ${v.status === "approved" ? "!border-green-600 !text-green-700" : v.status === "rejected" ? "!border-red-600 !text-red-700" : ""}`}>
-                {v.status}
-              </span>
-            </li>
+            <tr key={v.id} className="transition hover:bg-sand-50">
+              <Td><strong>{v.kind === "business" ? "Business permit" : "ID"}</strong></Td>
+              <Td className="max-w-56 truncate text-ink-500">{v.fileName ?? "document"}</Td>
+              <Td className="whitespace-nowrap text-ink-500">{fmtDate(v.createdAt)}</Td>
+              <Td><StatusChip status={v.status} /></Td>
+            </tr>
           ))}
-        </ul>
+        </DataTable>
       )}
 
       {/* submit / resubmit */}

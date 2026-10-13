@@ -8,6 +8,7 @@ import { formatKES, cartTotals } from "@/lib/format";
 import { WmImage } from "@/components/ui/wm-image";
 
 type Resolved = { id: string; slug: string; title: string; price: number; stock: number; seller: string; images: string[]; txMethod: string };
+type DetailedLine = { id: string; qty: number; slug: string; title: string; price: number; stock: number; seller: string; images: string[]; txMethod: string };
 
 export default function CartPage() {
   const { lines, setQty, remove, clear } = useCart();
@@ -29,11 +30,11 @@ export default function CartPage() {
 
   const detailed = [
     ...lines
-      .map((l) => {
+      .map((l): DetailedLine | null => {
         const c = getListing(l.id);
         return c ? { ...l, slug: c.slug, title: c.title, price: c.price, stock: c.stock, seller: c.sellerName, images: c.images, txMethod: c.transactionMethod } : null;
       })
-      .filter((x): x is { id: string; qty: number; slug: string; title: string; price: number; stock: number; seller: string; images: string[]; txMethod: string } => Boolean(x)),
+      .filter((x): x is DetailedLine => x !== null),
     ...storeItems.map((s) => ({ id: s.id, qty: lines.find((l) => l.id === s.id)?.qty ?? 1, slug: s.slug, title: s.title, price: s.price, stock: s.stock, seller: s.seller, images: s.images, txMethod: s.txMethod })),
   ].filter((l) => l.txMethod === "buy_online");
 
