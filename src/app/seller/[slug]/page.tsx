@@ -86,7 +86,7 @@ export default async function SellerPage({ params }: { params: { slug: string } 
               <a href={`https://wa.me/${contact.whatsapp}?text=${waText}`} target="_blank" rel="noopener" className="btn-whatsapp"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
             </>
           )}
-          <Link href="/dashboard/messages/new" className="btn-primary"><MessageCircle className="h-4 w-4" /> Message seller</Link>
+          <Link href={profile.userId ? `/dashboard/messages/new?user=${profile.userId}` : "/dashboard/messages/new"} className="btn-primary"><MessageCircle className="h-4 w-4" /> Message seller</Link>
         </div>
       </div>
       <div className="mt-3">

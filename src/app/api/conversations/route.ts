@@ -11,6 +11,8 @@ const startSchema = z.object({
   message: z.string().min(1).max(2000),
   name: z.string().min(2).max(80).optional(),
   phone: z.string().regex(/^(\+254|0)[17]\d{8}$/).optional(),
+  /** Direct message to a specific account (e.g. from a seller profile page). */
+  toUserId: z.string().min(1).max(80).optional(),
 });
 
 /** Start a conversation about a listing (signed-in or guest with phone). */
@@ -49,12 +51,23 @@ export async function POST(req: NextRequest) {
   const seller = shopName ?? catalog?.sellerName ?? stored?.sellerName ?? "Seller";
 
   const viewerId = user?.id ?? `phone:${phone}`;
-  // Link the seller side via exact display-name match (name + businessName).
+  // Direct target (seller profile "Message seller") wins over name matching.
   let sellerId: string | undefined;
-  try {
-    const hit = await store.findUserByDisplayName(seller).catch(() => null);
-    sellerId = hit?.id;
-  } catch {}
+  let directName: string | undefined;
+  if (d.toUserId) {
+    const target = await store.findUserById(d.toUserId).catch(() => null);
+    if (!target) return NextResponse.json({ error: "That seller no longer exists." }, { status: 404 });
+    if (user && target.id === user.id) return NextResponse.json({ error: "You can't message yourself." }, { status: 400 });
+    sellerId = target.id;
+    directName = target.businessName || target.name;
+  }
+  // Link the seller side via exact display-name match (name + businessName).
+  if (!sellerId) {
+    try {
+      const hit = await store.findUserByDisplayName(seller).catch(() => null);
+      sellerId = hit?.id;
+    } catch {}
+  }
   // Blocked participants can't open new threads with each other on the same listing.
   try {
     const blocked = ((await store.getSetting(`blocked:${viewerId}`).catch(() => null)) as string[] | null) ?? [];
@@ -64,8 +77,8 @@ export async function POST(req: NextRequest) {
   } catch {}
   const convo = await store.createConversation({
     listingId: d.listingId,
-    listingTitle: title,
-    sellerName: seller,
+    listingTitle: directName && d.listingId === "general" ? "Direct message" : title,
+    sellerName: directName ?? seller,
     sellerId,
     buyerId: viewerId,
     buyerName: name,

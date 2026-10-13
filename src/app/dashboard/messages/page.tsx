@@ -88,6 +88,16 @@ export default function InboxPage() {
       saved = localStorage.getItem("bd_phone") || "";
     } catch {}
     load(saved || undefined);
+    // Poll so chats started by the other side appear without a manual refresh.
+    const t = setInterval(() => {
+      try {
+        load(localStorage.getItem("bd_phone") || undefined);
+      } catch {
+        load(undefined);
+      }
+    }, 10000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

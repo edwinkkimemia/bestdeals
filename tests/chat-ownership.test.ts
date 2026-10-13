@@ -72,7 +72,7 @@ describe("chat ownership (sender lockout regression)", () => {
     const admin = identityOf({ id: "u_admin", phone: "0711111111" }, "")!;
     assert.equal(isParticipant(c, admin, { id: "u_admin", name: "Admin", role: "ADMIN" }), "u_admin");
   });
-  it("seller fallback resolves via listing owner", async () => {    const store = freshDemoStore();
+    it("seller fallback resolves via listing owner", async () => {    const store = freshDemoStore();
     const seller = await store.createUser({
       name: "Seller Sam", email: "sam@x.co.ke", phone: "0722000000",
       role: "SELLER", verified: true, passwordHash: "h",
@@ -115,5 +115,33 @@ describe("chat ownership (sender lockout regression)", () => {
     const vague = await resolveThreadSeller(store, { listingId: "general", sellerName: "Seller" });
     assert.equal(vague.name, "Seller");
     assert.equal(vague.phone, undefined);
+  });
+  it("two accounts message each other directly (explicit target, no name match needed)", async () => {
+    const store = freshDemoStore();
+    const a = await store.createUser({
+      name: "Account Alpha", email: "alpha@x.co.ke", phone: "0710000201",
+      role: "SELLER", verified: true, passwordHash: "h",
+    });
+    const b = await store.createUser({
+      name: "Totally Different Beta", email: "beta@x.co.ke", phone: "0710000202",
+      role: "SELLER", verified: true, passwordHash: "h",
+    });
+    // Direct chat: seller side pinned to B's account id at creation.
+    const c = await store.createConversation({
+      listingId: "general", listingTitle: "Direct message", sellerName: "Totally Different Beta",
+      sellerId: b.id, buyerId: a.id, buyerName: a.name, buyerPhone: a.phone,
+      firstMessage: { senderId: a.id, senderLabel: a.name, body: "Hello B", bodyHtml: "Hello B" },
+    });
+    // B's inbox contains it (seller side, no display-name coincidence).
+    const inboxB = await store.listConversations({ userId: b.id, phone: b.phone, sellerName: b.name });
+    assert.ok(inboxB.some((x) => x.id === c.id), "seller receives the chat");
+    // B reads + replies; A sees both messages with correct mine flags.
+    await store.addMessage({ conversationId: c.id, senderId: b.id, senderLabel: b.name, body: "Hi A", bodyHtml: "Hi A" });
+    const idA = identityOf({ id: a.id, phone: a.phone }, "")!;
+    assert.equal(isParticipant(c, idA, { id: a.id, name: a.name, role: "SELLER" }), a.id);
+    const msgs = await store.listMessages(c.id);
+    assert.equal(msgs.length, 2);
+    assert.equal(mineOf(msgs[0].senderId, a.id, a.phone), true);
+    assert.equal(mineOf(msgs[1].senderId, a.id, a.phone), false);
   });
 });

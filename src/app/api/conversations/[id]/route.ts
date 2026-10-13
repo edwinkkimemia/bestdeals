@@ -83,6 +83,33 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (user && convo.sellerId === user.id) {
     await store.setSetting(`reply_speed:${params.id}`, { at: new Date().toISOString() }).catch(() => {});
   }
+  // Ping the other side (best-effort SMS; console in demo mode).
+  try {
+    const { notifyLater } = await import("@/lib/notify");
+    const senderIsBuyer = viewer === convo.buyerId || (convo.buyerPhone != null && viewer === `phone:${convo.buyerPhone}`);
+    if (!senderIsBuyer && convo.buyerPhone) {
+      notifyLater({ channel: "sms", to: convo.buyerPhone, message: `Chap: new message from ${label} — open your inbox to read it.` });
+    } else if (senderIsBuyer && convo.listingId) {
+      let sellerPhone: string | undefined;
+      const lid = convo.listingId;
+      if (lid.startsWith("shop:")) {
+        const slug = lid.slice(5);
+        sellerPhone = (await store.getShopBySlug(slug).catch(() => null))?.phone;
+        if (!sellerPhone) {
+          const { getShop } = await import("@/data/catalog");
+          sellerPhone = getShop(slug)?.phone;
+        }
+      } else if (lid !== "general") {
+        const s = await store.getListing(lid).catch(() => null);
+        sellerPhone = s?.sellerPhone || undefined;
+        if (!sellerPhone) {
+          const { getListing } = await import("@/data/catalog");
+          sellerPhone = getListing(lid)?.sellerPhone;
+        }
+      }
+      if (sellerPhone) notifyLater({ channel: "sms", to: sellerPhone, message: `Chap: new message from ${label} about your listing — open your inbox to reply.` });
+    }
+  } catch {}
   return NextResponse.json({ ok: true, id: rec.id });
 }
 

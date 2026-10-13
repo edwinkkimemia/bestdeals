@@ -20,6 +20,7 @@ function NewMessageInner() {
   const router = useRouter();
   const listing = getListing(sp.get("listing") ?? "");
   const shopSlug = !listing ? (sp.get("shop") ?? "") : "";
+  const toUser = !listing && !shopSlug ? (sp.get("user") ?? "") : "";
   const [name, setName] = useState("");
   const [signedIn, setSignedIn] = useState(false);
   const [phone, setPhone] = useState(() => {
@@ -46,6 +47,7 @@ function NewMessageInner() {
         message: text,
         name: signedIn ? undefined : name || undefined,
         phone: signedIn ? undefined : phone || undefined,
+        toUserId: toUser || undefined,
       }),
     });
     const j = await r.json().catch(() => ({}));
@@ -65,6 +67,8 @@ function NewMessageInner() {
         <p className="mt-1 text-sm text-ink-500">About: <strong>{listing.title}</strong> — {listing.sellerName}</p>
       ) : shopSlug ? (
         <p className="mt-1 text-sm text-ink-500">About shop: <strong>{shopSlug}</strong> — the owner will reply here.</p>
+      ) : toUser ? (
+        <p className="mt-1 text-sm text-ink-500">Direct message — delivered straight to the seller&apos;s inbox.</p>
       ) : (
         <p className="mt-1 text-sm text-ink-500">Start a general enquiry.</p>
       )}
