@@ -19,10 +19,9 @@ async function resolveViewer(
 
 /** Thread view (participant only) + marks incoming as read. */
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const phone = new URL(req.url).searchParams.get("phone") ?? "";
   const user = await currentUser().catch(() => null);
-  const id = identityOf(user, phone);
-  if (!id) return NextResponse.json({ error: "Sign in or provide your phone." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Sign in to chat." }, { status: 401 });
+  const id = identityOf(user, "")!;
   const store = getStore();
   const convo = await store.getConversation(params.id);
   if (!convo) return NextResponse.json({ error: "Chat not found." }, { status: 404 });
@@ -63,10 +62,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const rl = rateLimit(clientKey(req, "convo:reply"), { limit: 30, windowMs: 3600_000 });
   if (!rl.ok) return NextResponse.json({ error: "Slow down — too many messages." }, { status: 429 });
   const body = await req.json().catch(() => ({}));
-  const { message, phone, name } = body as { message?: string; phone?: string; name?: string };
+  const { message, name } = body as { message?: string; phone?: string; name?: string };
   const user = await currentUser().catch(() => null);
-  const id = identityOf(user, phone ?? "");
-  if (!id) return NextResponse.json({ error: "Sign in or provide your phone." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Sign in to chat." }, { status: 401 });
+  const id = identityOf(user, "")!;
   const plain = String(message ?? "").trim().slice(0, 2000);
   if (!plain) return NextResponse.json({ error: "Message can't be empty." }, { status: 400 });
   const store = getStore();
@@ -116,10 +115,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 /** Block / spam / leave a conversation (participant only). */
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await currentUser().catch(() => null);
+  if (!user) return NextResponse.json({ error: "Sign in to chat." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
-  const { action, phone } = body as { action?: string; phone?: string };
-  const id = identityOf(user, phone ?? "");
-  if (!id) return NextResponse.json({ error: "Sign in or provide your phone." }, { status: 401 });
+  const { action } = body as { action?: string; phone?: string };
+  const id = identityOf(user, "")!;
   const store = getStore();
   const convo = await store.getConversation(params.id);
   if (!convo) return NextResponse.json({ error: "Chat not found." }, { status: 404 });
@@ -155,11 +154,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 /** Leave/delete own view of a conversation (participant only). */
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
   const user = await currentUser().catch(() => null);
-  const phone = new URL(req.url).searchParams.get("phone") ?? "";
-  const id = identityOf(user, phone);
-  if (!id) return NextResponse.json({ error: "Sign in or provide your phone." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Sign in to chat." }, { status: 401 });
+  const id = identityOf(user, "")!;
   const store = getStore();
   const convo = await store.getConversation(params.id);
   if (!convo) return NextResponse.json({ error: "Chat not found." }, { status: 404 });

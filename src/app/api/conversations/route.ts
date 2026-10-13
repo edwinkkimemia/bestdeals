@@ -15,7 +15,7 @@ const startSchema = z.object({
   toUserId: z.string().min(1).max(80).optional(),
 });
 
-/** Start a conversation about a listing (signed-in or guest with phone). */
+/** Start a conversation (signed-in only) about a listing, shop or user. */
 export async function POST(req: NextRequest) {
   const rl = rateLimit(clientKey(req, "convo:new"), { limit: 10, windowMs: 3600_000 });
   if (!rl.ok) return NextResponse.json({ error: "Too many new chats. Wait a bit." }, { status: 429 });
@@ -24,11 +24,9 @@ export async function POST(req: NextRequest) {
   const d = parsed.data;
 
   const user = await currentUser().catch(() => null);
-  const name = user?.name ?? d.name;
-  const phone = user?.phone ?? d.phone;
-  if (!name || !phone) {
-    return NextResponse.json({ error: "Guests need a name + Kenyan phone to chat." }, { status: 400 });
-  }
+  if (!user) return NextResponse.json({ error: "Sign in to chat." }, { status: 401 });
+  const name = user.name;
+  const phone = user.phone;
 
   const plain = d.message.trim();
   if (!plain) return NextResponse.json({ error: "Message can't be empty." }, { status: 400 });
@@ -50,14 +48,14 @@ export async function POST(req: NextRequest) {
   const title = shopName ? `Shop enquiry: ${shopName}` : (catalog?.title ?? stored?.title ?? "General enquiry");
   const seller = shopName ?? catalog?.sellerName ?? stored?.sellerName ?? "Seller";
 
-  const viewerId = user?.id ?? `phone:${phone}`;
+  const viewerId = user.id;
   // Direct target (seller profile "Message seller") wins over name matching.
   let sellerId: string | undefined;
   let directName: string | undefined;
   if (d.toUserId) {
     const target = await store.findUserById(d.toUserId).catch(() => null);
     if (!target) return NextResponse.json({ error: "That seller no longer exists." }, { status: 404 });
-    if (user && target.id === user.id) return NextResponse.json({ error: "You can't message yourself." }, { status: 400 });
+    if (target.id === user.id) return NextResponse.json({ error: "You can't message yourself." }, { status: 400 });
     sellerId = target.id;
     directName = target.businessName || target.name;
   }
@@ -78,11 +76,8 @@ export async function POST(req: NextRequest) {
   // WhatsApp-style: same buyer + seller + listing reuses the one thread —
   // the message lands in it instead of spawning a duplicate chat.
   try {
-    const buyerIds = viewerId.startsWith("phone:")
-      ? [viewerId]
-      : [viewerId, ...(user?.phone ? [`phone:${user.phone}`] : [])];
     const existing = await store.findConversationMatch({
-      buyerIds,
+      buyerIds: [viewerId, `phone:${user.phone}`],
       sellerId,
       sellerName: directName ?? seller,
       listingId: d.listingId,
@@ -109,26 +104,12 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, id: convo.id });
 }
 
-/** My inbox — signed-in buyers/sellers, or guests via exact ?phone=. */
-export async function GET(req: NextRequest) {
-  const q = new URL(req.url).searchParams.get("phone") ?? "";
+/** My inbox — signed-in only. */
+export async function GET() {
   const user = await currentUser().catch(() => null);
-  const identity = user
-    ? { userId: user.id, phone: user.phone, sellerName: user.name }
-    : /^(\+254|0)[17]\d{8}$/.test(q)
-      ? { phone: q }
-      : undefined;
-  if (!identity) return NextResponse.json({ error: "Sign in or provide your phone." }, { status: 401 });
+  if (!user) return NextResponse.json({ error: "Sign in to chat." }, { status: 401 });
   const store = getStore();
-  const items = await store.listConversations(identity);
-  // Signed-in with a different ?phone= (chat started as guest with another
-  // number): merge that phone's inbox so history never vanishes.
-  if (user && /^(\+254|0)[17]\d{8}$/.test(q) && q !== user.phone) {
-    const extra = await store.listConversations({ phone: q }).catch(() => []);
-    const seen = new Set(items.map((c) => c.id));
-    for (const c of extra) if (!seen.has(c.id)) items.push(c);
-    items.sort((a, b) => +new Date(b.lastAt ?? b.createdAt) - +new Date(a.lastAt ?? a.createdAt));
-  }
+  const items = await store.listConversations({ userId: user.id, phone: user.phone, sellerName: user.name });
   // Heal legacy threads stored as "Seller" before shop-chat naming existed.
   const { resolveThreadSeller } = await import("@/lib/chat-access");
   for (const c of items) {

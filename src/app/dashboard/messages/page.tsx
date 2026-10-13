@@ -5,9 +5,8 @@ import Link from "next/link";
 import { MessageCircleOff, Search } from "lucide-react";
 import { timeAgo } from "@/lib/format";
 
-function ChatList({ items, phone, filter, setFilter }: {
+function ChatList({ items, filter, setFilter }: {
   items: Convo[];
-  phone: string;
   filter: string;
   setFilter: (v: string) => void;
 }) {
@@ -35,7 +34,7 @@ function ChatList({ items, phone, filter, setFilter }: {
         <ul className="mt-3 space-y-2">
           {shown.map((c) => (
             <li key={c.id}>
-              <Link href={`/dashboard/messages/${c.id}${phone ? `?phone=${encodeURIComponent(phone)}` : ""}`} className="card flex items-center gap-3 p-4 hover:border-brand-600">
+              <Link href={`/dashboard/messages/${c.id}`} className="card flex items-center gap-3 p-4 hover:border-brand-600">
                 <span aria-hidden className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 font-black text-brand-700">
                   {(c.sellerName ?? "C").charAt(0).toUpperCase()}
                 </span>
@@ -68,12 +67,10 @@ type Convo = {
 export default function InboxPage() {
   const [items, setItems] = useState<Convo[]>([]);
   const [ready, setReady] = useState(false);
-  const [phone, setPhone] = useState("");
   const [filter, setFilter] = useState("");
 
-  const load = async (p?: string) => {
-    const qs = p ? `?phone=${encodeURIComponent(p)}` : "";
-    const r = await fetch(`/api/conversations${qs}`);
+  const load = async () => {
+    const r = await fetch(`/api/conversations`);
     if (r.status === 401) {
       setReady(true);
       return;
@@ -83,19 +80,9 @@ export default function InboxPage() {
   };
 
   useEffect(() => {
-    let saved = "";
-    try {
-      saved = localStorage.getItem("bd_phone") || "";
-    } catch {}
-    load(saved || undefined);
+    load();
     // Poll so chats started by the other side appear without a manual refresh.
-    const t = setInterval(() => {
-      try {
-        load(localStorage.getItem("bd_phone") || undefined);
-      } catch {
-        load(undefined);
-      }
-    }, 10000);
+    const t = setInterval(() => load(), 10000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -104,27 +91,6 @@ export default function InboxPage() {
     <div>
       <h1 className="section-title">Messages</h1>
       <p className="mt-1 text-sm text-ink-500">Buyer–seller chats with rich text. Abusive users can be blocked and reported.</p>
-
-      <form
-        className="card mt-4 flex gap-2 p-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          try {
-            localStorage.setItem("bd_phone", phone);
-          } catch {}
-          setReady(false);
-          load(phone || undefined);
-        }}
-      >
-        <input
-          aria-label="Checkout phone for guest lookup"
-          placeholder="Guest? enter your phone to find chats"
-          className="input-bd"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
-        <button className="btn-secondary flex shrink-0 items-center gap-1.5"><Search className="h-4 w-4" /> Find</button>
-      </form>
 
       {!ready ? (
         <p className="mt-4 text-sm text-ink-500">Loading…</p>
@@ -136,7 +102,7 @@ export default function InboxPage() {
           <Link href="/classifieds" className="btn-primary mt-4">Browse classifieds</Link>
         </div>
       ) : (
-        <ChatList items={items} phone={phone} filter={filter} setFilter={setFilter} />
+        <ChatList items={items} filter={filter} setFilter={setFilter} />
       )}
     </div>
   );

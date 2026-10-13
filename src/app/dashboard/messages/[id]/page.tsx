@@ -3,7 +3,6 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, CheckCheck, ChevronLeft } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import { ChatComposer } from "@/components/chat-composer";
 
 type Msg = {
@@ -38,29 +37,17 @@ export default function ThreadPage({ params }: { params: { id: string } }) {
 }
 
 function ThreadInner({ id }: { id: string }) {
-  const sp = useSearchParams();
   const [convo, setConvo] = useState<{ listingTitle?: string; sellerName?: string; listingId?: string } | null>(null);
   const [peer, setPeer] = useState<{ name: string; phone?: string; role: string } | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([]);
-  // Guest chats keep working via the remembered number (no visible phone box).
-  const [phone, setPhone] = useState(sp.get("phone") ?? "");
   const [err, setErr] = useState("");
   const [ready, setReady] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const firstLoad = useRef(true);
 
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("bd_phone") || "";
-      if (saved && !sp.get("phone")) setPhone(saved);
-    } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const load = useCallback(
     async (quiet = false) => {
-      const qs = phone ? `?phone=${encodeURIComponent(phone)}` : "";
-      const r = await fetch(`/api/conversations/${id}${qs}`);
+      const r = await fetch(`/api/conversations/${id}`);
       if (!r.ok) {
         setErr(r.status === 403 ? "This chat isn't yours." : "Chat not found.");
         setReady(true);
@@ -73,7 +60,7 @@ function ThreadInner({ id }: { id: string }) {
       setReady(true);
       if (!quiet) firstLoad.current = true;
     },
-    [id, phone]
+    [id]
   );
 
   useEffect(() => {
@@ -99,13 +86,10 @@ function ThreadInner({ id }: { id: string }) {
     const r = await fetch(`/api/conversations/${id}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text, phone: phone || undefined }),
+      body: JSON.stringify({ message: text }),
     });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) return j.error || "Failed to send.";
-    try {
-      if (phone) localStorage.setItem("bd_phone", phone);
-    } catch {}
     window.dispatchEvent(new Event("bd:messages"));
     load(true);
     return null;
