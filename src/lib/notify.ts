@@ -1,4 +1,4 @@
-/** Notification abstraction: Resend/SendGrid email + Africa's Talking/Twilio SMS.
+/** Notification abstraction: Resend/SendGrid/ZeptoMail email + Africa's Talking/Twilio SMS.
  * Console-logged ONLY when no provider keys are set (demo mode).
  */
 
@@ -29,6 +29,27 @@ async function sendEmail(to: string, subject: string, message: string): Promise<
         body: JSON.stringify({ personalizations: [{ to: [{ email: to }] }], from: { email: process.env.EMAIL_FROM || "info@chap.co.ke" }, subject, content: [{ type: "text/plain", value: message }] }),
       });
       return { ok: r.ok, provider: "sendgrid" };
+    }
+    if (provider === "zeptomail") {
+      // Zoho ZeptoMail: EMAIL_API_KEY is the agent's Send Mail Token
+      // (ZeptoMail → Agent → SMTP/API → copy Send Mail Token).
+      const fromRaw = process.env.EMAIL_FROM || "Chap <info@chap.co.ke>";
+      const m = fromRaw.match(/^(.*)<([^>]+)>\s*$/);
+      const fromAddr = (m ? m[2] : fromRaw).trim();
+      const fromName = ((m ? m[1] : "").trim().replace(/^"|"$/g, "") || "Chap").slice(0, 60);
+      const esc = message.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const r = await fetch("https://api.zeptomail.com/v1.1/email", {
+        method: "POST",
+        headers: { Accept: "application/json", "Content-Type": "application/json", Authorization: `Zoho-enczapikey ${key}` },
+        body: JSON.stringify({
+          from: { address: fromAddr, name: fromName },
+          to: [{ email_address: { address: to } }],
+          subject,
+          textbody: message,
+          htmlbody: `<div>${esc.replace(/\n/g, "<br>")}</div>`,
+        }),
+      });
+      return { ok: r.ok, provider: "zeptomail" };
     }
     console.log(`[notify:email:${provider}] to=${to} (no adapter — logged only)`);
     return { ok: false, provider };

@@ -13,7 +13,13 @@
 
 ## Email / SMS / WhatsApp
 
-- Set `EMAIL_PROVIDER` (resend/sendgrid) + `EMAIL_API_KEY` + `EMAIL_FROM="info@chap.co.ke"`, or `SMS_PROVIDER` (e.g. africastalking) + key.
+- Set `EMAIL_PROVIDER` (resend/sendgrid/zeptomail) + `EMAIL_API_KEY` + `EMAIL_FROM="info@chap.co.ke"`, or `SMS_PROVIDER` (e.g. africastalking) + key.
+- Zoho (recommended if your mailbox is Zoho): use **ZeptoMail**, not regular Zoho
+  Mail SMTP — the app has no SMTP client. Steps: ZeptoMail → add + verify the
+  `chap.co.ke` domain (SPF/DKIM) → create a Mail Agent for `info@chap.co.ke` →
+  Agent → SMTP/API → copy the **Send Mail Token** → Vercel env
+  `EMAIL_PROVIDER=zeptomail`, `EMAIL_API_KEY=<send mail token>`,
+  `EMAIL_FROM=info@chap.co.ke` → redeploy. `/api/health` shows `email: live`.
 - The sending domain must be verified in the provider first: add Resend/SendGrid's
   SPF + DKIM records to chap.co.ke DNS, otherwise `info@chap.co.ke` sends are
   rejected. Then add the three vars in Vercel → Project → Settings → Environment
