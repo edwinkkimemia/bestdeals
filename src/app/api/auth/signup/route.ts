@@ -4,7 +4,7 @@ import { hashPassword, createSessionToken, SESSION_COOKIE, sessionCookieAttrs } 
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { createPurposeToken } from "@/lib/auth-tokens";
-import { notifyLater } from "@/lib/notify";
+import { sendNotification } from "@/lib/notify";
 
 const isAdminEmail = (email: string) =>
   (process.env.ADMIN_EMAILS || "admin@chap.co.ke").split(",").map((s) => s.trim().toLowerCase()).includes(email.toLowerCase());
@@ -51,11 +51,12 @@ export async function POST(req: NextRequest) {
     } catch {}
   }
   const token = await createSessionToken({ id: user.id, name, email, phone, role, verified: false });
-  // Welcome email-verification link (queued — never fails signup).
+  // Welcome email-verification link. Awaited (not queued): serverless functions
+  // can freeze before background work finishes, silently dropping the email.
   try {
     const vToken = await createPurposeToken({ purpose: "email-verify", userId: user.id, email });
     const base = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
-    notifyLater({
+    await sendNotification({
       channel: "email",
       to: email,
       subject: "Verify your Chap email",

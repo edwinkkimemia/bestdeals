@@ -9,7 +9,7 @@ export function isNotifyLive(channel: Channel): boolean {
   return Boolean(process.env.SMS_PROVIDER && process.env.SMS_API_KEY);
 }
 
-async function sendEmail(to: string, subject: string, message: string): Promise<{ ok: boolean; provider: string }> {
+async function sendEmail(to: string, subject: string, message: string): Promise<{ ok: boolean; provider: string; error?: string }> {
   const provider = (process.env.EMAIL_PROVIDER || "").toLowerCase();
   const key = process.env.EMAIL_API_KEY || "";
   if (!provider || !key) return { ok: false, provider: "log" };
@@ -20,7 +20,12 @@ async function sendEmail(to: string, subject: string, message: string): Promise<
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({ from: process.env.EMAIL_FROM || "Chap <info@chap.co.ke>", to, subject, text: message }),
       });
-      return { ok: r.ok, provider: "resend" };
+      if (!r.ok) {
+        const err = (await r.text().catch(() => "")).slice(0, 300);
+        console.log(`[notify:email:resend:failed] status=${r.status} to=${to} err=${err}`);
+        return { ok: false, provider: "resend", error: err };
+      }
+      return { ok: true, provider: "resend" };
     }
     if (provider === "sendgrid") {
       const r = await fetch("https://api.sendgrid.com/v3/mail/send", {
@@ -28,7 +33,12 @@ async function sendEmail(to: string, subject: string, message: string): Promise<
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
         body: JSON.stringify({ personalizations: [{ to: [{ email: to }] }], from: { email: process.env.EMAIL_FROM || "info@chap.co.ke" }, subject, content: [{ type: "text/plain", value: message }] }),
       });
-      return { ok: r.ok, provider: "sendgrid" };
+      if (!r.ok) {
+        const err = (await r.text().catch(() => "")).slice(0, 300);
+        console.log(`[notify:email:sendgrid:failed] status=${r.status} to=${to} err=${err}`);
+        return { ok: false, provider: "sendgrid", error: err };
+      }
+      return { ok: true, provider: "sendgrid" };
     }
     if (provider === "zeptomail") {
       // Zoho ZeptoMail: EMAIL_API_KEY is the agent's Send Mail Token
@@ -49,7 +59,12 @@ async function sendEmail(to: string, subject: string, message: string): Promise<
           htmlbody: `<div>${esc.replace(/\n/g, "<br>")}</div>`,
         }),
       });
-      return { ok: r.ok, provider: "zeptomail" };
+      if (!r.ok) {
+        const err = (await r.text().catch(() => "")).slice(0, 300);
+        console.log(`[notify:email:zeptomail:failed] status=${r.status} to=${to} err=${err}`);
+        return { ok: false, provider: "zeptomail", error: err };
+      }
+      return { ok: true, provider: "zeptomail" };
     }
     console.log(`[notify:email:${provider}] to=${to} (no adapter — logged only)`);
     return { ok: false, provider };
