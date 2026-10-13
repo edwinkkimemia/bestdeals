@@ -38,6 +38,17 @@ export async function POST(req: NextRequest) {
   if (!docPath || !docPath.startsWith("private:")) {
     return NextResponse.json({ error: "Upload your document first (JPG/PNG/WebP, ≤5MB)." }, { status: 400 });
   }
+  // Prove the file exists and was uploaded (not a forged private: string).
+  const { privateBaseDir } = await import("@/lib/storage");
+  const { join } = await import("path");
+  const { existsSync } = await import("fs");
+  for (const p of [docPath, docPath2].filter(Boolean) as string[]) {
+    const rel = p.replace(/^private:/, "");
+    if (rel.includes("..")) return NextResponse.json({ error: "Invalid document path." }, { status: 400 });
+    if ((process.env.UPLOAD_DRIVER || "local") !== "s3" && !existsSync(join(privateBaseDir(), rel))) {
+      return NextResponse.json({ error: "Document upload not found. Upload again." }, { status: 400 });
+    }
+  }
   if (kind === "business" && (!docPath2 || !docPath2.startsWith("private:"))) {
     return NextResponse.json({ error: "Businesses need both: the permit AND the owner ID." }, { status: 400 });
   }
@@ -76,4 +87,20 @@ export async function GET() {
       businessName: fresh?.businessName ?? undefined,
     },
   });
+}
+
+/** Withdraw a pending verification (author only). */
+export async function DELETE(req: NextRequest) {
+  const user = await currentUser().catch(() => null);
+  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  const id = new URL(req.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ error: "Missing id." }, { status: 400 });
+  const store = getStore();
+  const all = await store.listVerifications().catch(() => []);
+  const v = all.find((x) => x.id === id);
+  if (!v) return NextResponse.json({ error: "Not found." }, { status: 404 });
+  if (v.userId !== user.id && user.role !== "ADMIN") return NextResponse.json({ error: "Not yours." }, { status: 403 });
+  if (v.status !== "pending") return NextResponse.json({ error: "Only pending requests can be withdrawn." }, { status: 409 });
+  await store.decideVerification(id, false, user.id).catch(() => {});
+  return NextResponse.json({ ok: true });
 }

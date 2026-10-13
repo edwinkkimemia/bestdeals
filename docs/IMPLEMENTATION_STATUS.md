@@ -1,13 +1,24 @@
-# Implementation status — honest accounting
+# Implementation status — honest accounting (updated 2026-10-13)
 
 ## Working now (demo mode, no credentials)
 
 Public marketplace (home, shop, category, product/classified/service detail, shops, deals,
-combined search with type tabs + counts, cross-seller related rails), seller registration +
-dashboards, listing intake with **real photo uploads** (`/uploads/*`) + moderation queue,
-shop storefronts (seller-created shops render at `/shops/[slug]`) + plans + CSV template,
-cart/checkout with server-side totals + multi-seller suborders, **server-persisted orders**
-with phone/signed-in lookup, enquiries/messaging intake, reports, wishlist, SEO, tests.
+combined search with type tabs + counts incl. **live store listings** via `searchAll`,
+cross-seller related rails), seller registration + dashboards, listing intake with
+**hardened photo uploads** (EXIF-strip via sharp, 5MB/type checks, S3-ready) + moderation queue
+with **granular reason codes** + bulk approve/reject, shop storefronts + plans + CSV template +
+bulk job polling, cart/checkout with server-side totals + multi-seller suborders +
+**M-Pesa + COD**, **stock decrement + idempotency**, **server cart** (`/api/cart`),
+**server-persisted orders** with OTP-hardened lookup + buyer-cancel/seller-fulfil state machine,
+enquiries seller inbox, reports with picker + 2-strike auto-hide, synced wishlist
+(`/api/wishlist`), saved searches (`/api/saved-searches`), messaging with block/spam/read-all +
+contact-reveal conversions, reviews with seller response/helpful + pending privacy,
+disputes with ownership + SLA stamps + refund ledger, wallet Balance lite (`/api/wallet`),
+renew/bump (7-day free) + TOP pins + Premium/VIP boosts, price hints/trends/niche
+(`/api/insights`), invoices (`/api/invoices`), delivery matrix (`/api/delivery`),
+newsletter double-opt-in + consents (`/api/consents`), audit trail (`/api/admin/audit`),
+dynamic sitemap (store listings/shops/blog), extended `/api/health`
+(payments/email/sms/redis/uploads/authSecret), tests 98 green.
 
 **Trust & safety (new):**
 - **Verification (mandatory before posting)**: sellers submit national ID/business permit + confirm the phone matching their account; admins review doc + number and approve. `/api/listings` and `/api/shops` reject unverified sellers (403 `NOT_VERIFIED`, fresh flag — never the sign-in token). Approval flips the ✓ badge and unlocks posting.
@@ -27,13 +38,19 @@ Migration `prisma/migrations/0001_init` (36 tables incl. `Dispute`) applies with
 
 ## Needs credentials / providers to go fully live
 
-- **M-Pesa Daraja**: STK initiation + idempotent callback ledger implemented and
-  wired to real order totals; labelled NOT LIVE until `MPESA_*` set and sandbox-tested.
-- **Email/SMS/WhatsApp**: adapter logs to console until provider keys are set.
-- **Object storage**: local-disk driver works for single-server; set `UPLOAD_DRIVER=s3`
-  + `S3_*` for CDN/object storage on serverless (see `docs/providers.md`).
-- **Background jobs** (emails, image processing, expiry): use BullMQ/Redis (`REDIS_URL`).
-- **Order lookup hardening**: guest lookup is exact-phone today; add OTP before scale.
+- **M-Pesa Daraja**: real OAuth + STK HTTP + CheckoutRequestID→order/wallet mapping +
+  amount-mismatch → failed + promo/plan activation on callback + refund ledger.
+  Code-live; labelled NOT LIVE in UI until `MPESA_*` set and sandbox-tested.
+- **Email/SMS**: Resend/SendGrid + Africa's Talking/Twilio adapters implemented;
+  console-log only until `EMAIL_/SMS_` keys set. Queue (`src/lib/queue.ts`) retries;
+  point it at BullMQ/Redis (`REDIS_URL`) at scale.
+- **Object storage**: S3 SigV4 PUT implemented (`UPLOAD_DRIVER=s3` + `S3_*`);
+  local-disk remains for single-server; serverless `/tmp` stays ephemeral by design.
+- **Background jobs**: in-memory queue drains inline today; move to BullMQ workers
+  for email bursts/image pipelines/expiry sweeps.
+- **Order lookup**: OTP (`/api/otp` request/verify, 10-min code, 30-min window)
+  implemented; legacy exact-phone still accepted during rollout — enforce OTP-only
+  before scale.
 
 ## Known risks
 

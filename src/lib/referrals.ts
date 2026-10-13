@@ -1,8 +1,29 @@
 import { getStore, type Store } from "./store";
+import { createHash } from "crypto";
 
-/** Invite link for a user — the code is the user id (opaque, looked up directly). */
+/** Invite link for a user — opaque code (not enumerable user id). */
 export function referralLink(userId: string, base: string): string {
-  return `${base.replace(/\/$/, "")}/auth/signup?ref=${encodeURIComponent(userId)}`;
+  return `${base.replace(/\/$/, "")}/auth/signup?ref=${encodeURIComponent(referralCode(userId))}`;
+}
+
+/** Opaque, stable referral code derived from user id + secret (safe to share). */
+export function referralCode(userId: string): string {
+  const secret = process.env.AUTH_SECRET || "dev-only-secret-change-me-32chars!!";
+  return createHash("sha256").update(`${secret}:${userId}`).digest("hex").slice(0, 12);
+}
+
+/** Resolve an opaque code (or legacy raw user id) back to the referrer. */
+export async function resolveReferrer(code: string, store: Store = getStore()): Promise<string | null> {
+  const c = code.trim();
+  if (!c) return null;
+  // Legacy: raw user id still works during rollout.
+  const direct = await store.findUserById(c).catch(() => null);
+  if (direct) return direct.id;
+  const users = await store.listUsers().catch(() => []);
+  for (const u of users) {
+    if (referralCode(u.id) === c) return u.id;
+  }
+  return null;
 }
 
 export const REFERRAL_REWARD = {

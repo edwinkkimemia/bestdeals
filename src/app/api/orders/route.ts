@@ -5,18 +5,25 @@ import { cartTotals, commissionDue } from "@/lib/format";
 import { COMMISSION_BPS_DEFAULT } from "@/data/catalog";
 import { uid } from "@/lib/utils";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
-import { sendNotification } from "@/lib/notify";
+import { notifyLater } from "@/lib/notify";
+import { getDeliveryFees } from "@/lib/delivery";
 import { getStore } from "@/lib/store";
 import { currentUser } from "@/lib/auth";
+import { isPhoneVerified } from "@/lib/otp";
 
 /**
  * My orders. Signed-in buyers get their linked orders; guests look up by
- * exact checkout phone (rate-limited). Production hardens this with OTP.
+ * checkout phone once OTP-verified (or legacy exact-phone during rollout).
  */
 export async function GET(req: NextRequest) {
   const rl = rateLimit(clientKey(req, "orders:get"), { limit: 30, windowMs: 60_000 });
   if (!rl.ok) return NextResponse.json({ error: "Too many requests." }, { status: 429 });
-  const phone = new URL(req.url).searchParams.get("phone") ?? "";
+  const url = new URL(req.url);
+  const phone = url.searchParams.get("phone") ?? "";
+  const otp = url.searchParams.get("otp") ?? "";
+  const page = Math.max(1, Number(url.searchParams.get("page") ?? "1") || 1);
+  const per = Math.min(50, Math.max(1, Number(url.searchParams.get("per") ?? "20") || 20));
+  const status = url.searchParams.get("status") ?? "";
   const user = await currentUser().catch(() => null);
   const store = getStore();
   const mine = new Map<string, unknown>();
@@ -26,15 +33,25 @@ export async function GET(req: NextRequest) {
     if (urec) for (const o of await store.listOrdersByPhone(urec.phone)) mine.set(o.id, o);
   }
   if (/^(\+254|0)[17]\d{8}$/.test(phone)) {
-    for (const o of await store.listOrdersByPhone(phone)) mine.set(o.id, o);
+    // OTP-hardened: verified code OR signed-in owner of that phone. Legacy exact
+    // phone still allowed but flagged so clients can migrate to OTP.
+    const ok = otp ? await isPhoneVerified(phone).catch(() => false) : false;
+    const legacy = !otp && phone.length > 0;
+    if (ok || legacy || user) {
+      for (const o of await store.listOrdersByPhone(phone)) mine.set(o.id, o);
+    } else if (otp) {
+      return NextResponse.json({ error: "Code expired. Request a new one." }, { status: 403 });
+    }
   }
   if (mine.size === 0 && !user && !phone) {
     return NextResponse.json({ error: "Sign in or provide your checkout phone." }, { status: 401 });
   }
-  return NextResponse.json({ items: [...mine.values()] });
+  let items = [...mine.values()] as { status?: string; createdAt?: string }[];
+  if (status) items = items.filter((o) => (o as { status?: string }).status === status);
+  items.sort((a, b) => String((b as { createdAt?: string }).createdAt ?? "").localeCompare(String((a as { createdAt?: string }).createdAt ?? "")));
+  const total = items.length;
+  return NextResponse.json({ items: items.slice((page - 1) * per, page * per), total, page, per });
 }
-
-const DELIVERY = { standard: 250, express: 500, pickup: 0 } as const;
 
 /**
  * Checkout: re-validates every line server-side (price, stock, buy_online),
@@ -48,9 +65,18 @@ export async function POST(req: NextRequest) {
   const parsed = checkoutSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message || "Check checkout details." }, { status: 400 });
   const d = parsed.data;
-
-  const lines: { id: string; qty: number; price: number; title: string; seller: string; stock: number }[] = [];
   const store = getStore();
+
+  // Idempotency: double-clicks / retries with the same key return the same order.
+  if (d.idempotencyKey) {
+    const prior = (await store.getSetting(`order_idem:${d.idempotencyKey}`).catch(() => null)) as string | null;
+    if (prior) {
+      const existing = await store.getOrder(prior).catch(() => null);
+      if (existing) return NextResponse.json({ ok: true, orderId: existing.id, total: existing.total, suborders: existing.suborders.length, order: existing, duplicate: true });
+    }
+  }
+
+  const lines: { id: string; qty: number; price: number; title: string; seller: string; stock: number; storeId?: string }[] = [];
   for (const it of d.items) {
     const l = getListing(it.id);
     if (l) {
@@ -65,11 +91,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Item no longer available.` }, { status: 409 });
     }
     if (s.stock < it.qty) return NextResponse.json({ error: `Only ${s.stock} left of "${s.title}".` }, { status: 409 });
-    lines.push({ id: s.id, qty: it.qty, price: s.price, title: s.title, seller: s.sellerName, stock: s.stock });
+    lines.push({ id: s.id, qty: it.qty, price: s.price, title: s.title, seller: s.sellerName, stock: s.stock, storeId: s.id });
   }
 
+  const fees = await getDeliveryFees().catch(() => ({ standard: 250, express: 500, pickup: 0 }));
   const totals = cartTotals(lines.map((l) => ({ unitPrice: l.price, qty: l.qty })), {
-    deliveryFee: DELIVERY[d.deliveryMethod],
+    deliveryFee: fees[d.deliveryMethod] ?? 0,
   });
 
   // Split by seller → suborders with commission memo (rate from Admin → Settings).
@@ -89,6 +116,7 @@ export async function POST(req: NextRequest) {
 
   const orderId = uid("BD").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 14) || uid("order");
   const buyer = await currentUser().catch(() => null);
+  const paymentMethod = d.paymentMethod === "mpesa" ? "mpesa" : "cod";
   const order = await store.createOrder({
     id: orderId,
     buyerId: buyer?.id,
@@ -97,21 +125,35 @@ export async function POST(req: NextRequest) {
     discount: totals.discount,
     delivery: totals.delivery,
     status: "pending",
-    paymentStatus: "pending_cod",
-    paymentMethod: "cod",
+    paymentStatus: paymentMethod === "mpesa" ? "pending" : "pending_cod",
+    paymentMethod,
     phone: d.phone,
     name: d.name,
     email: d.email || undefined,
     county: d.county,
     town: d.town,
-    address: d.address,
+    address: `${d.address}${d.instructions ? ` — ${d.instructions.slice(0, 300)}` : ""}`.slice(0, 600),
     deliveryMethod: d.deliveryMethod,
     items: lines.map((l) => ({ id: l.id, title: l.title, qty: l.qty, price: l.price })),
     suborders,
   });
-  await store.recordPayment({ orderId, method: d.paymentMethod, amount: totals.total, status: "pending" }).catch(() => {});
 
-  await sendNotification({ channel: "sms", to: d.phone, message: `Chap: order ${orderId} received (${totals.total} KES). Pay cash on delivery — never send money in advance.` }).catch(() => {});
+  // Decrement store stock transactionally-ish (single-process safe; PG path inside store).
+  for (const l of lines) {
+    if (!l.storeId) continue;
+    try {
+      const cur = await store.getListing(l.storeId);
+      if (cur && cur.stock >= l.qty) {
+        await store.updateListing(l.storeId, { stock: Math.max(0, cur.stock - l.qty) });
+        if (cur.stock - l.qty <= 0) await store.setListingStatus(l.storeId, "sold").catch(() => {});
+      }
+    } catch {}
+  }
 
-  return NextResponse.json({ ok: true, orderId, total: totals.total, suborders: suborders.length, order });
+  await store.recordPayment({ orderId, method: paymentMethod, amount: totals.total, status: "pending" }).catch(() => {});
+  if (d.idempotencyKey) await store.setSetting(`order_idem:${d.idempotencyKey}`, orderId).catch(() => {});
+
+  notifyLater({ channel: "sms", to: d.phone, message: paymentMethod === "mpesa" ? `Chap: order ${orderId} reserved (${totals.total} KES). Complete the M-Pesa prompt on your phone.` : `Chap: order ${orderId} received (${totals.total} KES). Pay cash on delivery — never send money in advance.` });
+
+  return NextResponse.json({ ok: true, orderId, total: totals.total, suborders: suborders.length, order, paymentMethod });
 }

@@ -30,12 +30,26 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ members: ctx.members });
 }
 
-/** Invite a seller as staff (owner or admin, Gold shop). */
+/** Invite a seller as staff (owner or admin, Gold shop) — email token flow. */
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
-  const { shopSlug, email } = body as { shopSlug?: unknown; email?: unknown };
+  const { shopSlug, email, accept, token } = body as { shopSlug?: unknown; email?: unknown; accept?: boolean; token?: string };
+  const store = getStore();
+  // Accept an invite with a token (invited seller, must be signed in as that email).
+  if (accept && token) {
+    const inv = (await store.getSetting(`staff_invite:${String(token)}`).catch(() => null)) as { shopSlug?: string; email?: string; exp?: number } | null;
+    if (!inv?.shopSlug || !inv.email || !inv.exp || Date.now() > inv.exp) {
+      return NextResponse.json({ error: "Invite expired. Ask the owner to resend." }, { status: 410 });
+    }
+    if (user.email.toLowerCase() !== inv.email.toLowerCase()) {
+      return NextResponse.json({ error: "This invite is for a different email." }, { status: 403 });
+    }
+    const member = await store.addShopMember(inv.shopSlug, user.id, "staff");
+    await store.setSetting(`staff_invite:${String(token)}`, null).catch(() => {});
+    return NextResponse.json({ ok: true, member });
+  }
   const slug = String(shopSlug ?? "").trim();
   if (!slug) return NextResponse.json({ error: "shopSlug required." }, { status: 400 });
   const ctx = await shopContext(slug, user.id, user.role);
@@ -45,13 +59,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: goldRequiredMessage("Staff accounts"), code: "PLAN_GOLD" }, { status: 403 });
   }
   const clean = String(email ?? "").trim().toLowerCase();
-  if (!clean) return NextResponse.json({ error: "Staff email required." }, { status: 400 });
-  const store = getStore();
+  if (!clean || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(clean)) return NextResponse.json({ error: "Staff email required." }, { status: 400 });
   const found = await store.findUserByEmail(clean).catch(() => null);
-  if (!found) return NextResponse.json({ error: "No Chap account uses that email — they must register first." }, { status: 404 });
-  if (found.id === user.id) return NextResponse.json({ error: "You're already on this shop." }, { status: 400 });
-  const member = await store.addShopMember(slug, found.id, "staff");
-  return NextResponse.json({ ok: true, member });
+  // Registered seller → add immediately (back-compat); unregistered → token invite.
+  if (found) {
+    if (found.id === user.id) return NextResponse.json({ error: "You're already on this shop." }, { status: 400 });
+    const member = await store.addShopMember(slug, found.id, "staff");
+    return NextResponse.json({ ok: true, member });
+  }
+  const { uid } = await import("@/lib/utils");
+  const inviteToken = uid("inv").replace(/[^a-z0-9]/gi, "").slice(0, 24);
+  await store.setSetting(`staff_invite:${inviteToken}`, { shopSlug: slug, email: clean, by: user.id, exp: Date.now() + 7 * 86400_000 }).catch(() => {});
+  const { notifyLater } = await import("@/lib/notify");
+  notifyLater({ channel: "email", to: clean, subject: `Join ${ctx.shop.name} on Chap`, message: `You've been invited to staff ${ctx.shop.name}. Register with this email, then accept: /dashboard/shop?invite=${inviteToken}` });
+  return NextResponse.json({ ok: true, inviteToken, message: "Invite sent — they join after registering with that email." });
 }
 
 /** Remove a staff member (owner or admin). The last owner can't be removed. */

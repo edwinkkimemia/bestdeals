@@ -7,7 +7,15 @@ const ALG = "HS256";
 
 function secret(): Uint8Array {
   const s = process.env.AUTH_SECRET || "dev-only-secret-change-me-32chars!!";
+  if (process.env.NODE_ENV === "production" && (s.includes("change-me") || s.includes("dev-only") || s.length < 32)) {
+    throw new Error("AUTH_SECRET must be set to a random 32+ char value in production.");
+  }
   return new TextEncoder().encode(s);
+}
+
+export function isStrongSecret(): boolean {
+  const s = process.env.AUTH_SECRET || "";
+  return s.length >= 32 && !s.includes("change-me") && !s.includes("dev-only");
 }
 
 export type SessionUser = {
@@ -52,6 +60,23 @@ export async function currentUser(): Promise<SessionUser | null> {
 }
 
 export const SESSION_COOKIE = COOKIE;
+
+/** Secure session cookie attributes — single place so signin/signout stay in sync. */
+export function sessionCookieAttrs(maxAgeSec = 7 * 24 * 3600): {
+  httpOnly: boolean;
+  secure: boolean;
+  sameSite: "lax";
+  path: string;
+  maxAge: number;
+} {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: maxAgeSec,
+  };
+}
 
 /** Back-compat demo helpers — now backed by the shared store (demo or Postgres). */
 export type StoredUser = {

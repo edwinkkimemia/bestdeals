@@ -134,15 +134,31 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
     } catch {}
   }, [listing.id]);
 
-  const submitReport = async () => {
-    if (!report.trim()) return;
+  const submitReport = async (reason: string, details?: string) => {
+    if (!reason.trim()) return;
     await fetch("/api/reports", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ listingId: listing.id, reason: report }),
+      body: JSON.stringify({ listingId: listing.id, reason, details }),
     }).catch(() => {});
     setReportDone(true);
   };
+
+  const trackReveal = (channel: string) => {
+    fetch("/api/analytics/reveal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ listingId: listing.id, channel }),
+    }).catch(() => {});
+  };
+
+  const REPORT_PICKER = [
+    { code: "illegal", label: "Illegal / prohibited" },
+    { code: "prepayment", label: "Asks for prepayment" },
+    { code: "spam", label: "Spam / duplicate" },
+    { code: "wrong", label: "Wrong category" },
+    { code: "other", label: "Other" },
+  ];
 
   const lowStock = listing.stock > 0 && listing.stock <= 5 && listing.transactionMethod === "buy_online";
 
@@ -323,7 +339,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Link href={`/dashboard/messages/new?listing=${listing.id}`} className="btn-primary !px-3">
+            <Link href={`/dashboard/messages/new?listing=${listing.id}`} onClick={() => trackReveal("chat")} className="btn-primary !px-3">
               <MessageCircle className="h-4 w-4" /> Message
             </Link>
             {listing.shopSlug ? (
@@ -343,9 +359,16 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
           {reportDone ? (
             <p className="mt-2 text-sm text-green-700">Thanks — our moderators will review with a recorded reason.</p>
           ) : (
-            <div className="mt-2 flex gap-2">
-              <input value={report} onChange={(e) => setReport(e.target.value)} placeholder="e.g. suspected fraud, wrong price…" className="input-bd" aria-label="Report reason" />
-              <button onClick={submitReport} className="btn-secondary shrink-0">Send</button>
+            <div className="mt-2 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {REPORT_PICKER.map((r) => (
+                  <button key={r.code} onClick={() => submitReport(r.code, report)} className="rounded-full border px-3 py-1 text-xs hover:bg-sand-50">{r.label}</button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input value={report} onChange={(e) => setReport(e.target.value)} placeholder="Details (optional)…" className="input-bd" aria-label="Report details" />
+                <button onClick={() => submitReport("other", report)} className="btn-secondary shrink-0">Send</button>
+              </div>
             </div>
           )}
         </div>

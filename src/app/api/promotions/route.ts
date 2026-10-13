@@ -62,8 +62,32 @@ export async function POST(req: NextRequest) {
     amount: product.price,
   });
 
+  // Wallet-first: spend balance when it covers the boost (Jiji Balance-style).
+  const { getBalance, debitWallet } = await import("@/lib/wallet");
+  const bal = await getBalance(user.id).catch(() => 0);
+  if (bal >= product.price && product.price > 0) {
+    const spent = await debitWallet(user.id, product.price, "boost", `${product.name} ${listing.id}`);
+    if (spent.ok) {
+      await store.activatePromotion(promo.id).catch(() => {});
+      await store.setListingFeatured(listing.id, true).catch(() => {});
+      return NextResponse.json({
+        ok: true,
+        promotion: { ...(await store.getPromotion(promo.id).catch(() => promo)), },
+        payment: { status: "paid", message: `Paid from wallet balance (${spent.balance} KES left).`, providerRef: undefined },
+        summary: `${product.name} for "${listing.title}" — ${formatKES(product.price)}. Paid from wallet.`,
+      });
+    }
+  }
+
   const phone = parsed.data.phone ?? fresh?.phone ?? user.phone;
-  const payment = await initiateSTKPush({ orderId: promo.id, amount: product.price, phone, method: "mpesa" });
+  const payment = await initiateSTKPush({ orderId: promo.id, amount: product.price, phone, method: "mpesa", label: "boost" });
+  if (payment.status === "processing" && payment.providerRef) {
+    await store.setSetting(`mpesa_link:${payment.providerRef}`, { promoId: promo.id }).catch(() => {});
+  }
+  // Free/zero-amount promos (referral rewards) activate immediately.
+  if (product.price === 0) {
+    await store.activatePromotion(promo.id).catch(() => {});
+  }
   return NextResponse.json({
     ok: true,
     promotion: promo,

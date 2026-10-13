@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { freshDemoStore } from "../src/lib/store.ts";
-import { referralLink, qualifyReferralsFor } from "../src/lib/referrals.ts";
+import { referralLink, referralCode, resolveReferrer, qualifyReferralsFor } from "../src/lib/referrals.ts";
 
 async function seller(store: ReturnType<typeof freshDemoStore>, email: string, activeListing = false) {
   const u = await store.createUser({ name: "Seller", email, phone: "0712345678", role: "SELLER", verified: false, passwordHash: "h" });
@@ -20,8 +20,18 @@ async function seller(store: ReturnType<typeof freshDemoStore>, email: string, a
 }
 
 describe("referrals", () => {
-  it("builds invite links from the user id", () => {
-    assert.equal(referralLink("u_abc123", "https://chap.co.ke"), "https://chap.co.ke/auth/signup?ref=u_abc123");
+  it("builds opaque invite links (not enumerable user ids)", () => {
+    const link = referralLink("u_abc123", "https://chap.co.ke");
+    assert.ok(link.startsWith("https://chap.co.ke/auth/signup?ref="));
+    assert.ok(!link.includes("u_abc123"), "code must be opaque");
+    assert.equal(link, `https://chap.co.ke/auth/signup?ref=${referralCode("u_abc123")}`);
+  });
+  it("resolves opaque codes and legacy ids", async () => {
+    const store = freshDemoStore();
+    const { u: a } = await seller(store, "rcode@x.co.ke");
+    assert.equal(await resolveReferrer(referralCode(a.id), store), a.id);
+    assert.equal(await resolveReferrer(a.id, store), a.id);
+    assert.equal(await resolveReferrer("nope", store), null);
   });
   it("attributes signups, refuses self-referrals and duplicates", async () => {
     const store = freshDemoStore();

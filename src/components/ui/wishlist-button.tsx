@@ -32,6 +32,12 @@ export function WishlistButton({ id, title }: { id: string; title?: string }) {
         localStorage.setItem(KEY, JSON.stringify(next));
         setActive(next.includes(id));
         window.dispatchEvent(new Event("bd:wishlist"));
+        // Best-effort server sync (signed-in users get cross-device wishlist).
+        fetch("/api/wishlist", {
+          method: next.includes(id) ? "POST" : "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(next.includes(id) ? { listingId: id } : { id }),
+        }).catch(() => {});
       }}
       className={cn(
         "flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow transition hover:scale-105",

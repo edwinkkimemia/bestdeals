@@ -4,6 +4,9 @@ const ALG = "HS256";
 
 function secret(): Uint8Array {
   const s = process.env.AUTH_SECRET || "dev-only-secret-change-me-32chars!!";
+  if (process.env.NODE_ENV === "production" && (s.includes("change-me") || s.includes("dev-only") || s.length < 32)) {
+    throw new Error("AUTH_SECRET must be set to a random 32+ char value in production.");
+  }
   return new TextEncoder().encode(s);
 }
 

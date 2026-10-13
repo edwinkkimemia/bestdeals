@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { signupSchema } from "@/lib/validators";
-import { hashPassword, createSessionToken, SESSION_COOKIE } from "@/lib/auth";
+import { hashPassword, createSessionToken, SESSION_COOKIE, sessionCookieAttrs } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { createPurposeToken } from "@/lib/auth-tokens";
-import { sendNotification } from "@/lib/notify";
+import { notifyLater } from "@/lib/notify";
 
 const isAdminEmail = (email: string) =>
   (process.env.ADMIN_EMAILS || "admin@chap.co.ke").split(",").map((s) => s.trim().toLowerCase()).includes(email.toLowerCase());
@@ -32,22 +32,30 @@ export async function POST(req: NextRequest) {
   if (await store.findUserByEmail(email)) return NextResponse.json({ error: "An account with this email already exists." }, { status: 409 });
   const role = (isAdminEmail(email) ? "ADMIN" : "SELLER") as "SELLER" | "ADMIN";
   const user = await store.createUser({ name, businessName: businessName || undefined, email, phone, role, verified: false, emailVerified: false, sellerKind, passwordHash: await hashPassword(password) });
-  // Referral attribution (best-effort — never fails signup; self/dup codes ignored).
+  // Referral attribution (opaque codes + legacy ids; fraud-guarded, never fails signup).
   const ref = (parsed.data.ref ?? "").trim();
   if (ref) {
     try {
-      const referrer = await store.findUserById(ref);
-      if (referrer && referrer.id !== user.id) {
-        await store.createReferral({ referrerUserId: referrer.id, referredUserId: user.id });
+      const { resolveReferrer } = await import("@/lib/referrals");
+      const referrerId = await resolveReferrer(ref, store);
+      if (referrerId && referrerId !== user.id) {
+        // Basic fraud: one signup per IP per hour counts (settings-backed counter).
+        const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+        const fk = `ref_fraud:${ip}`;
+        const n = Number(await store.getSetting(fk).catch(() => 0)) || 0;
+        if (n < 5) {
+          await store.setSetting(fk, n + 1).catch(() => {});
+          await store.createReferral({ referrerUserId: referrerId, referredUserId: user.id });
+        }
       }
     } catch {}
   }
   const token = await createSessionToken({ id: user.id, name, email, phone, role, verified: false });
-  // Welcome email-verification link (best-effort — never fails signup).
+  // Welcome email-verification link (queued — never fails signup).
   try {
     const vToken = await createPurposeToken({ purpose: "email-verify", userId: user.id, email });
     const base = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
-    await sendNotification({
+    notifyLater({
       channel: "email",
       to: email,
       subject: "Verify your Chap email",
@@ -55,6 +63,6 @@ export async function POST(req: NextRequest) {
     });
   } catch {}
   const res = NextResponse.json({ ok: true, role });
-  res.cookies.set(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 604800 });
+  res.cookies.set(SESSION_COOKIE, token, sessionCookieAttrs());
   return res;
 }

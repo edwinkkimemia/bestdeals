@@ -132,5 +132,21 @@ export async function POST(req: NextRequest) {
       errors.push({ row: lineNo, error: e instanceof Error ? e.message : "Invalid row." });
     }
   }
-  return NextResponse.json({ ok: true, created: created.length, failed: errors.length, ids: created, errors: errors.slice(0, 50) });
+  // Job record for progress polling (async-compatible: clients poll ?jobId=).
+  const { uid } = await import("@/lib/utils");
+  const jobId = uid("bulk");
+  await store.setSetting(`bulk:${jobId}`, { by: user.id, at: new Date().toISOString(), created: created.length, failed: errors.length, errors: errors.slice(0, 50) }).catch(() => {});
+  return NextResponse.json({ ok: true, jobId, created: created.length, failed: errors.length, ids: created, errors: errors.slice(0, 50) });
+}
+
+/** Bulk job progress (poll after POST returns jobId). */
+export async function GET(req: NextRequest) {
+  const { currentUser } = await import("@/lib/auth");
+  const user = await currentUser().catch(() => null);
+  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  const jobId = new URL(req.url).searchParams.get("jobId") || "";
+  if (!jobId) return NextResponse.json({ error: "jobId required." }, { status: 400 });
+  const job = await getStore().getSetting(`bulk:${jobId}`).catch(() => null);
+  if (!job) return NextResponse.json({ error: "Job not found." }, { status: 404 });
+  return NextResponse.json({ job });
 }

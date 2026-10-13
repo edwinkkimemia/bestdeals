@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { currentUser, createSessionToken, SESSION_COOKIE } from "@/lib/auth";
+import { currentUser, createSessionToken, SESSION_COOKIE, sessionCookieAttrs } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 
-/** Update own profile (display name + phone + public photo). Verification status can't be self-edited. */
+/** Update own profile (display name + phone + public photo). Phone change re-queues verification. */
 export async function PUT(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
@@ -24,10 +24,19 @@ export async function PUT(req: NextRequest) {
       (photoUrl.startsWith("https://") || photoUrl.startsWith("/uploads/") || photoUrl.startsWith("/api/files/"));
     if (!ok) return NextResponse.json({ error: "Photo must be an uploaded image (JPG/PNG/WebP)." }, { status: 400 });
   }
+  const store = getStore();
+  const before = await store.findUserById(user.id).catch(() => null);
   const patch: { name?: string; phone?: string; photoUrl?: string | null } = { name, phone };
   if (photoUrl !== undefined) patch.photoUrl = photoUrl ? photoUrl : null;
-  const updated = await getStore().updateUser(user.id, patch);
+  const updated = await store.updateUser(user.id, patch);
   if (!updated) return NextResponse.json({ error: "Account not found." }, { status: 404 });
+  // Re-verify on phone change: the verified number snapshot must match the account.
+  let reverify = false;
+  if (phone && before && phone !== before.phone && updated.verified) {
+    await store.setUserVerified(updated.id, false).catch(() => {});
+    updated.verified = false;
+    reverify = true;
+  }
   // Re-issue the session cookie so header/dashboard show the new name/phone immediately.
   const token = await createSessionToken({
     id: updated.id,
@@ -37,8 +46,8 @@ export async function PUT(req: NextRequest) {
     role: updated.role,
     verified: updated.verified,
   });
-  const res = NextResponse.json({ ok: true, name: updated.name, phone: updated.phone, photoUrl: updated.photoUrl ?? null });
-  res.cookies.set(SESSION_COOKIE, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 604800 });
+  const res = NextResponse.json({ ok: true, name: updated.name, phone: updated.phone, photoUrl: updated.photoUrl ?? null, ...(reverify ? { reverify: true, message: "Number changed — re-verify at /dashboard/verify to keep posting." } : {}) });
+  res.cookies.set(SESSION_COOKIE, token, sessionCookieAttrs());
   return res;
 }
 

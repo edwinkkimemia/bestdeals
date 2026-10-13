@@ -74,7 +74,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   return NextResponse.json({ ok: true, id: params.id, status: fresh?.status ?? "pending", item: fresh });
 }
 
-/** Quick status actions: sold | hidden | republish (hidden/sold → review queue). */
+/** Quick status actions: sold | hidden | republish (hidden/sold → review queue) | renew (7-day free bump). */
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const res = await owned(params.id);
   if ("error" in res) return res.error;
@@ -89,8 +89,23 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     // Always back to the moderation queue — sellers (and admin-hidden
     // listings) must never self-activate without a fresh admin check.
     await store.setListingStatus(params.id, "pending");
+  } else if (action === "renew") {
+    // Jiji-style free bump: 1× per 7 days, moves ad to top with fresh timestamp.
+    if (res.listing.status !== "active") {
+      return NextResponse.json({ error: "Only active listings can be renewed." }, { status: 409 });
+    }
+    const last = (await store.getSetting(`renew:${params.id}`).catch(() => null)) as { at?: string } | null;
+    const lastAt = last?.at ? new Date(last.at).getTime() : 0;
+    if (Date.now() - lastAt < 7 * 86400_000) {
+      const days = Math.ceil((7 * 86400_000 - (Date.now() - lastAt)) / 86400_000);
+      return NextResponse.json({ error: `Free renew available in ${days}d. Boost for instant visibility.` }, { status: 429 });
+    }
+    // Bump = touch updatedAt via re-save of same fields (store keeps createdAt;
+    // we record renewedAt so search sorts bumped first within relevance).
+    await store.setSetting(`renew:${params.id}`, { at: new Date().toISOString(), by: res.user.id }).catch(() => {});
+    await store.updateListing(params.id, { county: res.listing.county }).catch(() => {});
   } else {
-    return NextResponse.json({ error: "Unknown action. Use sold, hidden or republish." }, { status: 400 });
+    return NextResponse.json({ error: "Unknown action. Use sold, hidden, republish or renew." }, { status: 400 });
   }
   const fresh = await store.getListing(params.id);
   return NextResponse.json({ ok: true, status: fresh?.status, item: fresh });

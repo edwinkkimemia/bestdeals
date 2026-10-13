@@ -145,11 +145,17 @@ export const planListings = (p: { listings: number }): string =>
 
 export const COMMISSION_BPS_DEFAULT = 500; // 5%
 
-/** Paid visibility products: clearly labelled Featured boosts, fixed KES prices. */
+/** Paid visibility products: Featured boosts + TOP pins (Jiji-style bump economics). */
 export const BOOST_PRODUCTS = [
   { id: "boost-7", name: "Featured · 7 days", kind: "featured", days: 7, price: 199 },
   { id: "boost-14", name: "Featured · 14 days", kind: "featured", days: 14, price: 299 },
   { id: "boost-30", name: "Featured · 30 days", kind: "featured", days: 30, price: 499 },
+  // TOP pins sit above organics for 7/30 days (single-ad pin, Jiji-style).
+  { id: "top-7", name: "TOP pin · 7 days", kind: "top", days: 7, price: 349 },
+  { id: "top-30", name: "TOP pin · 30 days", kind: "top", days: 30, price: 899 },
+  // Portfolio tiers: longer window + auto-bump cadence handled in search ranking.
+  { id: "boost-premium-30", name: "Boost Premium · 30 days (5× reach)", kind: "boost_premium", days: 30, price: 1299 },
+  { id: "boost-vip-30", name: "Boost VIP · 30 days (7× reach + Similar Ads)", kind: "boost_vip", days: 30, price: 2499 },
 ];
 
 export const boostProductById = (id: string) => BOOST_PRODUCTS.find((p) => p.id === id) ?? null;

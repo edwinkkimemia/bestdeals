@@ -37,12 +37,12 @@ describe("kyc decisions", () => {
     assert.ok(done.decidedAt, "decidedAt should be set");
   });
 
-  it("id approval verifies the user but leaves shops pending", async () => {
+  it("id approval verifies the user AND their shops (unified KYC loop)", async () => {
     const { s, user, shop, v } = await setup("id");
     const out = await applyVerificationApproval(s, v.id, "admin1");
     assert.equal(out?.status, "approved");
     assert.equal((await s.findUserById(user.id))?.verified, true);
-    assert.equal((await s.getShopBySlug(shop.slug))?.verified, false);
+    assert.equal((await s.getShopBySlug(shop.slug))?.verified, true);
   });
 
   it("business approval verifies the user AND their shops", async () => {

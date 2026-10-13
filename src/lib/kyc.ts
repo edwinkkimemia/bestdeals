@@ -1,7 +1,8 @@
 /**
  * KYC decision helper: approving a verification marks the user verified.
- * Business-kind approvals additionally verify the user's shops, closing the
- * shop-KYC loop (the admin queue has no separate shop button).
+ * Approvals verify the user's shops too (business + individual) so the
+ * shop-KYC loop closes without a separate shop button; phone changes
+ * re-queue verification via /api/profile.
  */
 import type { Store } from "./store";
 
@@ -11,11 +12,9 @@ export async function applyVerificationApproval(store: Store, verificationId: st
   const v = all.find((x) => x.id === verificationId) ?? null;
   if (!v) return null;
   await store.setUserVerified(v.userId, true);
-  if (v.kind === "business") {
-    const shops = await store.listShopsByOwner(v.userId).catch(() => []);
-    for (const s of shops) {
-      await store.setShopVerified(s.slug, true).catch(() => null);
-    }
+  const shops = await store.listShopsByOwner(v.userId).catch(() => []);
+  for (const s of shops) {
+    await store.setShopVerified(s.slug, true).catch(() => null);
   }
   return v;
 }

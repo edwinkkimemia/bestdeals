@@ -4,8 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { toSafeHtml, toExcerpt } from "@/lib/richtext";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
-import { sendNotification } from "@/lib/notify";
-import { getListing } from "@/data/catalog";
+import { notifyLater } from "@/lib/notify";
 
 const startSchema = z.object({
   listingId: z.string().min(1).max(80).default("general"),
@@ -33,17 +32,25 @@ export async function POST(req: NextRequest) {
   if (!plain) return NextResponse.json({ error: "Message can't be empty." }, { status: 400 });
 
   const store = getStore();
+  const { getListing } = await import("@/data/catalog");
   const catalog = getListing(d.listingId);
   const stored = !catalog && d.listingId !== "general" ? await store.getListing(d.listingId) : null;
   const title = catalog?.title ?? stored?.title ?? "General enquiry";
   const seller = catalog?.sellerName ?? stored?.sellerName ?? "Seller";
 
   const viewerId = user?.id ?? `phone:${phone}`;
-  // Link the seller side when the seller has an account with the same display name.
+  // Link the seller side via exact display-name match (name + businessName).
   let sellerId: string | undefined;
   try {
-    const users = await store.listUsers();
-    sellerId = users.find((u) => u.name === seller)?.id;
+    const hit = await store.findUserByDisplayName(seller).catch(() => null);
+    sellerId = hit?.id;
+  } catch {}
+  // Blocked participants can't open new threads with each other on the same listing.
+  try {
+    const blocked = ((await store.getSetting(`blocked:${viewerId}`).catch(() => null)) as string[] | null) ?? [];
+    if (sellerId && blocked.includes(sellerId)) {
+      return NextResponse.json({ error: "You blocked this seller." }, { status: 403 });
+    }
   } catch {}
   const convo = await store.createConversation({
     listingId: d.listingId,
@@ -55,7 +62,7 @@ export async function POST(req: NextRequest) {
     buyerPhone: phone,
     firstMessage: { senderId: viewerId, senderLabel: name, body: plain, bodyHtml: toSafeHtml(plain) },
   });
-  await sendNotification({ channel: "sms", to: phone, message: `Chap: chat opened with ${seller} — "${toExcerpt(plain, 80)}"` }).catch(() => {});
+  notifyLater({ channel: "sms", to: phone, message: `Chap: chat opened with ${seller} — "${toExcerpt(plain, 80)}"` });
   return NextResponse.json({ ok: true, id: convo.id });
 }
 

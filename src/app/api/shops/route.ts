@@ -119,3 +119,36 @@ export async function PATCH(req: NextRequest) {
   if (!updated) return NextResponse.json({ error: "Update failed." }, { status: 500 });
   return NextResponse.json({ ok: true, shop: updated });
 }
+
+/** Close shop (owner/admin) + transfer ownership. */
+export async function DELETE(req: NextRequest) {
+  const user = await currentUser().catch(() => null);
+  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  const body = await req.json().catch(() => ({}));
+  const slug = String(body.slug || new URL(req.url).searchParams.get("slug") || "").trim();
+  const transferTo = String(body.transferTo || "").trim();
+  if (!slug) return NextResponse.json({ error: "Shop is required." }, { status: 400 });
+  const store = getStore();
+  const shop = await store.getShopBySlug(slug).catch(() => null);
+  if (!shop) return NextResponse.json({ error: "Shop not found." }, { status: 404 });
+  const members = await store.listShopMembers(slug).catch(() => []);
+  const isOwner = user.role === "ADMIN" || shop.ownerId === user.id || members.some((m) => m.userId === user.id && m.role === "owner");
+  if (!isOwner) return NextResponse.json({ error: "Only the owner can close the shop." }, { status: 403 });
+  if (transferTo) {
+    const target = await store.findUserById(transferTo).catch(() => null) ?? await store.findUserByEmail(transferTo).catch(() => null);
+    if (!target) return NextResponse.json({ error: "New owner not found." }, { status: 404 });
+    // Transfer = add new owner + remove old owner membership; keep listings.
+    await store.addShopMember(slug, target.id, "owner").catch(() => {});
+    if (shop.ownerId) await store.removeShopMember(slug, shop.ownerId).catch(() => {});
+    const { logAudit } = await import("@/lib/audit");
+    await logAudit({ actorId: user.id, actorEmail: user.email, action: "shop.transfer", entity: "shop", entityId: slug, reason: `to=${target.id}` }).catch(() => {});
+    return NextResponse.json({ ok: true, transferred: true });
+  }
+  // Close: hide all listings + mark plan cancelled via settings tombstone.
+  const listings = await store.listListingsByShop(slug).catch(() => []);
+  for (const l of listings) await store.setListingStatus(l.id, "hidden").catch(() => {});
+  await store.setSetting(`shop_closed:${slug}`, { by: user.id, at: new Date().toISOString() }).catch(() => {});
+  const { logAudit } = await import("@/lib/audit");
+  await logAudit({ actorId: user.id, actorEmail: user.email, action: "shop.close", entity: "shop", entityId: slug }).catch(() => {});
+  return NextResponse.json({ ok: true, closed: true });
+}

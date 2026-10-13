@@ -8,15 +8,14 @@ import { formatKES } from "@/lib/format";
 
 /**
  * Switch a shop's plan (Free / Silver / Gold).
- * Paid plans initiate an M-Pesa STK push (same pattern as ad boosts);
- * until Daraja billing is configured the plan activates immediately with
- * labelled demo billing and an admin confirms payment like boosts.
+ * Wallet-first, then M-Pesa STK. Invoices live in settings (demo + PG safe)
+ * with renewal reminders + grace; downgrades sweep over-limit listings.
  */
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
-  const { shopSlug, planId, phone } = body as { shopSlug?: unknown; planId?: unknown; phone?: unknown };
+  const { shopSlug, planId, phone, cancel } = body as { shopSlug?: unknown; planId?: unknown; phone?: unknown; cancel?: boolean };
   const plan = normalizePlan(planId);
   const def = SHOP_PLANS.find((p) => p.id === plan);
   if (!def) return NextResponse.json({ error: "Unknown plan." }, { status: 400 });
@@ -39,11 +38,41 @@ export async function POST(req: NextRequest) {
     members.some((m) => m.userId === user.id && m.role === "owner");
   if (!isOwner) return NextResponse.json({ error: "Only the shop owner can change the plan." }, { status: 403 });
 
-  await store.setShopPlan(slug, plan);
+  if (cancel) {
+    await store.setShopPlan(slug, "free").catch(() => {});
+    const { logAudit } = await import("@/lib/audit");
+    await logAudit({ actorId: user.id, actorEmail: user.email, action: "plan.cancel", entity: "shop", entityId: slug }).catch(() => {});
+    return NextResponse.json({ ok: true, shopSlug: slug, planId: "free", cancelled: true });
+  }
+
   if (plan === "free") {
+    await store.setShopPlan(slug, plan);
+    // Downgrade sweep: hide newest over-limit actives beyond the free cap (5).
+    try {
+      const { countLiveListings } = await import("@/lib/plans");
+      const live = await countLiveListings(shop.ownerId || user.id).catch(() => 0);
+      if (live > 5) {
+        const mine = await store.listListingsByOwner(shop.ownerId || user.id).catch(() => []);
+        const actives = mine.filter((l) => l.status === "active").sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
+        for (const l of actives.slice(0, live - 5)) await store.setListingStatus(l.id, "hidden").catch(() => {});
+      }
+    } catch {}
     return NextResponse.json({ ok: true, shopSlug: slug, planId: plan, plans: PLAN_IDS });
   }
-  // Paid plan: M-Pesa STK push for the monthly fee (advertising-style flow).
+  // Wallet-first (Balance-style): instant activation when covered.
+  const { getBalance, debitWallet } = await import("@/lib/wallet");
+  const bal = await getBalance(user.id).catch(() => 0);
+  const invoice = { id: `INV-${slug.slice(0, 8)}-${Date.now().toString(36)}`, shopSlug: slug, planId: plan, amount: def.monthly, at: new Date().toISOString(), renewsAt: new Date(Date.now() + 30 * 86400_000).toISOString(), method: "wallet" as string };
+  if (bal >= def.monthly && def.monthly > 0) {
+    const spent = await debitWallet(user.id, def.monthly, "plan", `${def.name} ${slug}`);
+    if (spent.ok) {
+      await store.setShopPlan(slug, plan);
+      const inv = ((await store.getSetting("invoices").catch(() => null)) as typeof invoice[] | null) ?? [];
+      await store.setSetting("invoices", [{ ...invoice, method: "wallet" }, ...inv].slice(0, 500)).catch(() => {});
+      return NextResponse.json({ ok: true, shopSlug: slug, planId: plan, invoice, payment: { status: "paid", message: `Paid from wallet (${spent.balance} KES left).` } });
+    }
+  }
+  // Paid plan: M-Pesa STK push for the monthly fee.
   const fresh = await store.findUserById(user.id).catch(() => null);
   const payPhone = String(phone ?? fresh?.phone ?? user.phone ?? "").trim();
   if (!/^(\+254|0)[17]\d{8}$/.test(payPhone)) {
@@ -56,6 +85,16 @@ export async function POST(req: NextRequest) {
     method: "mpesa",
     label: `${def.name} plan`,
   });
+  if (payment.status === "processing" && payment.providerRef) {
+    await store.setSetting(`mpesa_link:${payment.providerRef}`, { planShop: slug, planId: plan }).catch(() => {});
+    const inv = ((await store.getSetting("invoices").catch(() => null)) as typeof invoice[] | null) ?? [];
+    await store.setSetting("invoices", [{ ...invoice, method: "mpesa", providerRef: payment.providerRef }, ...inv].slice(0, 500)).catch(() => {});
+  }
+  // Demo mode (no Daraja): activate immediately so flows stay testable.
+  const { isPaymentsLive } = await import("@/lib/payments");
+  if (!isPaymentsLive()) {
+    await store.setShopPlan(slug, plan);
+  }
   return NextResponse.json({
     ok: true,
     shopSlug: slug,
@@ -63,7 +102,8 @@ export async function POST(req: NextRequest) {
     plans: PLAN_IDS,
     payment: { status: payment.status, message: payment.message, providerRef: payment.providerRef },
     summary: `${def.name} plan for ${formatKES(def.monthly)}/mo. ${payment.message}`,
-    note: "Demo billing — plan active immediately; confirm the M-Pesa prompt when sent.",
+    invoice,
+    ...(isPaymentsLive() ? {} : { note: "Demo billing — plan active immediately; connect Daraja for live billing." }),
   });
 }
 

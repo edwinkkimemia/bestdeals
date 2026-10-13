@@ -81,7 +81,8 @@ export const checkoutSchema = z.object({
   address: z.string().min(4).max(300),
   instructions: z.string().max(500).default(""),
   deliveryMethod: z.enum(["standard", "express", "pickup"]),
-  paymentMethod: z.literal("cod", { error: "Product checkout is cash on delivery." }),
+  paymentMethod: z.enum(["cod", "mpesa"]).default("cod"),
+  idempotencyKey: z.string().max(80).optional().default(""),
   items: z
     .array(z.object({ id: z.string(), qty: z.coerce.number().int().min(1).max(99) }))
     .min(1),

@@ -41,7 +41,7 @@ export type SellerAnalytics = {
   daily: DailyPoint[];
   perListing: (ListingStat & { title?: string })[];
   topReferrers: { source: string; count: number }[];
-  funnel: { views: number; enquiries: number; orders: number };
+  funnel: { views: number; enquiries: number; orders: number; reveals?: number; conversions?: number };
 };
 
 export type PlatformAnalytics = {
@@ -391,13 +391,24 @@ export async function getSellerAnalyticsReport(
   const store = getStore();
   const [convos, orders] = await Promise.all([
     store.listConversations({ userId: user.id, sellerName: user.name }).catch(() => [] as unknown[]),
-    store.listOrders().catch(() => [] as { suborders: { seller: string }[] }[]),
+    store.listOrders().catch(() => [] as { suborders: { seller: string }[]; items: { id?: string }[] }[]),
   ]);
   const enquiries = (convos as { lastAt?: string; createdAt: string }[]).filter((c) => {
     const t = +new Date(c.lastAt ?? c.createdAt);
     return Number.isFinite(t) && t >= since;
   }).length;
-  const attributed = orders.filter((o) => o.suborders?.some((s) => s.seller === user.name)).length;
+  // Attribution by owner listing ids (not display-name): order contains my listing id.
+  const idSet = new Set(listingIds);
+  const attributed = orders.filter((o) =>
+    (o.items ?? []).some((i) => i.id && idSet.has(i.id)) ||
+    o.suborders?.some((s) => s.seller === user.name)
+  ).length;
+  // Contact-reveal conversions (Show contact + Start chat taps) across my listings.
+  let reveals = 0;
+  try {
+    const counts: unknown[] = await Promise.all(listingIds.slice(0, 200).map((id) => store.getSetting(`reveals:${id}`).catch(() => 0)));
+    reveals = counts.reduce((s: number, n: unknown) => s + (Number(n) || 0), 0);
+  } catch {}
   const perListing = stats.perListing
     .map((p) => ({ ...p, title: titles.get(p.listingId) ?? p.listingId }))
     .sort((a, b) => b.views - a.views);
@@ -409,7 +420,7 @@ export async function getSellerAnalyticsReport(
     daily: stats.daily,
     perListing,
     topReferrers: referrers,
-    funnel: { views: stats.totalViews, enquiries, orders: attributed },
+    funnel: { views: stats.totalViews, enquiries, orders: attributed, reveals, conversions: reveals + enquiries },
     listingIds,
   };
 }

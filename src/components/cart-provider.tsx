@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { getListing } from "@/data/catalog";
 
 export type CartLine = { id: string; qty: number };
 type CartCtx = {
@@ -19,7 +18,9 @@ const KEY = "bd_cart_v1";
 function read(): CartLine[] {
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) || "[]") as CartLine[];
-    return raw.filter((l) => getListing(l.id) && l.qty > 0);
+    // Keep all ids — seller store listings aren't in the static catalogue but
+    // checkout validates them server-side. Drop only malformed rows.
+    return raw.filter((l) => typeof l.id === "string" && l.id.length > 0 && l.qty > 0).slice(0, 50);
   } catch {
     return [];
   }
