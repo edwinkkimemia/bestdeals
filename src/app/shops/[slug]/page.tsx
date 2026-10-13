@@ -6,6 +6,7 @@ import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { SHOPS, getShop, shopListings } from "@/data/catalog";
 import { storeRead } from "@/lib/store";
 import { ReviewsBlock } from "@/components/reviews-block";
+import { ReviewForm } from "@/components/review-form";
 import { ListingCard } from "@/components/ui/listing-card";
 import { Badge } from "@/components/ui/badge";
 import { localBusinessJsonLd, breadcrumbJsonLd } from "@/lib/seo";
@@ -100,6 +101,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
             </div>
           )}
           <ReviewsBlock reviews={storedReviews} title={`Reviews for ${nonNull.name}`} />
+          <ReviewForm shopSlug={nonNull.slug} sellerName={nonNull.name} />
         </div>
       </div>
     );
@@ -148,6 +150,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
           {items.map((l) => <ListingCard key={l.id} listing={l} />)}
         </div>
         <ReviewsBlock reviews={reviews} title={`Reviews for ${s.name}`} />
+        <ReviewForm shopSlug={s.slug} sellerName={s.name} />
       </div>
     </div>
   );
