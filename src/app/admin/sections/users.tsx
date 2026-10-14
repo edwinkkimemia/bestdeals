@@ -54,7 +54,7 @@ export async function UsersSection({ status, role, sort }: { status: string; rol
         <p className="mt-4 text-sm text-ink-500">No accounts match — try another filter. In-memory demo mode (no DATABASE_URL) resets on restart.</p>
       )}
       {items.length > 0 && (
-        <AdminTable columns={["User", "Contact", "Role", "Kind", "Seller ✓", "Email ✓", "Joined", "Actions"]}>
+        <AdminTable columns={["User", "Contact", "Role", "Kind", "Plan", "Seller ✓", "Email ✓", "Joined", "Actions"]}>
           {items.map((u) => (
             <tr key={u.id} className="transition hover:bg-sand-50">
               <Td>
@@ -67,6 +67,7 @@ export async function UsersSection({ status, role, sort }: { status: string; rol
               </Td>
               <Td className="whitespace-nowrap text-ink-500">{u.role}</Td>
               <Td className="whitespace-nowrap text-ink-500">{u.sellerKind === "business" ? "business" : "individual"}</Td>
+              <Td>{u.planId && u.planId !== "free" ? <Badge tone={u.planId === "gold" ? "amber" : "green"}>{u.planId}</Badge> : <span className="text-xs text-ink-400">free</span>}</Td>
               <Td>{u.verified ? <Badge tone="green">✓ seller</Badge> : <Badge>unverified</Badge>}</Td>
               <Td>{u.emailVerified ? <Badge tone="green">✓ email</Badge> : <Badge>no email ✓</Badge>}</Td>
               <Td className="whitespace-nowrap text-ink-500">{fmtDate(u.createdAt)}</Td>

@@ -44,13 +44,22 @@ export async function ListingsSection({ status }: { status: string }) {
             <Td><StatusChip status={l.status} /></Td>
             <Td className="whitespace-nowrap text-ink-500">{fmtDate(l.createdAt)}</Td>
             <Td>
-              <Link
-                href={listingPath(l)}
-                className="link-bd text-xs"
-                title="Open the product exactly as buyers will see it (admin preview works even before approval)"
-              >
-                Preview →
-              </Link>
+              <span className="flex flex-col gap-1">
+                <Link
+                  href={listingPath(l)}
+                  className="link-bd text-xs"
+                  title="Open the product exactly as buyers will see it (admin preview works even before approval)"
+                >
+                  Preview →
+                </Link>
+                <Link
+                  href={`/dashboard/listings/${l.id}`}
+                  className="link-bd text-xs"
+                  title="Open the full manage page (edit details, photos, price)"
+                >
+                  Edit →
+                </Link>
+              </span>
             </Td>
             <Td><AdminButtons kind="listing" id={l.id} /></Td>
           </tr>

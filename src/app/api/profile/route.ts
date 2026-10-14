@@ -3,31 +3,40 @@ import { currentUser, createSessionToken, SESSION_COOKIE, sessionCookieAttrs } f
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 
-/** Update own profile (display name + phone + public photo). Phone change re-queues verification. */
+const isPublicImageUrl = (u: unknown) =>
+  typeof u === "string" &&
+  u.length <= 2000 &&
+  (u.startsWith("https://") || u.startsWith("/uploads/") || u.startsWith("/api/files/"));
+
+/** Update own profile (display name + phone + photo + cover + bio). Phone change re-queues verification. */
 export async function PUT(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const rl = rateLimit(clientKey(req, `profile:${user.id}`), { limit: 10, windowMs: 3600_000 });
   if (!rl.ok) return NextResponse.json({ error: "Too many updates. Try again later." }, { status: 429 });
   const body = await req.json().catch(() => ({}));
-  const { name, phone, photoUrl } = body as { name?: string; phone?: string; photoUrl?: string | null };
+  const { name, phone, photoUrl, coverUrl, bio } = body as { name?: string; phone?: string; photoUrl?: string | null; coverUrl?: string | null; bio?: string | null };
   if (name !== undefined && (name.trim().length < 2 || name.trim().length > 80)) {
     return NextResponse.json({ error: "Name must be 2–80 characters." }, { status: 400 });
   }
   if (phone !== undefined && !/^(\+254|0)[17]\d{8}$/.test(phone)) {
     return NextResponse.json({ error: "Use a valid Kenyan phone e.g. 0712345678." }, { status: 400 });
   }
-  if (photoUrl !== undefined && photoUrl !== null && photoUrl !== "") {
-    const ok =
-      typeof photoUrl === "string" &&
-      photoUrl.length <= 2000 &&
-      (photoUrl.startsWith("https://") || photoUrl.startsWith("/uploads/") || photoUrl.startsWith("/api/files/"));
-    if (!ok) return NextResponse.json({ error: "Photo must be an uploaded image (JPG/PNG/WebP)." }, { status: 400 });
+  if (photoUrl !== undefined && photoUrl !== null && photoUrl !== "" && !isPublicImageUrl(photoUrl)) {
+    return NextResponse.json({ error: "Photo must be an uploaded image (JPG/PNG/WebP)." }, { status: 400 });
+  }
+  if (coverUrl !== undefined && coverUrl !== null && coverUrl !== "" && !isPublicImageUrl(coverUrl)) {
+    return NextResponse.json({ error: "Cover must be an uploaded image (JPG/PNG/WebP)." }, { status: 400 });
+  }
+  if (bio !== undefined && bio !== null && (typeof bio !== "string" || bio.length > 500)) {
+    return NextResponse.json({ error: "Bio must be 500 characters or less." }, { status: 400 });
   }
   const store = getStore();
   const before = await store.findUserById(user.id).catch(() => null);
-  const patch: { name?: string; phone?: string; photoUrl?: string | null } = { name, phone };
+  const patch: { name?: string; phone?: string; photoUrl?: string | null; coverUrl?: string | null; bio?: string | null } = { name, phone };
   if (photoUrl !== undefined) patch.photoUrl = photoUrl ? photoUrl : null;
+  if (coverUrl !== undefined) patch.coverUrl = coverUrl ? coverUrl : null;
+  if (bio !== undefined) patch.bio = bio ? bio : null;
   const updated = await store.updateUser(user.id, patch);
   if (!updated) return NextResponse.json({ error: "Account not found." }, { status: 404 });
   // Re-verify on phone change: the verified number snapshot must match the account.
@@ -46,7 +55,7 @@ export async function PUT(req: NextRequest) {
     role: updated.role,
     verified: updated.verified,
   });
-  const res = NextResponse.json({ ok: true, name: updated.name, phone: updated.phone, photoUrl: updated.photoUrl ?? null, ...(reverify ? { reverify: true, message: "Number changed — re-verify at /dashboard/verify to keep posting." } : {}) });
+  const res = NextResponse.json({ ok: true, name: updated.name, phone: updated.phone, photoUrl: updated.photoUrl ?? null, coverUrl: updated.coverUrl ?? null, bio: updated.bio ?? null, ...(reverify ? { reverify: true, message: "Number changed — re-verify at /dashboard/verify to keep posting." } : {}) });
   res.cookies.set(SESSION_COOKIE, token, sessionCookieAttrs());
   return res;
 }

@@ -17,6 +17,7 @@ import {
   Store,
 } from "lucide-react";
 import { getStore } from "@/lib/store";
+import { PlanCheckmark } from "@/components/ui/badge";
 import { ReferralPanel } from "@/components/referral-panel";
 import { getSellerAnalyticsReport } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
@@ -106,6 +107,7 @@ export default async function DashboardPage() {
             ) : (
               <Link href={verifyHref} className="chip !border-amber-500 !text-amber-700 hover:underline">Verification pending →</Link>
             )}
+            <PlanCheckmark plan={fresh?.planId} />
             {!emailVerified && (
               <Link href="/dashboard/profile" className="chip hover:border-brand-600 hover:text-brand-700">
                 <Mail className="h-3 w-3" /> Confirm email

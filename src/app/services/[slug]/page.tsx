@@ -34,7 +34,9 @@ export default async function ServiceDetail({ params }: { params: { slug: string
     const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(staticHit.id), []);
     const sellerPhotoUrl = await resolveSellerPhoto(staticHit);
     const shopInfo = await resolveShopInfo(staticHit.shopSlug);
-    return <ListingDetail listing={staticHit} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} jsonLd={breadcrumbJsonLd([{ name: "Home", url: "https://chap.co.ke/" }, { name: "Services", url: "https://chap.co.ke/services" }, { name: staticHit.title, url: `https://chap.co.ke/services/${staticHit.slug}` }])} />;
+    const { getSellerPlan } = await import("@/lib/plans");
+    const sellerPlan = staticHit.ownerId ? (await getSellerPlan(staticHit.ownerId).catch(() => null))?.planId ?? null : null;
+    return <ListingDetail listing={staticHit} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={breadcrumbJsonLd([{ name: "Home", url: "https://chap.co.ke/" }, { name: "Services", url: "https://chap.co.ke/services" }, { name: staticHit.title, url: `https://chap.co.ke/services/${staticHit.slug}` }])} />;
   }
   const { resolveStoreDetail } = await import("@/lib/live-listings");
   const resolved = await resolveStoreDetail(params.slug);
@@ -45,5 +47,7 @@ export default async function ServiceDetail({ params }: { params: { slug: string
   const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(l.id), []);
   const sellerPhotoUrl = await resolveSellerPhoto(l);
   const shopInfo = await resolveShopInfo(l.shopSlug);
-  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} jsonLd={breadcrumbJsonLd([{ name: "Home", url: "https://chap.co.ke/" }, { name: "Services", url: "https://chap.co.ke/services" }, { name: l.title, url: `https://chap.co.ke/services/${l.slug}` }])} previewStatus={previewStatus} />;
+  const { getSellerPlan: getPlan } = await import("@/lib/plans");
+  const sellerPlan = l.ownerId ? (await getPlan(l.ownerId).catch(() => null))?.planId ?? null : null;
+  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={breadcrumbJsonLd([{ name: "Home", url: "https://chap.co.ke/" }, { name: "Services", url: "https://chap.co.ke/services" }, { name: l.title, url: `https://chap.co.ke/services/${l.slug}` }])} previewStatus={previewStatus} />;
 }

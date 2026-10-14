@@ -28,6 +28,37 @@ describe("live verification badge", () => {
     const [out2] = await withLiveVerification([{ ...target }]);
     assert.equal(out2.verified, false, "unverified user keeps the catalogue flag");
   });
+  it("stamps the effective plan for card checkmarks", async () => {
+    const store = gs();
+    const u = await store.createUser({
+      name: "Plan Card Seller", email: "plan-card@demo.chap.co.ke", phone: "0710000199",
+      role: "SELLER", verified: true, emailVerified: true, sellerKind: "individual",
+      passwordHash: "h",
+    });
+    const base = { ownerId: u.id, sellerName: "Plan Card Seller", verified: true };
+    // Free everywhere → no check.
+    assert.equal((await withLiveVerification([{ ...base }]))[0].planId, null);
+    // Personal silver → blue check.
+    await store.setUserPlan(u.id, "silver");
+    assert.equal((await withLiveVerification([{ ...base }]))[0].planId, "silver");
+    // Owned gold shop beats personal silver.
+    if (!(await store.getShopBySlug("plan-card-shop"))) {
+      await store.createShop({
+        slug: "plan-card-shop", name: "Plan Card Shop", description: "d",
+        businessCategory: "Retail", county: "Nairobi", town: "CBD",
+        phone: "0710000199", ownerId: u.id,
+      });
+    }
+    await store.setShopPlan("plan-card-shop", "gold");
+    const [shopItem] = await withLiveVerification([{ ...base, shopSlug: "plan-card-shop" }]);
+    assert.equal(shopItem.planId, "gold");
+    // Unknown sellers keep flags with no check.
+    const [stranger] = await withLiveVerification([
+      { sellerName: "Nobody At All XYZ", verified: false },
+    ]);
+    assert.equal(stranger.verified, false);
+    assert.equal(stranger.planId, null);
+  });
   it("related rails inherit live flags", async () => {
     const target = LISTINGS.find((l) => l.sellerName === "Chebet R.")!;
     const { main, fromOthers } = await relatedWithLive(target);

@@ -3,6 +3,7 @@
  * Existing `from "./forms"` imports keep working unchanged.
  */
 export { ProfilePhotoForm } from "./forms/profile-photo";
+export { SellerCoverForm } from "./forms/cover-form";
 export { ProfileForm } from "./forms/profile";
 export { EmailVerifyPanel } from "./forms/email-verify";
 export { SettingsPanel } from "./forms/settings";

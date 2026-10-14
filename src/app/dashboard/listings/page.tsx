@@ -8,6 +8,7 @@ import { WmImage } from "@/components/ui/wm-image";
 import { formatKES, formatDay } from "@/lib/format";
 import { getListingsStats } from "@/lib/analytics";
 import { CopyListingLink } from "@/components/copy-listing-link";
+import { DeleteListingButton } from "@/components/delete-listing-button";
 
 const publicPath = (l: { type: string; slug: string }) =>
   `/${l.type === "classified" ? "classifieds" : l.type === "service" ? "services" : "product"}/${l.slug}`;
@@ -105,6 +106,7 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
                 </Link>
               )}
               <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">Manage</Link>
+              <DeleteListingButton id={l.id} title={l.title} />
             </li>
           ))}
         </ul>
@@ -136,6 +138,7 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
                 </Link>
                 <CopyListingLink path={publicPath(l)} />
                 <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">Manage</Link>
+                <DeleteListingButton id={l.id} title={l.title} />
               </li>
             ))}
           </ul>

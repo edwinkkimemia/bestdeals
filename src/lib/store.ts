@@ -25,6 +25,12 @@ export type UserRecord = {
   passwordHash: string;
   /** Public profile photo (https:// or /uploads/ or /api/files/). Shown on listings + shops. */
   photoUrl?: string | null;
+  /** Public seller cover (same URL rules). Shown atop the seller page. */
+  coverUrl?: string | null;
+  /** Seller bio — the seller page description + metadata. */
+  bio?: string | null;
+  /** Personal seller plan (free | silver | gold). Shops keep their own plan. */
+  planId?: string | null;
   createdAt: string;
 };
 
@@ -299,7 +305,9 @@ export interface Store {
   setUserVerified(id: string, verified: boolean): Promise<void>;
   setEmailVerified(id: string, verified: boolean): Promise<void>;
   setUserPassword(id: string, passwordHash: string): Promise<void>;
-  updateUser(id: string, patch: { name?: string; phone?: string; photoUrl?: string | null }): Promise<UserRecord | null>;
+  updateUser(id: string, patch: { name?: string; phone?: string; photoUrl?: string | null; coverUrl?: string | null; bio?: string | null }): Promise<UserRecord | null>;
+  /** Personal seller plan (free | silver | gold). Validated by the caller. */
+  setUserPlan(id: string, planId: string): Promise<void>;
   deleteUserAccount(id: string): Promise<void>;
   exportUserData(id: string): Promise<Record<string, unknown>>;
   listUsers(): Promise<UserRecord[]>;
@@ -310,6 +318,8 @@ export interface Store {
   getListing(id: string): Promise<ListingRecord | null>;
   listListingsByOwner(ownerId: string): Promise<ListingRecord[]>;
   listListingsByStatus(status: string): Promise<ListingRecord[]>;
+  /** Live-slot counts per owner (same filter as countLiveListings) — one call for the plan audit. */
+  countLiveListingsByOwner(): Promise<{ ownerId: string; count: number }[]>;
   listListingsByShop(shopSlug: string): Promise<ListingRecord[]>;
   setListingStatus(id: string, status: string, adminId?: string, reason?: string): Promise<void>;
   setListingFeatured(id: string, featured: boolean): Promise<void>;
@@ -450,7 +460,7 @@ class DemoStore implements Store {
     const u = this.users.get(id);
     if (u) u.passwordHash = passwordHash;
   }
-  async updateUser(id: string, patch: { name?: string; phone?: string; photoUrl?: string | null }) {
+  async updateUser(id: string, patch: { name?: string; phone?: string; photoUrl?: string | null; coverUrl?: string | null; bio?: string | null }) {
     const u = this.users.get(id);
     if (!u) return null;
     if (patch.name && patch.name.trim().length >= 2) u.name = patch.name.trim().slice(0, 80);
@@ -458,7 +468,17 @@ class DemoStore implements Store {
     if (patch.photoUrl !== undefined) {
       u.photoUrl = patch.photoUrl ? patch.photoUrl.slice(0, 2000) : null;
     }
+    if (patch.coverUrl !== undefined) {
+      u.coverUrl = patch.coverUrl ? patch.coverUrl.slice(0, 2000) : null;
+    }
+    if (patch.bio !== undefined) {
+      u.bio = patch.bio ? patch.bio.trim().slice(0, 500) : null;
+    }
     return u;
+  }
+  async setUserPlan(id: string, planId: string) {
+    const u = this.users.get(id);
+    if (u) u.planId = planId;
   }
   async deleteUserAccount(id: string) {
     const u = this.users.get(id);
@@ -534,6 +554,14 @@ class DemoStore implements Store {
     return [...this.listings.values()]
       .filter((l) => l.status === status)
       .map((l) => ({ ...l, featured: this.listingHasLivePromo(l.id) ? true : false, verified: this.ownerVerified(l.ownerId) }));
+  }
+  async countLiveListingsByOwner() {
+    const counts = new Map<string, number>();
+    for (const l of this.listings.values()) {
+      if (!l.ownerId || ["rejected", "sold", "expired"].includes(l.status)) continue;
+      counts.set(l.ownerId, (counts.get(l.ownerId) ?? 0) + 1);
+    }
+    return [...counts.entries()].map(([ownerId, count]) => ({ ownerId, count }));
   }
   async listListingsByShop(shopSlug: string) {
     return [...this.listings.values()]
@@ -1070,14 +1098,17 @@ class DemoStore implements Store {
 const mapUser = (u: {
   id: string; name: string; businessName?: string | null; email: string; phone: string; role: string;
   verified: boolean; passwordHash: string; createdAt: Date; emailVerified?: boolean;
-  sellerKind?: string;
-  seller?: { photoUrl?: string | null } | null;
+  sellerKind?: string; planId?: string | null;
+  seller?: { photoUrl?: string | null; coverUrl?: string | null; bio?: string | null } | null;
 }): UserRecord => ({
   id: u.id, name: u.name, businessName: u.businessName ?? undefined, email: u.email, phone: u.phone,
   role: u.role as Role, verified: u.verified, emailVerified: u.emailVerified ?? false,
   sellerKind: u.sellerKind === "business" ? "business" : "individual",
   passwordHash: u.passwordHash,
   photoUrl: u.seller?.photoUrl ?? null,
+  coverUrl: u.seller?.coverUrl ?? null,
+  bio: u.seller?.bio ?? null,
+  planId: u.planId ?? null,
   createdAt: u.createdAt.toISOString(),
 });
 
@@ -1104,11 +1135,11 @@ class PrismaStore implements Store {
   }
 
   async findUserByEmail(email: string) {
-    const u = await this.p.user.findUnique({ where: { email: email.toLowerCase() }, include: { seller: { select: { photoUrl: true } } } });
+    const u = await this.p.user.findUnique({ where: { email: email.toLowerCase() }, include: { seller: { select: { photoUrl: true, coverUrl: true, bio: true } } } });
     return u ? mapUser(u) : null;
   }
   async findUserById(id: string) {
-    const u = await this.p.user.findUnique({ where: { id }, include: { seller: { select: { photoUrl: true } } } });
+    const u = await this.p.user.findUnique({ where: { id }, include: { seller: { select: { photoUrl: true, coverUrl: true, bio: true } } } });
     return u ? mapUser(u) : null;
   }
   async createUser(u: Omit<UserRecord, "id" | "createdAt" | "emailVerified" | "sellerKind"> & { emailVerified?: boolean; sellerKind?: "individual" | "business" }) {
@@ -1132,22 +1163,28 @@ class PrismaStore implements Store {
   async setUserPassword(id: string, passwordHash: string) {
     await this.p.user.update({ where: { id }, data: { passwordHash } });
   }
-  async updateUser(id: string, patch: { name?: string; phone?: string; photoUrl?: string | null }) {
+  async updateUser(id: string, patch: { name?: string; phone?: string; photoUrl?: string | null; coverUrl?: string | null; bio?: string | null }) {
     const data: { name?: string; phone?: string } = {};
     if (patch.name && patch.name.trim().length >= 2) data.name = patch.name.trim().slice(0, 80);
     if (patch.phone && /^(\+254|0)[17]\d{8}$/.test(patch.phone)) data.phone = patch.phone;
     if (Object.keys(data).length > 0) {
       await this.p.user.update({ where: { id }, data });
     }
-    if (patch.photoUrl !== undefined) {
-      const photoUrl = patch.photoUrl ? patch.photoUrl.slice(0, 2000) : null;
+    if (patch.photoUrl !== undefined || patch.coverUrl !== undefined || patch.bio !== undefined) {
+      const profile: { photoUrl?: string | null; coverUrl?: string | null; bio?: string | null } = {};
+      if (patch.photoUrl !== undefined) profile.photoUrl = patch.photoUrl ? patch.photoUrl.slice(0, 2000) : null;
+      if (patch.coverUrl !== undefined) profile.coverUrl = patch.coverUrl ? patch.coverUrl.slice(0, 2000) : null;
+      if (patch.bio !== undefined) profile.bio = patch.bio ? patch.bio.trim().slice(0, 500) : null;
       await this.p.sellerProfile.upsert({
         where: { userId: id },
-        update: { photoUrl },
-        create: { userId: id, displayName: data.name ?? "Seller", photoUrl },
+        update: profile,
+        create: { userId: id, displayName: data.name ?? "Seller", ...profile },
       }).catch(() => null);
     }
     return this.findUserById(id);
+  }
+  async setUserPlan(id: string, planId: string) {
+    await this.p.user.update({ where: { id }, data: { planId } }).catch(() => null);
   }
   async deleteUserAccount(id: string) {
     const u = await this.p.user.findUnique({ where: { id } });
@@ -1186,14 +1223,14 @@ class PrismaStore implements Store {
     };
   }
   async listUsers() {
-    return (await this.p.user.findMany({ orderBy: { createdAt: "desc" }, take: 200, include: { seller: { select: { photoUrl: true } } } })).map(mapUser);
+    return (await this.p.user.findMany({ orderBy: { createdAt: "desc" }, take: 200, include: { seller: { select: { photoUrl: true, coverUrl: true, bio: true } } } })).map(mapUser);
   }
   async findUserByDisplayName(name: string) {
     const needle = name.trim();
     if (!needle) return null;
     const u = await this.p.user.findFirst({
       where: { OR: [{ name: needle }, { businessName: needle }] },
-      include: { seller: { select: { photoUrl: true } } },
+      include: { seller: { select: { photoUrl: true, coverUrl: true, bio: true } } },
     }).catch(() => null);
     return u ? mapUser(u) : null;
   }
@@ -1378,6 +1415,30 @@ class PrismaStore implements Store {
       sellerPhone: rec.sellerPhone ?? undefined,
       shopSlug: slugs.get((rec as { shopId?: string | null }).shopId ?? "") ?? undefined, categorySlug: (rec as { categorySlug?: string | null }).categorySlug ?? undefined, subcategory: (rec as { subcategory?: string | null }).subcategory ?? undefined, featured: live.has(rec.id), verified: vmap.get(((rec as { seller?: { userId?: string } | null }).seller)?.userId ?? "") ?? false, createdAt: rec.createdAt.toISOString(),
     }));
+  }
+  async countLiveListingsByOwner() {
+    const groups = await this.p.listing.groupBy({
+      by: ["sellerProfileId"],
+      where: {
+        status: { notIn: ["rejected", "sold", "expired"] as never },
+        sellerProfileId: { not: null },
+      },
+      _count: { _all: true },
+    }).catch(() => []);
+    const profileIds = groups.map((g: { sellerProfileId: string | null }) => g.sellerProfileId as string);
+    if (profileIds.length === 0) return [];
+    const profiles = await this.p.sellerProfile.findMany({
+      where: { id: { in: profileIds } },
+      select: { id: true, userId: true },
+    }).catch(() => []);
+    const ownerOf = new Map(profiles.map((p: { id: string; userId: string }) => [p.id, p.userId]));
+    const counts = new Map<string, number>();
+    for (const g of groups as { sellerProfileId: string | null; _count: { _all: number } }[]) {
+      const ownerId = g.sellerProfileId ? ownerOf.get(g.sellerProfileId) : undefined;
+      if (!ownerId) continue;
+      counts.set(ownerId, (counts.get(ownerId) ?? 0) + g._count._all);
+    }
+    return [...counts.entries()].map(([ownerId, count]) => ({ ownerId, count }));
   }
   async updateListing(id: string, patch: Partial<ListingRecord>) {
     const existing = await this.p.listing.findUnique({ where: { id } });

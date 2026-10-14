@@ -28,6 +28,30 @@ export function VerifiedBadge({ verified }: { verified: boolean }) {
   return <Badge tone="green">✓ Verified seller</Badge>;
 }
 
+/**
+ * X-style plan checkmark: blue filled check for Silver, gold for Gold —
+ * shown alongside the verification badge on seller/shop identities.
+ * Renders nothing on Free (or unknown) plans.
+ */
+export function PlanCheckmark({ plan, size = "md" }: { plan?: string | null; size?: "sm" | "md" }) {
+  const id = (plan ?? "").toLowerCase();
+  if (id !== "silver" && id !== "gold") return null;
+  const label = id === "gold" ? "Gold plan seller" : "Silver plan seller";
+  const dims = size === "sm" ? "h-3.5 w-3.5 text-[9px]" : "h-4 w-4 text-[10px]";
+  return (
+    <span
+      role="img"
+      aria-label={label}
+      title={label}
+      className={`inline-flex shrink-0 items-center justify-center rounded-full font-black text-white ${
+        id === "gold" ? "bg-amber-400" : "bg-[#1D9BF0]"
+      } ${dims}`}
+    >
+      ✓
+    </span>
+  );
+}
+
 export function ConditionBadge({ condition }: { condition: string }) {
   const map: Record<string, string> = {
     new: "New",

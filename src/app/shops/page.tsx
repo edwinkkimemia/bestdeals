@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SHOPS } from "@/data/catalog";
 import { storeRead } from "@/lib/store";
 import { ratingLabel } from "@/lib/ratings";
-import { Badge } from "@/components/ui/badge";
+import { Badge, PlanCheckmark } from "@/components/ui/badge";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { SafeImage } from "@/components/ui/safe-image";
 
@@ -27,7 +27,7 @@ export default async function ShopsIndex() {
           slug: s.slug, name: s.name, description: s.description,
           businessCategory: s.businessCategory, county: s.county, town: s.town,
           phone: s.phone, logo: s.logo, cover: s.cover, verified: s.verified,
-          deliveryInfo: s.deliveryInfo, hours: s.hours,
+          deliveryInfo: s.deliveryInfo, hours: s.hours, planId: "free",
         },
         twins.get(s.slug) ?? null
       ),
@@ -42,7 +42,7 @@ export default async function ShopsIndex() {
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
         {[
-          { t: "✓ means checked", d: "Verified shops passed ID or business-permit review. Unverified shops can still trade — inspect as usual." },
+          { t: "✓ means checked", d: "Verified shops passed ID or business-permit review. A blue check is a Silver plan, gold is Gold — plan sellers support the marketplace. Unverified shops can still trade — inspect as usual." },
           { t: "Catalogue + bulk", d: "Browse the full range, or send one bulk enquiry for wholesale quantities and institutional quotes." },
           { t: "Reviews you can trust", d: "Only moderated reviews show — paid or delivered orders earn the Verified purchase badge." },
         ].map((c) => (
@@ -63,7 +63,7 @@ export default async function ShopsIndex() {
                 )}
               </div>
               <div className="p-4">
-                <p className="font-bold">{s.name} {s.verified ? <Badge tone="green">✓ Verified</Badge> : <Badge>Unverified</Badge>}</p>
+                <p className="flex flex-wrap items-center gap-1.5 font-bold">{s.name} <PlanCheckmark plan={s.planId} size="sm" /> {s.verified ? <Badge tone="green">✓ Verified</Badge> : <Badge>Unverified</Badge>}</p>
                 <p className="text-xs text-ink-500">{s.businessCategory} · {s.town}, {s.county} · {rating}</p>
               <p className="clamp-2 mt-1 text-sm text-ink-500">{s.description}</p>
             </div>
@@ -91,7 +91,7 @@ export default async function ShopsIndex() {
                     )}
                   </span>
                   <span className="min-w-0">
-                    <span className="block font-bold">{s.name} {s.verified ? <Badge tone="green">✓ Verified</Badge> : <Badge>New</Badge>}</span>
+                    <span className="flex flex-wrap items-center gap-1.5 font-bold">{s.name} <PlanCheckmark plan={s.planId} size="sm" /> {s.verified ? <Badge tone="green">✓ Verified</Badge> : <Badge>New</Badge>}</span>
                     <span className="block text-xs text-ink-500">{s.businessCategory} · {s.town}, {s.county}</span>
                     <span className="clamp-2 mt-1 block text-sm text-ink-500">{s.description}</span>
                   </span>

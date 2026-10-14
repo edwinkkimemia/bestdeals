@@ -8,7 +8,7 @@ import { storeRead } from "@/lib/store";
 import { ReviewsBlock } from "@/components/reviews-block";
 import { ReviewForm } from "@/components/review-form";
 import { ListingCard } from "@/components/ui/listing-card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, PlanCheckmark } from "@/components/ui/badge";
 import { localBusinessJsonLd, breadcrumbJsonLd } from "@/lib/seo";
 import { ratingLabel } from "@/lib/ratings";
 import { ShareRow } from "@/components/share-row";
@@ -49,23 +49,28 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const s = getShop(params.slug);
   if (s) {
     // Twin wins for name/description so tab titles track admin/seller edits.
+    // The cover doubles as the social share image.
     const twin = await storeRead((st) => st.getShopBySlug(params.slug), null);
     const name = (twin?.name ?? "").trim() || s.name;
     const description = (twin?.description ?? "").trim() || s.description;
+    const cover = twin?.coverUrl || s.cover || undefined;
     return {
       title: `${name} — Shop on Chap`,
       description: description.slice(0, 160),
       alternates: { canonical: `https://chap.co.ke/shops/${s.slug}` },
+      ...(cover ? { openGraph: { title: `${name} — Shop on Chap`, description: description.slice(0, 160), images: [cover] } } : {}),
     };
   }
   // Seller-created shops live in the store, not the static catalogue —
   // check there before falling back to "not found" (fixes wrong tab title).
   const stored = await storeRead((st) => st.getShopBySlug(params.slug), null);
   if (!stored) return { title: "Shop not found" };
+  const storedDescription = (stored.description || "").slice(0, 160);
   return {
     title: `${stored.name} — Shop on Chap`,
-    description: (stored.description || "").slice(0, 160),
+    description: storedDescription,
     alternates: { canonical: `https://chap.co.ke/shops/${stored.slug}` },
+    ...(stored.coverUrl ? { openGraph: { title: `${stored.name} — Shop on Chap`, description: storedDescription, images: [stored.coverUrl] } } : {}),
   };
 }
 
@@ -100,7 +105,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
               )}
             </span>
             <div className="min-w-0 flex-1">
-              <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{nonNull.name} {nonNull.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</h1>
+              <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{nonNull.name} <PlanCheckmark plan={nonNull.planId} /> {nonNull.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</h1>
               <p className="text-sm text-ink-500">{nonNull.businessCategory} · {nonNull.town}, {nonNull.county} · {ratingLabel(storedReviews)}{nonNull.hours ? ` · 🕒 ${nonNull.hours}` : ""}</p>
               <p className="mt-1 text-sm">{nonNull.description}</p>
             </div>
@@ -157,7 +162,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
       slug: s.slug, name: s.name, description: s.description,
       businessCategory: s.businessCategory, county: s.county, town: s.town,
       phone: s.phone, logo: s.logo, cover: s.cover, verified: s.verified,
-      deliveryInfo: s.deliveryInfo, hours: s.hours,
+      deliveryInfo: s.deliveryInfo, hours: s.hours, planId: "free",
     },
     contacts
   );
@@ -184,7 +189,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
             </span>
           )}
           <div className="flex-1">
-            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{v.name} {v.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</h1>
+            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{v.name} <PlanCheckmark plan={v.planId} /> {v.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</h1>
             <p className="text-sm text-ink-500">{v.businessCategory} · {v.town}, {v.county} · {ratingLabel(reviews)}{v.hours ? ` · 🕒 ${v.hours}` : ""}</p>
             <p className="mt-1 text-sm">{v.description}</p>
           </div>

@@ -55,6 +55,29 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json({ ok: true, email: target.email });
 }
 
+/** Admin-only: delete an account (listings removed, orders anonymised). */
+export async function DELETE(req: NextRequest) {
+  const user = await currentUser().catch(() => null);
+  if (!user || user.role !== "ADMIN") return NextResponse.json({ error: "Admin only." }, { status: 403 });
+  const body = await req.json().catch(() => ({}));
+  const id = String(body.id || new URL(req.url).searchParams.get("id") || "").trim();
+  if (!id) return NextResponse.json({ error: "Provide id." }, { status: 400 });
+  if (id === user.id) return NextResponse.json({ error: "You can't delete your own account." }, { status: 422 });
+  const store = getStore();
+  const target = await store.findUserById(id).catch(() => null);
+  if (!target) return NextResponse.json({ error: "User not found." }, { status: 404 });
+  // Never orphan the admin panel: refuse to delete the last admin account.
+  if (target.role === "ADMIN") {
+    const admins = await store.listUsers().catch(() => []);
+    if (admins.filter((u) => u.role === "ADMIN").length <= 1) {
+      return NextResponse.json({ error: "Refusing to delete the last admin account." }, { status: 409 });
+    }
+  }
+  await store.deleteUserAccount(id);
+  await logAudit({ actorId: user.id, actorEmail: user.email, action: "user.delete", entity: "user", entityId: id }).catch(() => {});
+  return NextResponse.json({ ok: true });
+}
+
 /** Admin-only: clear a login lockout without changing the password. */
 export async function PATCH(req: NextRequest) {
   const user = await currentUser().catch(() => null);

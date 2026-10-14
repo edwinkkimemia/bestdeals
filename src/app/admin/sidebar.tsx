@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BadgeCheck,
   BarChart3,
+  CreditCard,
   ExternalLink,
   Flag,
   LayoutDashboard,
@@ -33,6 +34,7 @@ const NAV = [
   { href: "/admin/reports", label: "Reports", Icon: Flag },
   { href: "/admin/reviews", label: "Reviews", Icon: Star },
   { href: "/admin/promotions", label: "Promotions", Icon: Megaphone },
+  { href: "/admin/plans", label: "Plans", Icon: CreditCard },
   { href: "/admin/blog", label: "Blog", Icon: Newspaper },
   { href: "/admin/settings", label: "Settings", Icon: Settings },
 ];

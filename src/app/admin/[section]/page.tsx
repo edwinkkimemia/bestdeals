@@ -8,10 +8,11 @@ import { DisputesSection } from "../sections/disputes";
 import { ReportsSection } from "../sections/reports";
 import { ReviewsSection } from "../sections/reviews";
 import { PromotionsSection } from "../sections/promotions";
+import { PlansSection } from "../sections/plans";
 
 export const dynamic = "force-dynamic";
 
-const SECTIONS = ["listings", "verifications", "users", "shops", "orders", "disputes", "reports", "reviews", "promotions"] as const;
+const SECTIONS = ["listings", "verifications", "users", "shops", "orders", "disputes", "reports", "reviews", "promotions", "plans"] as const;
 export function generateStaticParams() {
   return SECTIONS.map((section) => ({ section }));
 }
@@ -54,6 +55,8 @@ export default async function AdminSection({
       return <ReviewsSection />;
     case "promotions":
       return <PromotionsSection status={status} />;
+    case "plans":
+      return <PlansSection status={status} />;
     default:
       notFound();
   }

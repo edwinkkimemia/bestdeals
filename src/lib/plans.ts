@@ -54,13 +54,20 @@ export const PLAN_ANALYTICS_DAYS: Record<PlanId, number> = {
   gold: 90,
 };
 
-export type SellerPlan = { planId: PlanId; shopSlug?: string; shopName?: string };
+export type SellerPlan = { planId: PlanId; shopSlug?: string; shopName?: string; personal?: boolean };
 
-/** Resolve a seller's effective plan: best plan across shops they own, else Free. */
+/**
+ * Resolve a seller's effective plan: best of their personal seller plan and
+ * the plans of shops they own, else Free. Personal plans give individual
+ * sellers (no shop) the same Silver/Gold limits and features as shops.
+ */
 export async function getSellerPlan(userId: string): Promise<SellerPlan> {
   try {
-    const shops = await getStore().listShopsByOwner(userId);
-    let best: SellerPlan = { planId: "free" };
+    const store = getStore();
+    const me = await store.findUserById(userId).catch(() => null);
+    const personal = normalizePlan(me?.planId);
+    const shops = await store.listShopsByOwner(userId);
+    let best: SellerPlan = { planId: personal, ...(personal !== "free" ? { personal: true } : {}) };
     for (const s of shops) {
       const pid = normalizePlan((s as { planId?: unknown }).planId);
       const rank = PLAN_IDS.indexOf(pid);
@@ -68,13 +75,82 @@ export async function getSellerPlan(userId: string): Promise<SellerPlan> {
         best = { planId: pid, shopSlug: s.slug, shopName: s.name };
       }
     }
-    if (!best.shopSlug && shops.length > 0) {
-      best = { planId: best.planId, shopSlug: shops[0].slug, shopName: shops[0].name };
+    // New listings still attach to the first owned shop when there is one.
+    if (shops.length > 0 && !best.shopSlug) {
+      best = { ...best, shopSlug: shops[0].slug, shopName: shops[0].name };
     }
     return best;
   } catch {
     return { planId: "free" };
   }
+}
+
+/** Storage key for a pending personal-plan checkout. */
+export const pendingSellerPlanKey = (userId: string) => `seller_plan_pending:${userId}`;
+
+/**
+ * Plan tier a live-listing count calls for: ≤5 free, 6–30 silver, 31+ gold.
+ * Matches PLAN_LISTING_LIMITS (free 5, silver 30, gold unlimited).
+ */
+export function expectedPlanForCount(count: number): PlanId {
+  if (count > 30) return "gold";
+  if (count > 5) return "silver";
+  return "free";
+}
+
+export type PlanAuditRow = {
+  userId: string;
+  name: string;
+  email: string;
+  liveCount: number;
+  effectivePlan: PlanId;
+  expectedPlan: PlanId;
+  /** True when the account holds fewer plan rights than its catalogue needs. */
+  needsUpgrade: boolean;
+  /** Where an upgrade lands: first owned shop, else the personal plan. */
+  target: { kind: "shop"; slug: string; name: string } | { kind: "personal" };
+};
+
+/**
+ * Pure plan-vs-listings audit across accounts. Assignment only ever moves
+ * UP (free→silver→gold) — over-provisioned accounts are reported, never
+ * auto-downgraded (downgrades hide listings and need a human decision).
+ */
+export function auditPlanRows(
+  users: { id: string; name: string; email: string; planId?: string | null }[],
+  shops: { slug: string; name: string; ownerId?: string; planId?: string }[],
+  counts: { ownerId: string; count: number }[]
+): PlanAuditRow[] {
+  const countOf = new Map(counts.map((c) => [c.ownerId, c.count]));
+  const shopsByOwner = new Map<string, { slug: string; name: string; planId?: string }[]>();
+  for (const s of shops) {
+    if (!s.ownerId) continue;
+    const list = shopsByOwner.get(s.ownerId) ?? [];
+    list.push({ slug: s.slug, name: s.name, planId: s.planId });
+    shopsByOwner.set(s.ownerId, list);
+  }
+  return users.map((u) => {
+    const liveCount = countOf.get(u.id) ?? 0;
+    const expectedPlan = expectedPlanForCount(liveCount);
+    let effectivePlan = normalizePlan(u.planId);
+    for (const s of shopsByOwner.get(u.id) ?? []) {
+      const pid = normalizePlan(s.planId);
+      if (PLAN_IDS.indexOf(pid) > PLAN_IDS.indexOf(effectivePlan)) effectivePlan = pid;
+    }
+    const owned = shopsByOwner.get(u.id) ?? [];
+    return {
+      userId: u.id,
+      name: u.name,
+      email: u.email,
+      liveCount,
+      effectivePlan,
+      expectedPlan,
+      needsUpgrade: PLAN_IDS.indexOf(expectedPlan) > PLAN_IDS.indexOf(effectivePlan),
+      target: owned.length > 0
+        ? { kind: "shop" as const, slug: owned[0].slug, name: owned[0].name }
+        : { kind: "personal" as const },
+    };
+  });
 }
 
 /** Count listings that occupy a plan slot (everything except rejected/sold/expired). */

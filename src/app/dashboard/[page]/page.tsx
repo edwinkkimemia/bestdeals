@@ -4,7 +4,7 @@ import { currentUser } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import { getStore } from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
-import { ProfileForm, SettingsPanel, EmailVerifyPanel, ProfilePhotoForm } from "./forms";
+import { ProfileForm, SettingsPanel, EmailVerifyPanel, ProfilePhotoForm, SellerCoverForm } from "./forms";
 import { PromotePanel } from "./promote";
 
 export function generateStaticParams() {
@@ -34,9 +34,12 @@ export default async function DashPage({ params, searchParams }: { params: { pag
         )}
         <div className="mt-4"><EmailVerifyPanel verified={fresh?.emailVerified ?? false} email={user.email} /></div>
         <div className="card mt-4 space-y-4 p-5">
-          <ProfilePhotoForm initialUrl={fresh?.photoUrl ?? null} name={fresh?.name ?? user.name} />
+          <SellerCoverForm initialUrl={fresh?.coverUrl ?? null} name={fresh?.name ?? user.name} />
           <div className="border-t border-neutral-200 pt-4">
-            <ProfileForm name={fresh?.name ?? user.name} phone={fresh?.phone ?? user.phone} />
+            <ProfilePhotoForm initialUrl={fresh?.photoUrl ?? null} name={fresh?.name ?? user.name} />
+          </div>
+          <div className="border-t border-neutral-200 pt-4">
+            <ProfileForm name={fresh?.name ?? user.name} phone={fresh?.phone ?? user.phone} bio={fresh?.bio ?? null} />
           </div>
           <div className="flex flex-wrap items-center gap-2 border-t border-neutral-200 pt-4 text-sm">
             <span>Email: <strong>{user.email}</strong></span>

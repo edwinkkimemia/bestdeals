@@ -9,8 +9,8 @@ async function call(url: string, body: Record<string, unknown>): Promise<string>
   return r.ok ? "ok" : j.error || "Failed";
 }
 
-/** Small admin action buttons (verify / review / dispute / report / moderate). */
-export function AdminButtons({ kind, id, extra }: { kind: "verify" | "review" | "dispute" | "report" | "listing" | "user" | "shop"; id: string; extra?: Record<string, unknown> }) {
+/** Small admin action buttons (verify / review / dispute / report / moderate / plan-audit). */
+export function AdminButtons({ kind, id, extra }: { kind: "verify" | "review" | "dispute" | "report" | "listing" | "user" | "shop" | "planaudit"; id: string; extra?: Record<string, unknown> }) {
   const router = useRouter();
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -25,6 +25,7 @@ export function AdminButtons({ kind, id, extra }: { kind: "verify" | "review" | 
       : kind === "report" ? "/api/admin/reports"
       : kind === "user" ? "/api/admin/users"
       : kind === "shop" ? "/api/admin/shops"
+      : kind === "planaudit" ? "/api/admin/plan-audit"
       : "/api/admin/moderate";
     setMsg(await call(url, { id, ...extra, ...payload }));
     setBusy(false);
@@ -34,13 +35,50 @@ export function AdminButtons({ kind, id, extra }: { kind: "verify" | "review" | 
   const btn = "rounded-lg border border-neutral-300 bg-white px-2.5 py-1 text-xs font-semibold hover:bg-sand-50 disabled:opacity-50";
   const primary = "rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50";
 
+  if (kind === "planaudit") {
+    return (
+      <span className="flex gap-1.5">
+        <button
+          disabled={busy}
+          className="rounded-lg bg-brand-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+          onClick={() => {
+            if (!confirm("Assign the matching plan to this account? Upgrades only — nothing is ever downgraded here.")) return;
+            run({ userId: id });
+          }}
+        >
+          Assign plan
+        </button>
+        {msg && msg !== "ok" && <span className="text-xs text-red-600">{msg}</span>}
+      </span>
+    );
+  }
+
   if (kind === "user" || kind === "shop") {
     const verified = Boolean(extra?.verified);
+    const del = async () => {
+      if (kind !== "user") return;
+      if (!confirm("Delete this account permanently? Their listings are removed; orders stay anonymised. This can't be undone.")) return;
+      setBusy(true);
+      setMsg("");
+      try {
+        const r = await fetch(`/api/admin/users?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+        const j = await r.json().catch(() => ({}));
+        setMsg(r.ok ? "ok" : j.error || "Delete failed.");
+        router.refresh();
+      } finally {
+        setBusy(false);
+      }
+    };
     return (
       <span className="flex gap-1.5">
         <button disabled={busy} className={verified ? btn : primary} onClick={() => run(kind === "shop" ? { slug: id, verified: !verified } : { verified: !verified })}>
           {verified ? "Revoke ✓" : "Verify"}
         </button>
+        {kind === "user" && (
+          <button disabled={busy} className="rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50" onClick={del}>
+            Delete
+          </button>
+        )}
         {msg && msg !== "ok" && <span className="text-xs text-red-600">{msg}</span>}
       </span>
     );
@@ -73,10 +111,24 @@ export function AdminButtons({ kind, id, extra }: { kind: "verify" | "review" | 
       </span>
     );
   }
+  const delListing = async () => {
+    if (!confirm("Delete this listing permanently? This can't be undone.")) return;
+    setBusy(true);
+    setMsg("");
+    try {
+      const r = await fetch(`/api/listings/${encodeURIComponent(id)}`, { method: "DELETE" });
+      const j = await r.json().catch(() => ({}));
+      setMsg(r.ok ? "ok" : j.error || "Delete failed.");
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <span className="flex gap-1.5">
       <button disabled={busy} className={primary} onClick={() => run({ action: "approve" })}>Approve</button>
       <button disabled={busy} className={btn} onClick={() => run({ action: "hide" })}>Hide</button>
+      <button disabled={busy} className="rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50" onClick={delListing}>Delete</button>
       {msg && msg !== "ok" && <span className="text-xs text-red-600">{msg}</span>}
     </span>
   );

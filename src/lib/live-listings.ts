@@ -14,6 +14,7 @@
  */
 import type { Listing } from "@/data/catalog";
 import { storeRead, type ListingRecord } from "./store";
+import { normalizePlan, PLAN_IDS } from "./plans";
 
 type ListingType = Listing["listingType"];
 
@@ -240,6 +241,8 @@ export type ShopInfo = {
   county: string;
   /** Store-twin phone (admin/seller editable) — catalogue copy goes stale. */
   phone?: string | null;
+  /** Normalized shop plan (free | silver | gold) — drives the plan checkmark. */
+  planId?: string | null;
 };
 
 /** Display fields shared by the static catalogue and store shop rows. */
@@ -256,6 +259,8 @@ export type ShopDisplay = {
   verified: boolean;
   deliveryInfo: string;
   hours: string;
+  /** Normalized plan id (free | silver | gold) — drives the plan checkmark. */
+  planId: string;
 };
 
 export type ShopTwin = {
@@ -270,6 +275,7 @@ export type ShopTwin = {
   verified?: boolean;
   deliveryInfo?: string | null;
   hours?: string | null;
+  planId?: string | null;
 };
 
 /**
@@ -299,6 +305,7 @@ export function mergeShopDisplay(demo: ShopDisplay, stored: ShopTwin | null): Sh
     verified: stored.verified ?? demo.verified,
     deliveryInfo: text(stored.deliveryInfo, demo.deliveryInfo),
     hours: text(stored.hours, demo.hours),
+    planId: normalizePlan(stored.planId ?? demo.planId),
   };
 }
 
@@ -319,13 +326,13 @@ export async function resolveShopInfo(shopSlug?: string): Promise<ShopInfo | nul
           slug: demo.slug, name: demo.name, description: demo.description,
           businessCategory: demo.businessCategory, county: demo.county, town: demo.town,
           phone: demo.phone, logo: demo.logo, cover: demo.cover, verified: demo.verified,
-          deliveryInfo: demo.deliveryInfo, hours: demo.hours,
+          deliveryInfo: demo.deliveryInfo, hours: demo.hours, planId: "free",
         }
       : {
           slug: stored.slug, name: stored.name, description: stored.description ?? "",
           businessCategory: stored.businessCategory ?? "", county: stored.county ?? "",
           town: stored.town ?? "", phone: stored.phone ?? "", logo: null, cover: null,
-          verified: stored.verified ?? false, deliveryInfo: "", hours: "",
+          verified: stored.verified ?? false, deliveryInfo: "", hours: "", planId: "free",
         };
     const v = mergeShopDisplay(base, stored);
     return {
@@ -337,6 +344,7 @@ export async function resolveShopInfo(shopSlug?: string): Promise<ShopInfo | nul
       town: v.town,
       county: v.county,
       phone: v.phone,
+      planId: v.planId,
     };
   }
   if (!demo) return null;
@@ -349,6 +357,7 @@ export async function resolveShopInfo(shopSlug?: string): Promise<ShopInfo | nul
     town: demo.town,
     county: demo.county,
     phone: demo.phone,
+    planId: "free",
   };
 }
 
@@ -395,32 +404,83 @@ export function mergeStaticAndLive(
 }
 
 /**
- * Single source of truth for the ✓ badge: the LIVE user record wins over the
- * hardcoded catalogue flag. Demo listings ship with `verified: false` in
- * `catalog.ts`, but once the seller verifies (admin approval), every badge —
- * detail pages, cards, rails — must flip without editing the catalogue.
- * One `listUsers` call per invocation; safe fallback keeps the static flag.
+ * Single source of truth for the ✓ badge + plan checkmark: the LIVE records
+ * win over hardcoded catalogue flags. Demo listings ship with `verified:
+ * false` in `catalog.ts`, but once the seller verifies (admin approval),
+ * every badge — detail pages, cards, rails — must flip without editing the
+ * catalogue. Same for plans: the effective plan (best of personal seller
+ * plan and owned shops, plus the listing's own shop) stamps `planId` so grid
+ * cards can render the blue/gold check without per-row queries.
+ * One `listUsers` + one `listShops` call per invocation; safe fallback keeps
+ * the static flags with a null plan.
  */
 export async function withLiveVerification<T extends Pick<Listing, "ownerId" | "sellerName" | "verified">>(
   items: T[]
-): Promise<T[]> {
-  if (items.length === 0) return items;
-  const users = await storeRead(
-    (st) => st.listUsers(),
-    []
-  ).catch(() => []);
-  if (users.length === 0) return items;
-  const byId = new Map(users.map((u) => [u.id, u.verified]));
-  const byName = new Map<string, boolean>();
+): Promise<(T & { planId: string | null })[]> {
+  if (items.length === 0) return [];
+  const [users, shops] = await Promise.all([
+    storeRead(
+      (st) => st.listUsers(),
+      []
+    ).catch(() => []),
+    storeRead(
+      (st) => st.listShops(),
+      []
+    ).catch(() => []),
+  ]);
+  const rank = (p: string | null) => PLAN_IDS.indexOf(normalizePlan(p ?? "free"));
+  const byId = new Map(users.map((u) => [u.id, u]));
+  const byName = new Map<string, (typeof users)[number]>();
   for (const u of users) {
-    byName.set(u.name.trim().toLowerCase(), u.verified);
-    if (u.businessName) byName.set(u.businessName.trim().toLowerCase(), u.verified);
+    byName.set(u.name.trim().toLowerCase(), u);
+    if (u.businessName) byName.set(u.businessName.trim().toLowerCase(), u);
   }
+  // Best shop plan per owner + plan per shop slug (staff-posted edge included).
+  const shopBestByOwner = new Map<string, string>();
+  const planByShopSlug = new Map<string, string>();
+  for (const s of shops) {
+    const pid = normalizePlan((s as { planId?: unknown }).planId);
+    planByShopSlug.set(s.slug, pid);
+    const owner = (s as { ownerId?: string }).ownerId;
+    if (owner && rank(pid) > rank(shopBestByOwner.get(owner) ?? null)) {
+      shopBestByOwner.set(owner, pid);
+    }
+  }
+  const effective = (user: (typeof users)[number] | undefined, ownerId?: string, shopSlug?: string): { verified: boolean | undefined; plan: string | null } => {
+    let verified: boolean | undefined;
+    let plan: string | null = null;
+    if (user) {
+      verified = user.verified;
+      const personal = normalizePlan(user.planId);
+      if (rank(personal) > rank(plan)) plan = personal;
+    }
+    if (ownerId) {
+      const owned = shopBestByOwner.get(ownerId);
+      if (owned && rank(owned) > rank(plan)) plan = owned;
+    }
+    if (shopSlug) {
+      const sp = planByShopSlug.get(shopSlug);
+      if (sp && rank(sp) > rank(plan)) plan = sp;
+    }
+    return { verified, plan: rank(plan) > 0 ? plan : null };
+  };
   return items.map((l) => {
-    if (l.ownerId && byId.has(l.ownerId)) return { ...l, verified: byId.get(l.ownerId)! };
+    const shopSlug = (l as { shopSlug?: string }).shopSlug;
+    const basePlan = (l as { planId?: string | null }).planId ?? null;
+    if (l.ownerId && byId.has(l.ownerId)) {
+      const e = effective(byId.get(l.ownerId), l.ownerId, shopSlug);
+      return { ...l, verified: e.verified ?? l.verified, planId: e.plan ?? basePlan };
+    }
     const hit = byName.get(l.sellerName.trim().toLowerCase());
-    if (hit !== undefined) return { ...l, verified: hit };
-    return l;
+    if (hit !== undefined) {
+      const e = effective(hit, undefined, shopSlug);
+      return { ...l, verified: e.verified ?? l.verified, planId: e.plan ?? basePlan };
+    }
+    if (shopSlug && planByShopSlug.has(shopSlug)) {
+      const sp = planByShopSlug.get(shopSlug)!;
+      return { ...l, planId: rank(sp) > rank(basePlan) ? sp : basePlan };
+    }
+    return { ...l, planId: basePlan };
   });
 }
 
@@ -458,6 +518,8 @@ export type SellerProfileView = {
   name: string;
   businessName?: string;
   photoUrl?: string | null;
+  coverUrl?: string | null;
+  bio?: string | null;
   verified: boolean;
   sellerKind: string;
   memberSince?: string;
@@ -483,6 +545,8 @@ export async function resolveSellerProfile(slug: string): Promise<SellerProfileV
       name: byId.name,
       businessName: byId.businessName,
       photoUrl: byId.photoUrl ?? null,
+      coverUrl: byId.coverUrl ?? null,
+      bio: byId.bio ?? null,
       verified: byId.verified,
       sellerKind: byId.sellerKind,
       memberSince: byId.createdAt,
@@ -503,6 +567,8 @@ export async function resolveSellerProfile(slug: string): Promise<SellerProfileV
       name: hit.name,
       businessName: hit.businessName,
       photoUrl: hit.photoUrl ?? null,
+      coverUrl: hit.coverUrl ?? null,
+      bio: hit.bio ?? null,
       verified: hit.verified,
       sellerKind: hit.sellerKind,
       memberSince: hit.createdAt,
@@ -518,6 +584,8 @@ export async function resolveSellerProfile(slug: string): Promise<SellerProfileV
     key: sellerSlug(name),
     name,
     photoUrl: null,
+    coverUrl: null,
+    bio: null,
     verified: items.some((l) => l.verified),
     sellerKind: items[0]?.sellerType ?? "individual",
     hasAccount: false,

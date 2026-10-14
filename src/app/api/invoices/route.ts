@@ -13,5 +13,14 @@ export async function GET(req: Request) {
   }
   const owned = await getStore().listShopsByOwner(user.id).catch(() => []);
   const slugs = new Set(owned.map((s) => s.slug));
-  return NextResponse.json({ items: all.filter((i) => i.shopSlug && slugs.has(i.shopSlug)).slice(0, 200) });
+  // Shop invoices plus personal seller-plan invoices (tagged with userId).
+  return NextResponse.json({
+    items: all
+      .filter(
+        (i) =>
+          (i.shopSlug && slugs.has(i.shopSlug)) ||
+          ((i as { userId?: string }).userId && (i as { userId?: string }).userId === user.id)
+      )
+      .slice(0, 200),
+  });
 }

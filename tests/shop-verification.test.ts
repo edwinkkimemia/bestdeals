@@ -16,6 +16,7 @@ const demo = {
   verified: false,
   deliveryInfo: "Bulk delivery within Rift Valley.",
   hours: "Mon–Sat 8am–5:30pm",
+  planId: "free",
 };
 
 describe("shop display merge (store twin wins)", () => {
@@ -43,6 +44,13 @@ describe("shop display merge (store twin wins)", () => {
     assert.equal(merged.phone, "0722000000");
     assert.equal(merged.deliveryInfo, demo.deliveryInfo);
     assert.equal(merged.slug, demo.slug);
+  });
+
+  it("carries the twin plan for the plan checkmark", () => {
+    assert.equal(mergeShopDisplay(demo, null).planId, "free");
+    assert.equal(mergeShopDisplay(demo, { planId: "silver" }).planId, "silver");
+    assert.equal(mergeShopDisplay(demo, { planId: "gold" }).planId, "gold");
+    assert.equal(mergeShopDisplay(demo, { planId: "bogus" }).planId, "free");
   });
 });
 
@@ -79,5 +87,7 @@ describe("resolveShopInfo (product-page shop card)", () => {
     assert.equal(after!.verified, true);
     assert.equal(after!.name, "Rift Hardware Ltd");
     assert.equal(after!.phone, demo.phone);
+    await store.setShopPlan("rift-hardware", "gold");
+    assert.equal((await resolveShopInfo("rift-hardware"))?.planId, "gold");
   });
 });

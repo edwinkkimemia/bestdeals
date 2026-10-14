@@ -26,7 +26,7 @@ import { ReviewsBlock } from "./reviews-block";
 import { ReviewForm } from "./review-form";
 import { ViewTracker } from "./view-tracker";
 import { ViewCount } from "./view-count";
-import { Badge, ConditionBadge, VerifiedBadge } from "@/components/ui/badge";
+import { Badge, ConditionBadge, VerifiedBadge, PlanCheckmark } from "@/components/ui/badge";
 import { WmImage } from "@/components/ui/wm-image";
 import { SafeImage } from "@/components/ui/safe-image";
 import { ProductGallery } from "@/components/product-gallery";
@@ -108,7 +108,7 @@ function ShareButtons({ title }: { title: string }) {
   );
 }
 
-export function ListingDetail({ listing, related, moreFromSeller, reviews, listingReviews, jsonLd, sellerPhotoUrl, previewStatus, shopInfo }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; listingReviews?: ReviewRecord[]; jsonLd: Record<string, unknown>; sellerPhotoUrl?: string | null; previewStatus?: string | null; shopInfo?: { name: string; logoUrl: string | null; verified: boolean; businessCategory: string; town: string; county: string; phone?: string | null } | null }) {
+export function ListingDetail({ listing, related, moreFromSeller, reviews, listingReviews, jsonLd, sellerPhotoUrl, previewStatus, shopInfo, sellerPlan }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; listingReviews?: ReviewRecord[]; jsonLd: Record<string, unknown>; sellerPhotoUrl?: string | null; previewStatus?: string | null; shopInfo?: { name: string; logoUrl: string | null; verified: boolean; businessCategory: string; town: string; county: string; phone?: string | null; planId?: string | null } | null; sellerPlan?: string | null }) {
   const { add } = useCart();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
@@ -118,7 +118,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
 
   const shop = listing.shopSlug ? getShop(listing.shopSlug) : undefined;
   // Shop listings show the shop identity, not the owner's personal profile.
-  const shopCard = shopInfo ?? (shop ? { name: shop.name, logoUrl: shop.logo, verified: shop.verified, businessCategory: shop.businessCategory, town: shop.town, county: shop.county } : null);
+  const shopCard = shopInfo ?? (shop ? { name: shop.name, logoUrl: shop.logo, verified: shop.verified, businessCategory: shop.businessCategory, town: shop.town, county: shop.county, planId: "free" } : null);
   // Avatar: owner's photo for individual sellers, shop logo for shop listings.
   const avatarUrl = shopCard ? shopCard.logoUrl : (sellerPhotoUrl ?? null);
   // WhatsApp ordering always uses the verified number: the snapshot taken at
@@ -341,7 +341,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
               {shopCard ? (
                 <>
                   <p className="flex flex-wrap items-center gap-2 font-bold">
-                    {shopCard.name} {shopCard.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}
+                    {shopCard.name} <PlanCheckmark plan={shopCard.planId} size="sm" /> {shopCard.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}
                   </p>
                   <p className="truncate text-xs text-ink-500">
                     {shopCard.businessCategory} · {shopCard.town}, {shopCard.county} · Enquiries go straight to their inbox
@@ -349,7 +349,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
                 </>
               ) : (
                 <>
-                  <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <VerifiedBadge verified={listing.verified} /></p>
+                  <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <PlanCheckmark plan={sellerPlan} size="sm" /> <VerifiedBadge verified={listing.verified} /></p>
                   <p className="truncate text-xs text-ink-500">
                     {listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}, {listing.county} · Enquiries go straight to their inbox
                   </p>

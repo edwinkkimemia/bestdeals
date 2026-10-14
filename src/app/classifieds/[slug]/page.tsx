@@ -43,12 +43,14 @@ export default async function ClassifiedDetail({ params }: { params: { slug: str
     const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(staticHit.id), []);
     const sellerPhotoUrl = await resolveSellerPhoto(staticHit);
     const shopInfo = await resolveShopInfo(staticHit.shopSlug);
+    const { getSellerPlan } = await import("@/lib/plans");
+    const sellerPlan = staticHit.ownerId ? (await getSellerPlan(staticHit.ownerId).catch(() => null))?.planId ?? null : null;
     const jsonLd = breadcrumbJsonLd([
       { name: "Home", url: "https://chap.co.ke/" },
       { name: "Classifieds", url: "https://chap.co.ke/classifieds" },
       { name: staticHit.title, url: `https://chap.co.ke/classifieds/${staticHit.slug}` },
     ]);
-    return <ListingDetail listing={staticHit} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} jsonLd={jsonLd} />;
+    return <ListingDetail listing={staticHit} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} />;
   }
   const { resolveStoreDetail } = await import("@/lib/live-listings");
   const resolved = await resolveStoreDetail(params.slug);
@@ -59,10 +61,12 @@ export default async function ClassifiedDetail({ params }: { params: { slug: str
   const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(l.id), []);
   const sellerPhotoUrl = await resolveSellerPhoto(l);
   const shopInfo = await resolveShopInfo(l.shopSlug);
+  const { getSellerPlan: getPlan } = await import("@/lib/plans");
+  const sellerPlan = l.ownerId ? (await getPlan(l.ownerId).catch(() => null))?.planId ?? null : null;
   const jsonLd = breadcrumbJsonLd([
     { name: "Home", url: "https://chap.co.ke/" },
     { name: "Classifieds", url: "https://chap.co.ke/classifieds" },
     { name: l.title, url: `https://chap.co.ke/classifieds/${l.slug}` },
   ]);
-  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} jsonLd={jsonLd} previewStatus={previewStatus} />;
+  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} previewStatus={previewStatus} />;
 }

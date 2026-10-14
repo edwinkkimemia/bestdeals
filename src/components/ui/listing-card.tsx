@@ -5,6 +5,7 @@ import { Badge, ConditionBadge } from "./badge";
 import { Heart } from "lucide-react";
 import { WishlistButton } from "./wishlist-button";
 import { WmImage } from "./wm-image";
+import { PlanCheckmark } from "./badge";
 
 export function Price({ value, compareAt }: { value: number; compareAt?: number | null }) {
   const pct = compareAt ? savings(compareAt, value) : null;
@@ -57,7 +58,10 @@ export function ListingCard({ listing }: { listing: Listing }) {
         </Link>
         <Price value={listing.price} compareAt={listing.compareAt} />
         <div className="flex items-center justify-between text-xs text-ink-500">
-          <span className="truncate">{listing.verified ? `✓ ${listing.sellerName}` : listing.sellerName}</span>
+          <span className="flex min-w-0 items-center gap-1">
+            <PlanCheckmark plan={listing.planId} size="sm" />
+            <span className="truncate">{listing.verified ? `✓ ${listing.sellerName}` : listing.sellerName}</span>
+          </span>
           <span className="shrink-0" title={`Posted ${formatFull(listing.createdAt)}`}>{timeAgo(listing.createdAt)} · {formatDay(listing.createdAt)}</span>
         </div>
       </div>

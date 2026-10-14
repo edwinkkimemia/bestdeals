@@ -38,7 +38,7 @@ export default function PricingPage() {
         <InfoSidebar current="/pricing" />
         <div className="min-w-0">
       <h1 className="section-title">Business shop plans</h1>
-      <p className="mt-1 max-w-2xl text-sm text-ink-500">Start free, upgrade when growth pays for itself. Prices in KES, limits published, and every charge shows plan, price, billing period, and renewal before you confirm.</p>
+      <p className="mt-1 max-w-2xl text-sm text-ink-500">Start free, upgrade when growth pays for itself. Prices in KES, limits published, and every charge shows plan, price, billing period, and renewal before you confirm. Individual sellers get the same Silver/Gold limits on their personal seller plan — no storefront needed.</p>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {SHOP_PLANS.map((p) => (
           <div key={p.id} className={`card flex flex-col p-6 ${p.id === "silver" ? "border-2 border-brand-600" : ""}`}>

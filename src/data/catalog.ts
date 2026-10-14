@@ -32,6 +32,8 @@ export type Listing = {
   sellerType: "individual" | "business";
   /** Store owner id for seller-posted listings (avatar lookup survives renames). */
   ownerId?: string;
+  /** Effective seller plan stamped at read time (silver/gold checkmark, else null). */
+  planId?: string | null;
   sellerPhone?: string; // verified snapshot — WhatsApp ordering always uses this first
   shopSlug?: string;
   verified: boolean;

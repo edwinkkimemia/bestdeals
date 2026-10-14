@@ -9,7 +9,7 @@ import { resolveSellerProfile, getSellerListings, sellerSlug, withLiveVerificati
 import { ReviewsBlock } from "@/components/reviews-block";
 import { ReviewForm } from "@/components/review-form";
 import { ListingCard } from "@/components/ui/listing-card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, PlanCheckmark } from "@/components/ui/badge";
 import { ratingLabel } from "@/lib/ratings";
 import { ShareRow } from "@/components/share-row";
 import { SafeImage } from "@/components/ui/safe-image";
@@ -27,10 +27,15 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const p = await resolveSellerProfile(params.slug);
   if (!p) return { title: "Seller not found" };
+  // The seller's own bio is the description; the cover doubles as the social
+  // share image (falls back to the profile photo).
+  const description = (p.bio ?? "").trim() || `${p.businessName ? `${p.businessName} · ` : ""}${p.verified ? "Verified seller" : "Seller"} on Chap marketplace.`;
+  const shareImage = p.coverUrl || p.photoUrl || undefined;
   return {
     title: `${p.name} — Seller on Chap`,
-    description: `${p.businessName ? `${p.businessName} · ` : ""}${p.verified ? "Verified seller" : "Seller"} on Chap marketplace.`,
+    description: description.slice(0, 160),
     alternates: { canonical: `https://chap.co.ke/seller/${params.slug}` },
+    ...(shareImage ? { openGraph: { title: `${p.name} — Seller on Chap`, description: description.slice(0, 160), images: [shareImage] } } : {}),
   };
 }
 
@@ -60,9 +65,17 @@ export default async function SellerPage({ params }: { params: { slug: string } 
   const contact = resolveSellerContact(items, shops);
   const waText = encodeURIComponent(`Hello ${profile.name}! I found you on Chap and have a question.`);
   const liveItems = await withLiveVerification(items);
+  const { getSellerPlan } = await import("@/lib/plans");
+  const sellerPlan = profile.userId ? (await getSellerPlan(profile.userId).catch(() => null)) : null;
 
   return (
-    <div className="container-bd py-6">
+    <div>
+      <div aria-hidden className="relative h-32 w-full overflow-hidden bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 sm:h-44">
+        {profile.coverUrl && (
+          <SafeImage src={profile.coverUrl} alt={`${profile.name} cover`} className="absolute inset-0 h-full w-full object-cover" />
+        )}
+      </div>
+      <div className="container-bd py-6">
       <div className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
         <span aria-hidden className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-2xl font-black text-white">
           {profile.photoUrl ? (
@@ -73,7 +86,8 @@ export default async function SellerPage({ params }: { params: { slug: string } 
         </span>
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">
-            {profile.name}{" "}
+            {profile.name}
+            <PlanCheckmark plan={sellerPlan?.planId} />
             {profile.verified ? <Badge tone="green">✓ Verified seller</Badge> : <Badge>Unverified seller</Badge>}
           </h1>
           <p className="text-sm text-ink-500">
@@ -81,6 +95,7 @@ export default async function SellerPage({ params }: { params: { slug: string } 
             {profile.sellerKind === "business" ? "Business seller" : "Individual seller"} · {memberSince(profile.memberSince)} ·{" "}
             {ratingLabel(reviews)}
           </p>
+          {profile.bio && <p className="mt-1 text-sm">{profile.bio}</p>}
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href={`/search?q=${encodeURIComponent(profile.name)}`} className="btn-secondary">All listings</Link>
@@ -102,7 +117,7 @@ export default async function SellerPage({ params }: { params: { slug: string } 
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {shops.map((s) => (
               <Link key={s.slug} href={`/shops/${s.slug}`} className="card p-4">
-                <p className="font-bold">{s.name}</p>
+                <p className="flex flex-wrap items-center gap-1.5 font-bold">{s.name} <PlanCheckmark plan={s.planId} size="sm" /></p>
                 <p className="truncate text-sm text-ink-500">{s.businessCategory} · {s.town}, {s.county}</p>
                 <p className="mt-1">{s.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</p>
               </Link>
@@ -125,6 +140,7 @@ export default async function SellerPage({ params }: { params: { slug: string } 
       )}
       <ReviewsBlock reviews={reviews} title={`Reviews for ${profile.name}`} />
       <ReviewForm sellerName={profile.name} />
+      </div>
     </div>
   );
 }

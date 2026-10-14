@@ -43,6 +43,8 @@ export default async function ProductPage({ params }: { params: { slug: string }
     const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(l.id), []);
     const sellerPhotoUrl = await resolveSellerPhoto(l);
     const shopInfo = await resolveShopInfo(l.shopSlug);
+    const { getSellerPlan } = await import("@/lib/plans");
+    const sellerPlan = l.ownerId ? (await getSellerPlan(l.ownerId).catch(() => null))?.planId ?? null : null;
     const jsonLd = {
       "@context": "https://schema.org",
       "@graph": [
@@ -54,7 +56,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
         ]),
       ],
     };
-    return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} jsonLd={jsonLd} />;
+    return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} />;
   }
   // Seller-posted listing: `active` is public, anything else previews only
   // for admins / the owner / shop staff (banner inside ListingDetail).
@@ -67,6 +69,8 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const listingReviews = await storeRead((s) => s.listApprovedReviewsForListing(listing.id), []);
   const sellerPhotoUrl = await resolveSellerPhoto(listing);
   const shopInfo = await resolveShopInfo(listing.shopSlug);
+  const { getSellerPlan: getPlan } = await import("@/lib/plans");
+  const sellerPlan = listing.ownerId ? (await getPlan(listing.ownerId).catch(() => null))?.planId ?? null : null;
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -78,5 +82,5 @@ export default async function ProductPage({ params }: { params: { slug: string }
       ]),
     ],
   };
-  return <ListingDetail listing={listing} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} jsonLd={jsonLd} previewStatus={previewStatus} />;
+  return <ListingDetail listing={listing} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} previewStatus={previewStatus} />;
 }

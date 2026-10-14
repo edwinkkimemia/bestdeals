@@ -5,6 +5,7 @@ import { CreditCard } from "lucide-react";
 import { normalizePlan, PLAN_IDS } from "@/lib/plans";
 import { getStore } from "@/lib/store";
 import { PlanPanel } from "../shop/panels";
+import { SellerPlanPanel } from "./seller-panel";
 
 export const metadata = { title: "Plan & billing" };
 export const dynamic = "force-dynamic";
@@ -14,8 +15,10 @@ export default async function PlanDash({ searchParams }: { searchParams: { plan?
   if (!user) redirect("/auth/signin?next=/dashboard/plan");
   const store = getStore();
   const owned = await store.listShopsByOwner(user.id).catch(() => []);
+  const fresh = await store.findUserById(user.id).catch(() => null);
+  const personalPlan = normalizePlan(fresh?.planId);
   const active = owned[0] ?? null;
-  // ?plan=silver from /pricing preselects + highlights that plan in the checkout panel.
+  // ?plan=silver from /pricing preselects + highlights that plan in the checkout panels.
   const highlightPlan =
     searchParams.plan && (PLAN_IDS as readonly string[]).includes(searchParams.plan) ? searchParams.plan : undefined;
   return (
@@ -25,11 +28,12 @@ export default async function PlanDash({ searchParams }: { searchParams: { plan?
         {active ? (
           <>Plan for <strong>{active.name}</strong> · <Link href={`/shops/${active.slug}`} className="link-bd">view storefront →</Link></>
         ) : (
-          <>No shop yet — <Link href="/dashboard/shop" className="link-bd">create your storefront first →</Link></>
+          <>No shop yet — your personal seller plan below covers your listings, or <Link href="/dashboard/shop" className="link-bd">create a storefront →</Link></>
         )}
         {" · "}<Link href="/pricing" className="link-bd">Compare plans →</Link>
       </p>
-      <div className="mt-4 max-w-2xl">
+      <div className="mt-4 grid max-w-4xl items-start gap-3 lg:grid-cols-2">
+        <SellerPlanPanel planId={personalPlan} highlightPlan={highlightPlan} />
         <PlanPanel
           shops={owned.map((s) => ({ slug: s.slug, name: s.name, planId: normalizePlan((s as { planId?: unknown }).planId) }))}
           activeSlug={active?.slug ?? ""}

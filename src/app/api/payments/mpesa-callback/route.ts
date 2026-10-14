@@ -59,9 +59,26 @@ export async function POST(req: NextRequest) {
         await store.setOrderStatus(order.id, "confirmed");
       }
       // Activate any promo/plan linked to this payment (stored at initiate time).
-      const promoLink = (await store.getSetting(`mpesa_link:${v.orderRef}`).catch(() => null)) as { promoId?: string; planShop?: string; planId?: string } | null;
+      const promoLink = (await store.getSetting(`mpesa_link:${v.orderRef}`).catch(() => null)) as { promoId?: string; planShop?: string; planUser?: string; planId?: string } | null;
       if (promoLink?.promoId) {
         await store.activatePromotion(promoLink.promoId).catch(() => {});
+      }
+      if (promoLink?.planUser && promoLink?.planId) {
+        await store.setUserPlan(promoLink.planUser, promoLink.planId).catch(() => {});
+        try {
+          const { pendingSellerPlanKey } = await import("@/lib/plans");
+          const pending = (await store.getSetting(pendingSellerPlanKey(promoLink.planUser)).catch(() => null)) as { invoiceId?: string } | null;
+          await store.setSetting(pendingSellerPlanKey(promoLink.planUser), null).catch(() => {});
+          if (pending?.invoiceId) {
+            const inv = ((await store.getSetting("invoices").catch(() => null)) as { id: string }[] | null) ?? [];
+            await store
+              .setSetting(
+                "invoices",
+                inv.map((i) => (i.id === pending.invoiceId ? { ...i, status: "paid", providerRef: v.providerRef } : i))
+              )
+              .catch(() => {});
+          }
+        } catch {}
       }
       if (promoLink?.planShop && promoLink?.planId) {
         await store.setShopPlan(promoLink.planShop, promoLink.planId).catch(() => {});
