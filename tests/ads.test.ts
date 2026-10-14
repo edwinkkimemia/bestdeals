@@ -1,6 +1,14 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { isPathAllowed, adsAllowedOn, adsEnabled } from "../src/lib/ads.ts";
+import { isPathAllowed, adsAllowedOn, adsEnabled, getAdsConsent } from "../src/lib/ads.ts";
+import { getAnalyticsConsent } from "../src/lib/consent.ts";
+
+describe("consent defaults (no browser storage in tests)", () => {
+  it("reports undecided when nothing is stored", () => {
+    assert.equal(getAnalyticsConsent(), null);
+    assert.equal(getAdsConsent(), null);
+  });
+});
 
 describe("ads route policy", () => {
   it("stays off without a publisher ID", () => {

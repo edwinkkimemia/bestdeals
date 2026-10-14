@@ -9,18 +9,18 @@ import {
   adsAllowedOn,
   adsEnabled,
   getAdsConsent,
-  setAdsConsent,
   type AdsConsent,
 } from "@/lib/ads";
+import { getAnalyticsConsent, setConsent } from "@/lib/consent";
 
 /**
- * AdSense loader. Runs only after a consent mode is known (explicit choice,
- * else non-personalized default) so tracking never precedes consent.
+ * AdSense loader. Runs only after an explicit consent choice — no Google
+ * request fires pre-choice. "Essential only" loads it non-personalized.
  */
 export function AdScript() {
   const [mode, setMode] = useState<AdsConsent | null>(null);
   useEffect(() => {
-    const sync = () => setMode(getAdsConsent() ?? "non-personalized");
+    const sync = () => setMode(getAdsConsent());
     sync();
     window.addEventListener("chap:ads-consent", sync);
     return () => window.removeEventListener("chap:ads-consent", sync);
@@ -136,32 +136,39 @@ export function AnchorAd({ slot }: { slot: string }) {
   );
 }
 
-/** Consent banner: personalized vs basic ads (DPA/GDPR). Persists the choice. */
+/**
+ * Unified cookie banner (DPA/GDPR): analytics tracking + advertising share
+ * one decision. "Accept all" enables view analytics and personalized ads;
+ * "Essential only" keeps the session cookie alone (analytics off, basic
+ * non-personalized ads). Persists on-device; change it anytime by clearing
+ * site data. Ads copy adapts when AdSense isn't configured.
+ */
 export function ConsentBanner() {
   const [show, setShow] = useState(false);
   useEffect(() => {
-    if (!adsEnabled()) return;
-    setShow(getAdsConsent() === null);
+    setShow(getAnalyticsConsent() === null);
   }, []);
   if (!show) return null;
-  const choose = (mode: AdsConsent) => {
-    setAdsConsent(mode);
+  const choose = (analytics: boolean, ads: AdsConsent) => {
+    setConsent(analytics, ads);
     setShow(false);
   };
   return (
-    <div role="dialog" aria-label="Advertising consent" className="fixed inset-x-0 bottom-16 z-50 p-3 md:bottom-4">
+    <div role="dialog" aria-label="Cookie consent" className="fixed inset-x-0 bottom-16 z-50 p-3 md:bottom-4">
       <div className="card mx-auto max-w-xl p-4 shadow-lg">
-        <p className="text-sm font-bold">Ads keep Chap free</p>
+        <p className="text-sm font-bold">Cookies & ads keep Chap free</p>
         <p className="mt-1 text-xs text-ink-500">
-          Allow personalized ads, or keep basic non-personalized ones. Either way, ads never appear on checkout,
-          payments or your account pages. See our <Link href="/privacy" className="link-bd">Privacy policy</Link>.
+          We use a sign-in cookie (essential), view analytics to improve search, and
+          {adsEnabled() ? " ads to fund the marketplace" : " ads to fund the marketplace (currently off)"}.
+          Either way, ads never appear on checkout, payments or your account pages. See our{" "}
+          <Link href="/privacy" className="link-bd">Privacy policy</Link>.
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" onClick={() => choose("personalized")} className="btn-primary !px-4 !py-2 text-sm">
-            Allow personalized ads
+          <button type="button" onClick={() => choose(true, "personalized")} className="btn-primary !px-4 !py-2 text-sm">
+            Accept all
           </button>
-          <button type="button" onClick={() => choose("non-personalized")} className="btn-secondary !px-4 !py-2 text-sm">
-            Basic ads only
+          <button type="button" onClick={() => choose(false, "non-personalized")} className="btn-secondary !px-4 !py-2 text-sm">
+            Essential only
           </button>
         </div>
       </div>

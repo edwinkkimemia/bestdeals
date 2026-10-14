@@ -37,6 +37,12 @@ export async function POST(req: NextRequest) {
   const listingId = String((body as { listingId?: unknown }).listingId ?? "").trim().slice(0, 64);
   if (!listingId) return NextResponse.json({ error: "listingId required" }, { status: 400 });
 
+  // Consent gate: explicit decline records nothing. Unknown (pre-banner or
+  // direct calls) still counts the aggregate hit but never persists a new
+  // visitor id — only an opted-in visitor gets a long-lived tracker.
+  const consent = req.cookies.get("chap_consent")?.value;
+  if (consent === "a0") return NextResponse.json({ ok: true, skipped: "no-consent" });
+
   const vid = visitorId(req);
   let viewerId: string | undefined;
   try {
@@ -55,7 +61,7 @@ export async function POST(req: NextRequest) {
   });
 
   const res = NextResponse.json({ ok: true, deduped: r.deduped });
-  if (!req.cookies.get(VISITOR_COOKIE)) {
+  if (!req.cookies.get(VISITOR_COOKIE) && (consent === "a1" || viewerId)) {
     res.cookies.set(VISITOR_COOKIE, vid, {
       httpOnly: true,
       sameSite: "lax",
