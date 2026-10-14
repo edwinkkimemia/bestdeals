@@ -148,9 +148,10 @@ export default async function ShopPage({ params }: { params: { slug: string } })
     );
   }
   const staticItems = shopListings(s.slug);
-  const { getLiveShopListings: getLiveForStatic, mergeStaticAndLive } = await import("@/lib/live-listings");
+  const { getLiveShopListings: getLiveForStatic, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
   const liveForShop = await getLiveForStatic(s.slug);
-  const items = mergeStaticAndLive(staticItems, liveForShop);
+  // Stamp the merged catalogue so static rows carry live plan/verified flags for card checkmarks.
+  const items = await withLiveVerification(mergeStaticAndLive(staticItems, liveForShop));
   const reviews = await storeRead((st) => st.listApprovedReviewsForShop(s.slug), []);
   // Seller-managed header + verification live on the store twin (seeded
   // shops have one) — the catalogue copy is frozen, so the twin wins or the

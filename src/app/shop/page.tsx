@@ -15,12 +15,14 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ShopIndex() {
-  const { getLiveStoreListings, mergeStaticAndLive } = await import("@/lib/live-listings");
+  const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
   const live = (await getLiveStoreListings()).filter((l) => l.listingType === "product");
   const products = shuffleFeaturedFirst(
-    mergeStaticAndLive(
-      LISTINGS.filter((l) => l.listingType === "product"),
-      live
+    await withLiveVerification(
+      mergeStaticAndLive(
+        LISTINGS.filter((l) => l.listingType === "product"),
+        live
+      )
     )
   );
   return (

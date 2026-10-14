@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { resolveCounty, countyMatches, townsFor } from "../src/lib/kenya.ts";
-import { searchListings, suggestions, shuffleFeaturedFirst } from "../src/lib/search.ts";
+import { searchListings, suggestions, shuffleFeaturedFirst, dominantIntent } from "../src/lib/search.ts";
 import { CATEGORIES } from "../src/data/catalog.ts";
 import { signupSchema } from "../src/lib/validators.ts";
 import { listingSchema } from "../src/lib/validators.ts";
@@ -70,6 +70,44 @@ describe("location-filtering", () => {
     assert.ok(day.items.every((l) => now - +new Date(l.createdAt) <= 24 * 3600_000));
     const month = searchListings({ postedWithinHours: 720, perPage: 100 });
     assert.ok(month.total >= day.total);
+  });
+});
+
+describe("dominant-cluster tiering", () => {
+  it("returns null for empty or single-hit queries", () => {
+    assert.equal(dominantIntent([]), null);
+    assert.equal(
+      dominantIntent([{ l: { categorySlug: "x", subcategory: "Y" }, s: 5 }]),
+      null
+    );
+  });
+
+  it("finds the majority category and subcategory", () => {
+    const intent = dominantIntent([
+      { l: { categorySlug: "phones-tablets", subcategory: "Smartphones" }, s: 9 },
+      { l: { categorySlug: "phones-tablets", subcategory: "Smartphones" }, s: 7 },
+      { l: { categorySlug: "phones-tablets", subcategory: "Accessories" }, s: 6 },
+      { l: { categorySlug: "home-furniture", subcategory: "Furniture" }, s: 8 },
+    ]);
+    assert.deepEqual(intent, { categorySlug: "phones-tablets", subcategory: "Smartphones" });
+  });
+
+  it("leads free-text results with the query's own cluster", () => {
+    const { items } = searchListings({ q: "samsung", perPage: 60 });
+    assert.ok(items.length >= 2, "expected a phones cluster");
+    assert.equal(items[0].categorySlug, "phones-tablets");
+  });
+
+  it("never buries the lone best hit under a bonus-only majority", () => {
+    // "cement" matches one title; featured/verified bonuses (+2.5 with zero
+    // text match) elect a spurious phones majority — the title hit must stay first.
+    const { items } = searchListings({ q: "cement", perPage: 60 });
+    assert.ok(items[0].title.toLowerCase().includes("cement"));
+  });
+
+  it("leaves price/newest sorts untouched", () => {
+    const a = searchListings({ q: "cement", sort: "price_asc", perPage: 60 }).items;
+    for (let i = 1; i < a.length; i++) assert.ok(a[i].price >= a[i - 1].price);
   });
 });
 

@@ -491,8 +491,12 @@ export async function withLiveVerification<T extends Pick<Listing, "ownerId" | "
 export async function relatedWithLive(
   main: Listing
 ): Promise<{ main: Listing; fromOthers: Listing[]; fromSeller: Listing[] }> {
+  const { LISTINGS } = await import("@/data/catalog");
+  // Static + live merged: seller-posted products only exist in the store.
+  const live = await getLiveStoreListings().catch(() => []);
+  const pool = mergeStaticAndLive(LISTINGS, live);
   const { getRelated } = await import("./related");
-  const { fromOthers, fromSeller } = getRelated(main);
+  const { fromOthers, fromSeller } = getRelated(main, 6, pool);
   const all = await withLiveVerification([main, ...fromOthers, ...fromSeller]);
   return {
     main: all[0],

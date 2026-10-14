@@ -1,5 +1,6 @@
 import { LISTINGS, type Listing } from "@/data/catalog";
 import { countyMatches } from "@/lib/kenya";
+import { relatedTier } from "@/lib/related";
 
 export type SearchParams = {
   q?: string;
@@ -88,17 +89,88 @@ export function searchListings(p: SearchParams): {
   });
 
   const sort = p.sort ?? "relevance";
-  items = [...items].sort((a, b) => {
-    if (sort === "price_asc") return a.price - b.price;
-    if (sort === "price_desc") return b.price - a.price;
-    if (sort === "newest") return +new Date(b.createdAt) - +new Date(a.createdAt);
-    return score(b, tokens) - score(a, tokens);
-  });
+  if (sort === "price_asc") items = [...items].sort((a, b) => a.price - b.price);
+  else if (sort === "price_desc") items = [...items].sort((a, b) => b.price - a.price);
+  else if (sort === "newest") items = [...items].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  else items = relevanceRanked(items, tokens, (l) => score(l, tokens));
 
   const perPage = Math.min(Math.max(p.perPage ?? 24, 1), 60);
   const page = Math.max(p.page ?? 1, 1);
   const total = items.length;
   return { items: items.slice((page - 1) * perPage, page * perPage), total, page, perPage };
+}
+
+/**
+ * Query-dominant category intent: the category (and subcategory) most
+ * represented among genuine title hits. Free-text queries like "toyota
+ * fielder" or "2 bedroom" carry no category name, so name-matching can't find
+ * intent — but title hits cluster in one category, and tiering by that
+ * cluster (same subcategory > same category > rest, mirroring related
+ * items) keeps one strong outsider from outranking the pack on a title
+ * keyword. Title-only (featured/verified bonuses elect spurious majorities),
+ * needs ≥2 hits; null falls back to pure relevance.
+ */
+const normText = (s: string) => s.toLowerCase().replace(/[-_]+/g, " ");
+
+/** Genuine query hit (title), ignoring featured/verified score bonuses. */
+function titleHit(l: Pick<Listing, "title">, tokens: string[]): boolean {
+  const t = normText(l.title);
+  return tokens.some((tok) => tok.length >= 2 && t.includes(normText(tok)));
+}
+
+export function dominantIntent(
+  scored: { l: Pick<Listing, "categorySlug" | "subcategory" | "title">; s: number }[],
+  tokens: string[] = []
+): {
+  categorySlug: string;
+  subcategory?: string;
+} | null {
+  const hits = scored.filter((x) => x.s > 0).slice(0, 12);
+  if (hits.length === 0) return null;
+  // Intent comes from genuine title matches only: featured/verified bonuses
+  // (+2.5 with zero text match) can otherwise elect a spurious majority and
+  // bury the true best hit beneath it.
+  const strong = tokens.length > 0 ? hits.filter((x) => titleHit(x.l, tokens)) : hits;
+  if (strong.length < 2) return null;
+  const catCount = new Map<string, number>();
+  for (const h of strong) catCount.set(h.l.categorySlug, (catCount.get(h.l.categorySlug) ?? 0) + 1);
+  let topCat = "";
+  let topN = 0;
+  for (const [c, n] of catCount) {
+    if (n > topN) {
+      topN = n;
+      topCat = c;
+    }
+  }
+  if (topN < 2 || !topCat) return null;
+  const subCount = new Map<string, number>();
+  for (const h of strong) {
+    if (h.l.categorySlug === topCat) {
+      const sub = (h.l.subcategory ?? "").trim();
+      if (sub) subCount.set(sub, (subCount.get(sub) ?? 0) + 1);
+    }
+  }
+  let topSub = "";
+  let topS = 0;
+  for (const [s, n] of subCount) {
+    if (n > topS) {
+      topS = n;
+      topSub = s;
+    }
+  }
+  return { categorySlug: topCat, ...(topS >= 2 && topSub ? { subcategory: topSub } : {}) };
+}
+
+/** Relevance order with dominant-cluster tiering (stable within tiers). */
+function relevanceRanked<T extends Pick<Listing, "categorySlug" | "subcategory" | "title">>(
+  items: T[],
+  tokens: string[],
+  textScore: (l: T) => number
+): T[] {
+  const scored = items.map((l) => ({ l, s: textScore(l) }));
+  const intent = tokens.length > 0 ? dominantIntent(scored, tokens) : null;
+  scored.sort((a, b) => (intent ? relatedTier(a.l, intent) - relatedTier(b.l, intent) : 0) || b.s - a.s);
+  return scored.map((x) => x.l);
 }
 
 /** Per-request shuffle for rails: Featured/promoted items always lead, everything else mixes freshly on every refresh. */
@@ -226,7 +298,18 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
     if (sort === "price_asc") items = [...items].sort((a, b) => a.price - b.price);
     else if (sort === "price_desc") items = [...items].sort((a, b) => b.price - a.price);
     else if (sort === "newest") items = [...items].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-    else items = [...items].sort((a, b) => score(b, tokens) - score(a, tokens) || +new Date(b.createdAt) - +new Date(a.createdAt));
+    else {
+      // Same dominant-cluster tiering as the static path (recency breaks ties).
+      const scored = items.map((l) => ({ l, s: score(l, tokens) }));
+      const intent = tokens.length > 0 ? dominantIntent(scored, tokens) : null;
+      scored.sort(
+        (a, b) =>
+          (intent ? relatedTier(a.l, intent) - relatedTier(b.l, intent) : 0) ||
+          b.s - a.s ||
+          +new Date(b.l.createdAt) - +new Date(a.l.createdAt)
+      );
+      items = scored.map((x) => x.l);
+    }
     // TOP pins lead deterministically — kinds come from live promos (a
     // listing object never carries one, so reading it off was a no-op).
     const kinds = await store.livePromoKinds(items.map((l) => l.id)).catch(() => new Map<string, string>());

@@ -29,9 +29,10 @@ export default async function CountyPage({ params }: { params: { county: string 
   if (!entry) notFound();
 
   const county = entry as NonNullable<typeof entry>;
-  const { getLiveStoreListings, mergeStaticAndLive } = await import("@/lib/live-listings");
+  const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
   const live = await getLiveStoreListings();
-  const all = mergeStaticAndLive(LISTINGS, live);
+  // Stamp the merged set so static rows carry live plan/verified flags for card checkmarks.
+  const all = await withLiveVerification(mergeStaticAndLive(LISTINGS, live));
   const items = all.filter((l) => countyMatches(l.county, county.county));
   const products = items.filter((l) => l.listingType === "product");
   const classifieds = items.filter((l) => l.listingType === "classified");

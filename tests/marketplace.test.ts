@@ -4,7 +4,7 @@ import { cartTotals, commissionDue, savings } from "../src/lib/format.ts";
 import { slugify } from "../src/lib/utils.ts";
 import { validateMpesaCallback } from "../src/lib/payments.ts";
 import { searchListings } from "../src/lib/search.ts";
-import { getRelated, listingHref } from "../src/lib/related.ts";
+import { getRelated, listingHref, relatedTier } from "../src/lib/related.ts";
 import { getListing, LISTINGS, CATEGORIES } from "../src/data/catalog.ts";
 import { freshDemoStore } from "../src/lib/store.ts";
 import { reviewSchema, disputeSchema } from "../src/lib/validators.ts";
@@ -272,6 +272,54 @@ describe("related", () => {
     const { fromOthers, fromSeller } = getRelated(base);
     assert.ok(fromOthers.length > 0 && fromOthers.length <= 6);
     assert.ok(fromSeller.length > 4 && fromSeller.length <= 12, `expected 5–12 same-seller picks, got ${fromSeller.length}`);
+  });
+  it("ranks same subcategory first, then same category, then the rest", () => {
+    const made = (id: string, categorySlug: string, subcategory: string): Parameters<typeof getRelated>[0] => ({
+      id, slug: id, title: `T ${id}`, description: "01234567890123456789",
+      categorySlug, subcategory, price: 100, compareAt: null, condition: "new",
+      listingType: "product", transactionMethod: "buy_online", county: "Nairobi", town: "CBD",
+      negotiable: false, stock: 1, images: [], sellerName: `Seller ${id}`, sellerType: "individual",
+      ownerId: `u-${id}`, sellerPhone: "0712345678", verified: false,
+      createdAt: new Date().toISOString(), attributes: {},
+    });
+    const base = made("base", "phones-tablets", "Smartphones");
+    // Deliberately worst-first: sibling sub, sibling category, outsider.
+    const pool = [
+      base,
+      made("out", "home-furniture", "Furniture"),
+      made("cat", "phones-tablets", "Accessories"),
+      made("sub", "phones-tablets", "Smartphones"),
+    ];
+    // relatedTier unit order.
+    assert.equal(relatedTier(pool[3], base), 0);
+    assert.equal(relatedTier(pool[2], base), 1);
+    assert.equal(relatedTier(pool[1], base), 2);
+    const { fromOthers } = getRelated(base, 6, pool);
+    assert.deepEqual(fromOthers.map((l) => l.id), ["sub", "cat", "out"]);
+  });
+  it("real catalogue: phone page leads with phones", () => {
+    const base = getListing("samsung-galaxy-a55-128gb-nairobi")!;
+    const { fromOthers } = getRelated(base);
+    assert.ok(fromOthers.length > 0);
+    assert.equal(fromOthers[0].categorySlug, "phones-tablets");
+    const tiers = fromOthers.map((l) => relatedTier(l, base));
+    assert.deepEqual([...tiers].sort((a, b) => a - b), tiers, "tiers must never regress down the rail");
+  });
+  it("matches same-seller siblings by owner/shop across renames and store splits", () => {
+    const made = (id: string, ownerId: string | undefined, sellerName: string, shopSlug?: string): Parameters<typeof getRelated>[0] => ({
+      id, slug: id, title: `T ${id}`, description: "01234567890123456789",
+      categorySlug: "phones-tablets", price: 100, compareAt: null, condition: "new",
+      listingType: "product", transactionMethod: "buy_online", county: "Nairobi", town: "CBD",
+      negotiable: false, stock: 1, images: [], sellerName, sellerType: "business",
+      ownerId, sellerPhone: "0712345678", shopSlug, verified: true,
+      createdAt: new Date().toISOString(), attributes: {},
+    });
+    // New shop: base + sibling share owner/shop but the sibling was renamed.
+    const base = made("nb1", "u-new", "Old Shop Name", "new-shop");
+    const pool = [base, made("nb2", "u-new", "New Shop Name", "new-shop"), made("nb3", "u-other", "Other Seller")];
+    const { fromSeller, fromOthers } = getRelated(base, 6, pool);
+    assert.deepEqual(fromSeller.map((l) => l.id), ["nb2"]);
+    assert.deepEqual(fromOthers.map((l) => l.id), ["nb3"]);
   });
   it("builds canonical urls per type", () => {
     assert.equal(listingHref({ listingType: "classified", slug: "x" }), "/classifieds/x");

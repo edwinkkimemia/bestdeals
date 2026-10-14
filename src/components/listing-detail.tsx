@@ -349,7 +349,8 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
                 </>
               ) : (
                 <>
-                  <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <PlanCheckmark plan={sellerPlan} size="sm" /> <VerifiedBadge verified={listing.verified} /></p>
+                  {/* listing.planId covers name-matched static rows where ownerId is absent. */}
+                  <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <PlanCheckmark plan={sellerPlan ?? listing.planId} size="sm" /> <VerifiedBadge verified={listing.verified} /></p>
                   <p className="truncate text-xs text-ink-500">
                     {listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}, {listing.county} · Enquiries go straight to their inbox
                   </p>

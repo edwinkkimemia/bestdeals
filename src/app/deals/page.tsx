@@ -13,12 +13,14 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function DealsPage() {
-  const { getLiveStoreListings, mergeStaticAndLive } = await import("@/lib/live-listings");
+  const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
   const liveDeals = (await getLiveStoreListings()).filter((l) => l.compareAt && l.compareAt > l.price);
   const deals = shuffleFeaturedFirst(
-    mergeStaticAndLive(
-      LISTINGS.filter((l) => l.compareAt && l.compareAt > l.price),
-      liveDeals
+    await withLiveVerification(
+      mergeStaticAndLive(
+        LISTINGS.filter((l) => l.compareAt && l.compareAt > l.price),
+        liveDeals
+      )
     )
   );
   return (

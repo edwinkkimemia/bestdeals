@@ -40,9 +40,11 @@ type ShopRailCard = {
 };
 
 export default async function HomePage() {
-  const { getLiveStoreListings, mergeStaticAndLive } = await import("@/lib/live-listings");
+  const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
   const liveAll = await getLiveStoreListings();
-  const all = mergeStaticAndLive(LISTINGS, liveAll);
+  // Stamp the merged set: static catalogue rows need live plan/verified flags
+  // for card checkmarks, not just the store half.
+  const all = await withLiveVerification(mergeStaticAndLive(LISTINGS, liveAll));
   const deals = shuffleFeaturedFirst(all.filter((l) => l.compareAt && l.compareAt > l.price)).slice(0, 6);
   const featured = shuffleFeaturedFirst(all.filter((l) => l.featured)).slice(0, 12);
   const fresh = shuffleFeaturedFirst([...all].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 36)).slice(0, 12);
