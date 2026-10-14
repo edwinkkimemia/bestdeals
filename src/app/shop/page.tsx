@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { CATEGORIES } from "@/data/catalog";
 import { LISTINGS } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
+import { AdAfterEvery } from "@/components/ads";
+import { AD_SLOTS } from "@/lib/ads";
 import { CategoryIcon } from "@/components/category-icon";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { shuffleFeaturedFirst } from "@/lib/search";
@@ -75,7 +78,12 @@ export default async function ShopIndex() {
         <Link href="/search?type=product&sort=newest" className="link-bd text-sm">Newest first →</Link>
       </div>
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-        {products.map((l) => <ListingCard key={l.id} listing={l} />)}
+        {products.map((l, i) => (
+        <Fragment key={l.id}>
+          <ListingCard listing={l} />
+          <AdAfterEvery index={i} slot={AD_SLOTS.feed} />
+        </Fragment>
+      ))}
       </div>
     </div>
   );

@@ -87,7 +87,12 @@ function CheckoutInner() {
           setServerErr("");
           setPlacing(true);
           try {
-            const idempotencyKey = `co-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+            // One key per cart contents (not per click): double-clicks and
+            // retries collapse to the same order server-side.
+            const fingerprint = detailed.map((l) => `${l.id}x${l.qty}`).sort().join("|");
+            let hash = 0;
+            for (let i = 0; i < fingerprint.length; i++) hash = (Math.imul(hash, 31) + fingerprint.charCodeAt(i)) | 0;
+            const idempotencyKey = `co-${Math.abs(hash).toString(36)}-${detailed.length}`;
             const r = await fetch("/api/orders", {
               method: "POST",
               headers: { "Content-Type": "application/json" },

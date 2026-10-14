@@ -57,8 +57,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     myNames.add(user.name);
     isSeller = order.suborders.some((s) => myNames.has(s.seller));
   }
+  // Any path into `cancelled` gives reserved stock back (see lib/stock).
+  const { restoreReservedStock } = await import("@/lib/stock");
   if (isAdmin) {
     await store.setOrderStatus(order.id, next).catch(() => {});
+    if (next === "cancelled") await restoreReservedStock(order.id).catch(() => {});
     await logAudit({ actorId: user.id, actorEmail: user.email, action: `order.${next}`, entity: "order", entityId: order.id }).catch(() => {});
     return NextResponse.json({ ok: true, status: next });
   }
@@ -68,12 +71,14 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     await store.setOrderStatus(order.id, "cancelled").catch(() => {});
     await store.setOrderPayment(order.id, "cancelled").catch(() => {});
+    await restoreReservedStock(order.id).catch(() => {});
     return NextResponse.json({ ok: true, status: "cancelled" });
   }
   if (isSeller) {
     const allowed = SELLER_FLOW[order.status] ?? [];
     if (!allowed.includes(next)) return NextResponse.json({ error: `Can't move ${order.status} → ${next}.` }, { status: 409 });
     await store.setOrderStatus(order.id, next).catch(() => {});
+    if (next === "cancelled") await restoreReservedStock(order.id).catch(() => {});
     notifyLater({ channel: "sms", to: order.phone, message: `Chap: order ${order.id} is now ${next}.` });
     return NextResponse.json({ ok: true, status: next });
   }

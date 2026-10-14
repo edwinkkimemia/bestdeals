@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Chrome } from "@/components/layout/chrome";
 import { Footer } from "@/components/layout/footer";
+import { AdScript, AnchorAd, ConsentBanner } from "@/components/ads";
+import { AD_SLOTS } from "@/lib/ads";
 import { CartProvider } from "@/components/cart-provider";
 import { currentUser } from "@/lib/auth";
 import { storeRead } from "@/lib/store";
@@ -25,6 +27,7 @@ export const metadata: Metadata = {
   description:
     "Discover great deals, shop trusted businesses, buy and sell new or pre-owned items, and find services across Kenya.",
   icons: { icon: "/fav.png", apple: "/fav.png" },
+  manifest: "/manifest.webmanifest",
   alternates: { canonical: "https://chap.co.ke/" },
   openGraph: {
     type: "website",
@@ -68,7 +71,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           >
             {children}
           </Chrome>
+          <AnchorAd slot={AD_SLOTS.anchor} />
+          <ConsentBanner />
         </CartProvider>
+        <AdScript />
       </body>
     </html>
   );

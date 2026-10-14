@@ -44,6 +44,41 @@ function darajaBase(): string {
     : "https://sandbox.safaricom.co.ke";
 }
 
+/**
+ * Daraja POSTs to our exact CallBackURL, query string included — so a long
+ * random `MPESA_CALLBACK_SECRET` in the URL authenticates callbacks (Daraja
+ * sends no HMAC/IP guarantees we can rely on behind Vercel's proxies).
+ * Production MUST set it; without it any caller can forge callbacks.
+ */
+export function mpesaCallbackUrl(): string {
+  const base = process.env.MPESA_CALLBACK_URL || "https://chap.co.ke/api/payments/mpesa-callback";
+  const secret = (process.env.MPESA_CALLBACK_SECRET || "").trim();
+  if (!secret) return base;
+  const joiner = base.includes("?") ? "&" : "?";
+  return `${base}${joiner}key=${encodeURIComponent(secret)}`;
+}
+
+/** True when callback authentication is enforced (secret configured). */
+export function isCallbackAuthEnforced(): boolean {
+  return (process.env.MPESA_CALLBACK_SECRET || "").trim().length >= 16;
+}
+
+/** Timing-safe check of the `?key=` callback secret. Open (true) when unset — configure it in prod. */
+export function verifyCallbackSecret(url: string): boolean {
+  const secret = (process.env.MPESA_CALLBACK_SECRET || "").trim();
+  if (!secret) return true;
+  let given = "";
+  try {
+    given = new URL(url).searchParams.get("key") ?? "";
+  } catch {
+    return false;
+  }
+  if (given.length !== secret.length || given.length === 0) return false;
+  let diff = 0;
+  for (let i = 0; i < secret.length; i++) diff |= secret.charCodeAt(i) ^ given.charCodeAt(i);
+  return diff === 0;
+}
+
 function timestamp(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, "0");
@@ -86,7 +121,7 @@ export async function initiateSTKPush(init: PaymentInit): Promise<PaymentResult>
     const ts = timestamp();
     const password = Buffer.from(`${shortcode}${passkey}${ts}`).toString("base64");
     const token = await darajaToken();
-    const callbackURL = process.env.MPESA_CALLBACK_URL || "https://chap.co.ke/api/payments/mpesa-callback";
+    const callbackURL = mpesaCallbackUrl();
     // AccountReference carries our order/promo id so the callback can map back.
     const r = await fetch(`${darajaBase()}/mpesa/stkpush/v1/processrequest`, {
       method: "POST",
@@ -131,6 +166,56 @@ export async function initiateSTKPush(init: PaymentInit): Promise<PaymentResult>
     };
   } catch (e) {
     return { ok: false, status: "failed", message: (e as Error)?.message?.slice(0, 160) || "M-Pesa request failed." };
+  }
+}
+
+export type ReversalInput = { receipt: string; amount: number; occasion?: string };
+export type ReversalResult = { ok: boolean; message: string; conversationId?: string };
+
+/**
+ * Daraja transaction reversal (M-Pesa → customer). Needs MPESA_INITIATOR_NAME
+ * plus a pre-encrypted MPESA_SECURITY_CREDENTIAL (generate it with Safaricom's
+ * credential tooling and paste it into env — the private key never lives here).
+ * Without both, returns ok:false so callers fall back to ledger + manual flow.
+ */
+export async function requestDarajaReversal(input: ReversalInput): Promise<ReversalResult> {
+  if (!isPaymentsLive()) {
+    return { ok: false, message: "M-Pesa reversal unavailable (provider not configured)." };
+  }
+  const initiator = (process.env.MPESA_INITIATOR_NAME || "").trim();
+  const credential = (process.env.MPESA_SECURITY_CREDENTIAL || "").trim();
+  if (!initiator || !credential) {
+    return { ok: false, message: "Reversal credentials not configured." };
+  }
+  try {
+    const token = await darajaToken();
+    const r = await fetch(`${darajaBase()}/mpesa/reversal/v1/request`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        Initiator: initiator,
+        SecurityCredential: credential,
+        CommandID: "TransactionReversal",
+        TransactionID: input.receipt,
+        Amount: Math.round(input.amount),
+        ReceiverParty: process.env.MPESA_SHORTCODE!,
+        ReceiverIdentifierType: "11",
+        Remarks: "Chap dispute refund",
+        Occasion: (input.occasion ?? `refund-${Date.now().toString(36)}`).slice(0, 40),
+      }),
+    });
+    const j = (await r.json().catch(() => ({}))) as {
+      ResponseCode?: string;
+      ConversationID?: string;
+      errorMessage?: string;
+      ResponseDescription?: string;
+    };
+    if (!r.ok || j.ResponseCode !== "0" || !j.ConversationID) {
+      return { ok: false, message: j.errorMessage || j.ResponseDescription || "Reversal rejected." };
+    }
+    return { ok: true, message: "Reversal submitted to M-Pesa.", conversationId: j.ConversationID };
+  } catch (e) {
+    return { ok: false, message: (e as Error)?.message?.slice(0, 160) || "Reversal failed." };
   }
 }
 

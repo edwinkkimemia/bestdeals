@@ -18,21 +18,21 @@
 - [ ] Rotate `AUTH_SECRET` (currently falls back to `dev-only-secret…` in `src/lib/auth.ts:8-11`, `src/lib/auth-tokens.ts:5-8`). Add startup fail if default in production.
 - [ ] Verify JWT in `middleware.ts:5-20` (currently only checks cookie existence, never verifies signature; forged cookie passes).
 - [ ] Move rate-limit + login-guard to Redis (`src/lib/rate-limit.ts:1-17`, `src/lib/login-guard.ts:1-6` — both in-memory, per-process). Add `REDIS_URL`, BullMQ worker.
-- [ ] Wire S3 object storage (`src/app/api/upload/route.ts:39-44` returns `501` when `UPLOAD_DRIVER=s3`; `src/lib/storage.ts:10-18` local-disk only, ephemeral on Vercel `/tmp`).
-- [ ] Implement real Daraja OAuth + STK HTTP (`src/lib/payments.ts:52-57` returns fake `STK-${orderId}`, no HTTP). Keep UI labelled NOT LIVE until sandbox-tested (`docs/providers.md`).
+- [x] S3 auto-enables from keys + DB-backed fallback for serverless (storage.ts, pubimages.ts). Remaining: set keys in prod.
+- [x] Real Daraja OAuth + STK HTTP + reversal API (payments.ts). Remaining: live keys, MPESA_CALLBACK_SECRET set, sandbox-tested label in UI.
 
 ## 1. Payments / Billing `[~] stub`
 
 Evidence: `src/lib/payments.ts:32-57`, `src/app/api/payments/initiate/route.ts:13-52`, `src/app/api/payments/mpesa-callback/route.ts:10-32`, `src/app/checkout/page.tsx:32,104-110`, `src/app/api/orders/route.ts:100,112`, `.env.example:26-36`.
 
 - [ ] Daraja: OAuth → STK push with `Shortcode/Passkey/Timestamp/Password/Phone/Amount/CallbackURL`; persist `CheckoutRequestID → orderId|promoId|planId` map.
-- [ ] Callback: verify signature/IP allowlist, map `MerchantRequestID` correctly (today `payments.ts:91` uses it as `orderRef` but callback looks up `getOrder(v.orderRef)` — will miss), handle `amount mismatch → failed + alert`, idempotent on `providerRef` unique.
-- [ ] Fix `PUT /api/payments/initiate:33-52` — currently never updates order status; remove or wire to order transition `pending → paid`.
+- [x] Callback: ?key= secret (MPESA_CALLBACK_SECRET) + rate-limit + dual request-id lookup + amount checks + promo/plan activation outside order gate + duplicate early-return.
+- [x] Lax PUT alternate removed (405); single hardened POST /api/payments/mpesa-callback.
 - [ ] Checkout UI: M-Pesa phone input + STK flow + polling/reconcile job. Today hardcoded `paymentMethod=cod`, `?pay=cod` (`checkout/page.tsx:72`).
 - [ ] Delivery fees: replace hardcoded `{standard:250, express:500, pickup:0}` (`checkout/page.tsx:13,38` + duplicate in `orders/route.ts:37`) with per-county/shop matrix + admin setting.
 - [ ] Cards: either implement `CARD_PROVIDER` or remove option (today `Card payments are not available yet`).
 - [x] Plans/boosts: upgrades now create a pending checkout — wallet debits or M-Pesa callback/admin-confirm activates (`src/app/api/shops/plan/route.ts`); downgrades apply immediately with over-limit sweep; invoices listed in PlanPanel; per-listing promote deep-links (`?listing=`). Remaining: renewal reminders, grace period, prorate.
-- [ ] Refunds/reversals: `src/app/api/admin/disputes/route.ts:1-28` only flips local status, no Daraja reversal, no `LedgerEntry`/`Refund` write.
+- [x] Refunds: live Daraja reversal attempt (receipt from ledger) + honest SMS copy; ledger + audit always written. Remaining: initiator credentials in prod.
 - [ ] Vouchers/discounts/tax engine: `discount` always 0, no coupon codes.
 - [ ] Tests: add `tests/payments.test.ts` — sandbox STK, callback idempotency, duplicate receipt, amount mismatch, promo/plan activation.
 
@@ -86,7 +86,7 @@ Evidence: `src/components/cart-provider.tsx:17-51`, `src/app/checkout/page.tsx:2
 
 - [ ] Server cart: today `localStorage bd_cart_v1` only, filters out seller listings (`filter(getListing(l.id))` drops `store.getListing`), so seller items show `Nothing to check out`. Add server cart, merge on login, cross-device sync, qty caps per listing.
 - [ ] Persist `instructions` field (registered in form `:32` but never sent/stored).
-- [ ] Stock: never decremented/reserved — oversell risk. Add transactional decrement + reservation + idempotency key (double-click creates 2 orders today).
+- [x] Stock: atomic conditional decrement + reservation ledger + restore on cancel/fail + content-stable idempotency key (orders/route, lib/stock).
 - [ ] State machine: add `PATCH /api/orders/[id]` (buyer cancel/edit, seller confirm/pack/ship/deliver, admin adjust) + tracking + returns. Today only `GET+POST` / `GET`.
 - [ ] Lookup: OTP + pagination + filters; remove PII from URL; dual `localStorage bd_orders_v1` vs server source-of-truth cleanup.
 - [ ] Commission: `COMMISSION_BPS_DEFAULT` hardcoded (`orders/route.ts:5,78`); move to admin setting + per-category rules (`CommissionRule` model unused).
@@ -122,7 +122,7 @@ Evidence: `src/app/api/admin/moderate/route.ts:23-29`, `src/app/admin/[section]/
 - [ ] Admin APIs: add `GET` lists / `PATCH` status for users/shops/verifications/reports/reviews/disputes (today mostly `POST`-only, pages read `store` server-side — breaks on multi-instance). Add bulk approve/reject, suspend/appeal.
 - [ ] Analytics: move from in-memory (`MEMORY_CAP 50k`, per-process dedup `ANALYTICS_DEDUP_MS 30m`) to Postgres + Redis dedup; fix attribution (`orders=suborders.some(seller==user.name)` name-string match — use `ownerId/shopId`); add revenue/orders-by-status, `catalogueSize` dynamic, `topReferrers` full URL.
 - [ ] Exports: admin CSV export (only seller-Gold has it), scheduled reports; auth on `/api/analytics/track` (spam-able today), bot filter audit.
-- [ ] Seed: split demo catalogue vs prod seed; `in-memory demo mode resets on restart` warning (`[section]/page.tsx:125`).
+- [x] Seed: `SEED_DEMO_CATALOGUE=false` skips fictional shops/listings/users (categories/plans/blog/admins still seed). Set it for prod.
 - [ ] Tests: moderation/dispute-resolve/promo-sweep integration.
 
 ## 10. SEO / Infra / Jobs / Observability `[ ] missing`

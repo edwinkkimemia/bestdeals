@@ -21,6 +21,8 @@ export async function POST(req: NextRequest) {
 
 /** Verify the code — sets a 30-min verified window for this phone. */
 export async function PUT(req: NextRequest) {
+  const rl = rateLimit(clientKey(req, "otp:verify"), { limit: 20, windowMs: 3600_000 });
+  if (!rl.ok) return NextResponse.json({ error: "Too many attempts. Try again later." }, { status: 429 });
   const parsed = verSchema.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Enter the 6-digit code." }, { status: 400 });
   const { verifyOtp } = await import("@/lib/otp");

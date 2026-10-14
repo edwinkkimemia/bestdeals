@@ -29,6 +29,34 @@ export function VerifiedBadge({ verified }: { verified: boolean }) {
 }
 
 /**
+ * Compact account age ("3y", "8m") — the Jiji-style "X years on Chap" trust
+ * signal. Null under ~30 days (too new to mean anything).
+ */
+export function tenureLabel(iso?: string | null): string | null {
+  if (!iso) return null;
+  const t = +new Date(iso);
+  if (!Number.isFinite(t)) return null;
+  const days = Math.floor((Date.now() - t) / 86400_000);
+  if (days < 30) return null;
+  if (days < 365) return `${Math.floor(days / 30)}m`;
+  return `${Math.floor(days / 365)}y`;
+}
+
+/** Pill version for seller/shop headers ("3y on Chap"). */
+export function TenureBadge({ since }: { since?: string | null }) {
+  const t = tenureLabel(since);
+  if (!t) return null;
+  return (
+    <span
+      title={`On Chap since ${since}`}
+      className="inline-flex shrink-0 items-center rounded-full border border-neutral-200 bg-sand-50 px-2.5 py-0.5 text-xs font-medium text-ink-700"
+    >
+      {t} on Chap
+    </span>
+  );
+}
+
+/**
  * X-style plan checkmark: blue filled check for Silver, gold for Gold —
  * shown alongside the verification badge on seller/shop identities.
  * Renders nothing on Free (or unknown) plans.

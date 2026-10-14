@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { CATEGORIES, categoryBySlug } from "@/data/catalog";
 import { searchAll } from "@/lib/search";
 import { ListingCard } from "@/components/ui/listing-card";
+import { AdAfterEvery } from "@/components/ads";
+import { AD_SLOTS } from "@/lib/ads";
 import { COUNTY_NAMES, resolveCounty, townsFor } from "@/lib/kenya";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { SaveSearchButton } from "@/components/save-search-button";
@@ -254,7 +257,12 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
-              {items.map((l) => <ListingCard key={l.id} listing={l} />)}
+              {items.map((l, i) => (
+              <Fragment key={l.id}>
+                <ListingCard listing={l} />
+                <AdAfterEvery index={i} slot={AD_SLOTS.feed} />
+              </Fragment>
+            ))}
             </div>
           )}
         </div>

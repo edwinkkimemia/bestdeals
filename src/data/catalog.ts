@@ -34,6 +34,8 @@ export type Listing = {
   ownerId?: string;
   /** Effective seller plan stamped at read time (silver/gold checkmark, else null). */
   planId?: string | null;
+  /** Seller account age stamped at read time (tenure display, else null). */
+  sellerSince?: string | null;
   sellerPhone?: string; // verified snapshot — WhatsApp ordering always uses this first
   shopSlug?: string;
   verified: boolean;

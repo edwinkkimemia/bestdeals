@@ -86,10 +86,16 @@ async function main(): Promise<SeedCounts> {
     });
   }
 
-  const users = await seedUsers();
+  // Production split: SEED_DEMO_CATALOGUE=false skips the fictional demo
+  // shops/listings (and their derived demo accounts) so a prod database never
+  // grows fake sellers with ✓ badges. Categories, plans, blog library and
+  // admins still seed. Defaults to true for zero-config dev/demo.
+  const seedDemo = (process.env.SEED_DEMO_CATALOGUE ?? "true").toLowerCase() !== "false";
+  if (!seedDemo) console.log("[seed] SEED_DEMO_CATALOGUE=false — skipping demo shops/listings/users.");
+  const users = seedDemo ? await seedUsers() : new Map<string, { id: string; profileId: string | null }>();
   const admins = await seedAdmins();
-  const shops = await seedShops(users);
-  const listings = await seedListings(users, shops);
+  const shops = seedDemo ? await seedShops(users) : new Map<string, string>();
+  const listings = seedDemo ? await seedListings(users, shops) : 0;
 
   console.log(`Seeded ${CATEGORIES.length} categories, ${SHOP_PLANS.length} plans, ${BLOG_POSTS.length} blog posts.`);
   console.log(`Seeded ${users.size} users (${admins} admins), ${shops.size} shops, ${listings} product listings.`);

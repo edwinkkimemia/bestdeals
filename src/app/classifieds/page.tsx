@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { CATEGORIES, LISTINGS } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
+import { AdAfterEvery } from "@/components/ads";
+import { AD_SLOTS } from "@/lib/ads";
 import { CategoryIcon } from "@/components/category-icon";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { shuffleFeaturedFirst } from "@/lib/search";
@@ -99,7 +102,12 @@ export default async function ClassifiedsIndex() {
 
       <h2 className="mb-2 mt-8 font-bold">Latest classifieds ({items.length})</h2>
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-        {items.map((l) => <ListingCard key={l.id} listing={l} />)}
+        {items.map((l, i) => (
+        <Fragment key={l.id}>
+          <ListingCard listing={l} />
+          <AdAfterEvery index={i} slot={AD_SLOTS.feed} />
+        </Fragment>
+      ))}
       </div>
 
       <div className="card mt-8 bg-sand-50 p-5">

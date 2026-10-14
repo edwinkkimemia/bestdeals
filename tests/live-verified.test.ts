@@ -9,6 +9,7 @@ import { freshDemoStore, getStore } from "../src/lib/store.ts";
 // that is a process-global singleton, so seed it through the same accessor.
 import { getStore as gs } from "../src/lib/store.ts";
 import { withLiveVerification, relatedWithLive } from "../src/lib/live-listings.ts";
+import { tenureLabel } from "../src/components/ui/badge.tsx";
 import { LISTINGS } from "../src/data/catalog.ts";
 
 describe("live verification badge", () => {
@@ -58,6 +59,24 @@ describe("live verification badge", () => {
     ]);
     assert.equal(stranger.verified, false);
     assert.equal(stranger.planId, null);
+  });
+  it("formats tenure compactly (null under ~30 days)", () => {
+    assert.equal(tenureLabel(undefined), null);
+    assert.equal(tenureLabel("not-a-date"), null);
+    assert.equal(tenureLabel(new Date(Date.now() - 10 * 86400_000).toISOString()), null);
+    assert.equal(tenureLabel(new Date(Date.now() - 60 * 86400_000).toISOString()), "2m");
+    assert.equal(tenureLabel(new Date(Date.now() - 400 * 86400_000).toISOString()), "1y");
+    assert.equal(tenureLabel(new Date(Date.now() - 1100 * 86400_000).toISOString()), "3y");
+  });
+  it("stamps seller account age for tenure display", async () => {
+    const store = gs();
+    const u = await store.createUser({
+      name: "Tenure Seller", email: "tenure@demo.chap.co.ke", phone: "0710000188",
+      role: "SELLER", verified: true, emailVerified: true, sellerKind: "individual",
+      passwordHash: "h",
+    });
+    const [out] = await withLiveVerification([{ ownerId: u.id, sellerName: "Tenure Seller", verified: true }]);
+    assert.ok(out.sellerSince, "account age stamped");
   });
   it("related rails inherit live flags", async () => {
     const target = LISTINGS.find((l) => l.sellerName === "Chebet R.")!;

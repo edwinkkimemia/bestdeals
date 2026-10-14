@@ -138,17 +138,31 @@ export async function POST(req: NextRequest) {
     suborders,
   });
 
-  // Decrement store stock transactionally-ish (single-process safe; PG path inside store).
+  // Atomic decrement per line (conditional in the store — concurrent checkouts
+  // can't both pass). On any shortfall, roll back this checkout's earlier
+  // decrements and fail loud instead of overselling. Reservations are recorded
+  // so cancel/failed-payment paths can restore exact units (see lib/stock).
+  const reserved: { storeId: string; qty: number }[] = [];
   for (const l of lines) {
     if (!l.storeId) continue;
+    const ok = await store.decrementListingStock(l.storeId, l.qty).catch(() => false);
+    if (!ok) {
+      for (const r of reserved) {
+        try {
+          const cur = await store.getListing(r.storeId);
+          if (cur) await store.updateListing(r.storeId, { stock: cur.stock + r.qty });
+        } catch {}
+      }
+      return NextResponse.json({ error: `Sorry — "${l.title}" just sold out at that quantity. Adjust and try again.` }, { status: 409 });
+    }
+    reserved.push({ storeId: l.storeId, qty: l.qty });
     try {
       const cur = await store.getListing(l.storeId);
-      if (cur && cur.stock >= l.qty) {
-        await store.updateListing(l.storeId, { stock: Math.max(0, cur.stock - l.qty) });
-        if (cur.stock - l.qty <= 0) await store.setListingStatus(l.storeId, "sold").catch(() => {});
-      }
+      if (cur && cur.stock <= 0) await store.setListingStatus(l.storeId, "sold").catch(() => {});
     } catch {}
   }
+  const { recordReservation } = await import("@/lib/stock");
+  await recordReservation(orderId, reserved);
 
   await store.recordPayment({ orderId, method: paymentMethod, amount: totals.total, status: "pending" }).catch(() => {});
   if (d.idempotencyKey) await store.setSetting(`order_idem:${d.idempotencyKey}`, orderId).catch(() => {});

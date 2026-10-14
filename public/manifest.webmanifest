@@ -1,0 +1,26 @@
+{
+  "name": "Chap — Kenya's Marketplace for Everything",
+  "short_name": "Chap",
+  "description": "Shop products, classifieds, business shops and local services across Kenya.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#0043D2",
+  "lang": "en-KE",
+  "icons": [
+    {
+      "src": "/fav.png",
+      "sizes": "608x608",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/chaplogo.png",
+      "sizes": "1147x287",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

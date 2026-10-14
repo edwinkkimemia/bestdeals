@@ -416,7 +416,7 @@ export function mergeStaticAndLive(
  */
 export async function withLiveVerification<T extends Pick<Listing, "ownerId" | "sellerName" | "verified">>(
   items: T[]
-): Promise<(T & { planId: string | null })[]> {
+): Promise<(T & { planId: string | null; sellerSince: string | null })[]> {
   if (items.length === 0) return [];
   const [users, shops] = await Promise.all([
     storeRead(
@@ -446,11 +446,13 @@ export async function withLiveVerification<T extends Pick<Listing, "ownerId" | "
       shopBestByOwner.set(owner, pid);
     }
   }
-  const effective = (user: (typeof users)[number] | undefined, ownerId?: string, shopSlug?: string): { verified: boolean | undefined; plan: string | null } => {
+  const effective = (user: (typeof users)[number] | undefined, ownerId?: string, shopSlug?: string): { verified: boolean | undefined; plan: string | null; since: string | null } => {
     let verified: boolean | undefined;
     let plan: string | null = null;
+    let since: string | null = null;
     if (user) {
       verified = user.verified;
+      since = (user as { createdAt?: string }).createdAt ?? null;
       const personal = normalizePlan(user.planId);
       if (rank(personal) > rank(plan)) plan = personal;
     }
@@ -462,25 +464,26 @@ export async function withLiveVerification<T extends Pick<Listing, "ownerId" | "
       const sp = planByShopSlug.get(shopSlug);
       if (sp && rank(sp) > rank(plan)) plan = sp;
     }
-    return { verified, plan: rank(plan) > 0 ? plan : null };
+    return { verified, plan: rank(plan) > 0 ? plan : null, since };
   };
   return items.map((l) => {
     const shopSlug = (l as { shopSlug?: string }).shopSlug;
     const basePlan = (l as { planId?: string | null }).planId ?? null;
+    const baseSince = (l as { sellerSince?: string | null }).sellerSince ?? null;
     if (l.ownerId && byId.has(l.ownerId)) {
       const e = effective(byId.get(l.ownerId), l.ownerId, shopSlug);
-      return { ...l, verified: e.verified ?? l.verified, planId: e.plan ?? basePlan };
+      return { ...l, verified: e.verified ?? l.verified, planId: e.plan ?? basePlan, sellerSince: e.since ?? baseSince };
     }
     const hit = byName.get(l.sellerName.trim().toLowerCase());
     if (hit !== undefined) {
       const e = effective(hit, undefined, shopSlug);
-      return { ...l, verified: e.verified ?? l.verified, planId: e.plan ?? basePlan };
+      return { ...l, verified: e.verified ?? l.verified, planId: e.plan ?? basePlan, sellerSince: e.since ?? baseSince };
     }
     if (shopSlug && planByShopSlug.has(shopSlug)) {
       const sp = planByShopSlug.get(shopSlug)!;
-      return { ...l, planId: rank(sp) > rank(basePlan) ? sp : basePlan };
+      return { ...l, planId: rank(sp) > rank(basePlan) ? sp : basePlan, sellerSince: baseSince };
     }
-    return { ...l, planId: basePlan };
+    return { ...l, planId: basePlan, sellerSince: baseSince };
   });
 }
 

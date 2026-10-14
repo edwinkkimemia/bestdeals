@@ -180,6 +180,8 @@ export type ReviewRecord = {
   listingId?: string;
   shopSlug?: string;
   sellerName?: string;
+  /** Account that wrote it — ownership for edit/delete. Null for legacy rows. */
+  authorId?: string;
   authorName: string;
   rating: number;
   body?: string;
@@ -318,6 +320,11 @@ export interface Store {
   getListing(id: string): Promise<ListingRecord | null>;
   listListingsByOwner(ownerId: string): Promise<ListingRecord[]>;
   listListingsByStatus(status: string): Promise<ListingRecord[]>;
+  /**
+   * Atomic stock decrement: succeeds (and subtracts) only when enough stock
+   * remains, so concurrent checkouts can't both pass the check and oversell.
+   */
+  decrementListingStock(id: string, qty: number): Promise<boolean>;
   /** Live-slot counts per owner (same filter as countLiveListings) — one call for the plan audit. */
   countLiveListingsByOwner(): Promise<{ ownerId: string; count: number }[]>;
   listListingsByShop(shopSlug: string): Promise<ListingRecord[]>;
@@ -334,6 +341,8 @@ export interface Store {
   setOrderPayment(id: string, paymentStatus: string, providerRef?: string): Promise<void>;
   setOrderStatus(id: string, status: string): Promise<void>;
   recordPayment(p: { orderId: string; method: string; amount: number; status: string; providerRef?: string }): Promise<{ id: string; duplicate: boolean }>;
+  /** M-Pesa receipt + amount of the successful payment for an order (for reversals). */
+  getOrderReceipt(orderId: string): Promise<{ receipt: string; amount: number } | null>;
   // enquiries / reports
   createEnquiry(e: Omit<EnquiryRecord, "id" | "createdAt">): Promise<EnquiryRecord>;
   createReport(r: Omit<ReportRecord, "id" | "createdAt" | "status">): Promise<ReportRecord>;
@@ -358,6 +367,9 @@ export interface Store {
   decideVerification(id: string, approve: boolean, adminId: string): Promise<void>;
   // reviews
   createReview(r: Omit<ReviewRecord, "id" | "status" | "createdAt">): Promise<ReviewRecord>;
+  getReview(id: string): Promise<ReviewRecord | null>;
+  /** Author edit of body/rating (ownership checked by the caller). */
+  updateReview(id: string, patch: { body?: string; rating?: number }): Promise<ReviewRecord | null>;
   listApprovedReviewsForSeller(sellerName: string): Promise<ReviewRecord[]>;
   listApprovedReviewsForShop(shopSlug: string): Promise<ReviewRecord[]>;
   listApprovedReviewsForListing(listingId: string): Promise<ReviewRecord[]>;
@@ -426,7 +438,7 @@ class DemoStore implements Store {
   users = new Map<string, UserRecord>();
   listings = new Map<string, ListingRecord>();
   orders = new Map<string, OrderRecord>();
-  payments = new Map<string, { id: string; orderId: string; providerRef?: string }>();
+  payments = new Map<string, { id: string; orderId: string; amount?: number; status?: string; providerRef?: string }>();
   enquiries: EnquiryRecord[] = [];
   reports = new Map<string, ReportRecord>();
   shops = new Map<string, ShopRecord>();
@@ -599,6 +611,13 @@ class DemoStore implements Store {
   async deleteListing(id: string) {
     this.listings.delete(id);
   }
+  async decrementListingStock(id: string, qty: number) {
+    if (!(qty > 0)) return false;
+    const l = this.listings.get(id);
+    if (!l || l.stock < qty) return false;
+    l.stock = Math.max(0, l.stock - qty);
+    return true;
+  }
 
   async createOrder(o: Omit<OrderRecord, "id" | "createdAt" | "status" | "paymentStatus"> & { id?: string; status?: string; paymentStatus?: string }) {
     const rec: OrderRecord = {
@@ -632,13 +651,22 @@ class DemoStore implements Store {
     const o = this.orders.get(id);
     if (o) o.status = status;
   }
+  async getOrderReceipt(orderId: string) {
+    // Latest paid providerRef wins; REFUND-* ledger entries are not receipts.
+    const rows = [...this.payments.values()].filter(
+      (x) => x.orderId === orderId && x.providerRef && x.status === "paid" && !x.providerRef.startsWith("REFUND-")
+    );
+    const pick = rows[rows.length - 1];
+    if (!pick?.providerRef) return null;
+    return { receipt: pick.providerRef, amount: pick.amount ?? 0 };
+  }
   async recordPayment(p: { orderId: string; method: string; amount: number; status: string; providerRef?: string }) {
     if (p.providerRef) {
       const dup = [...this.payments.values()].find((x) => x.providerRef === p.providerRef);
       if (dup) return { id: dup.id, duplicate: true };
     }
     const id = uid("pay");
-    this.payments.set(id, { id, orderId: p.orderId, providerRef: p.providerRef });
+    this.payments.set(id, { id, orderId: p.orderId, amount: p.amount, status: p.status, providerRef: p.providerRef });
     return { id, duplicate: false };
   }
 
@@ -772,6 +800,16 @@ class DemoStore implements Store {
   }
   async findReviewByOrder(orderId: string) {
     return [...this.reviews.values()].find((r) => r.orderId === orderId) ?? null;
+  }
+  async getReview(id: string) {
+    return this.reviews.get(id) ?? null;
+  }
+  async updateReview(id: string, patch: { body?: string; rating?: number }) {
+    const r = this.reviews.get(id);
+    if (!r) return null;
+    if (patch.body !== undefined) r.body = patch.body.slice(0, 1000);
+    if (patch.rating !== undefined && patch.rating >= 1 && patch.rating <= 5) r.rating = Math.round(patch.rating);
+    return r;
   }
   async listPendingReviews() {
     return [...this.reviews.values()].filter((r) => r.status === "pending");
@@ -1498,6 +1536,20 @@ class PrismaStore implements Store {
     await this.p.listingImage.deleteMany({ where: { listingId: id } }).catch(() => null);
     await this.p.listing.delete({ where: { id } }).catch(() => null);
   }
+  async decrementListingStock(id: string, qty: number) {
+    if (!(qty > 0)) return false;
+    const r = await this.p.listing
+      .updateMany({ where: { id, stock: { gte: qty } }, data: { stock: { decrement: qty } } })
+      .catch(() => null);
+    return !!r && r.count > 0;
+  }
+  async getOrderReceipt(orderId: string) {
+    const r = await this.p.payment
+      .findFirst({ where: { orderId, status: "paid", NOT: { providerRef: { startsWith: "REFUND-" } } }, orderBy: { createdAt: "desc" } })
+      .catch(() => null) as { providerRef: string | null; amount: number } | null;
+    if (!r?.providerRef) return null;
+    return { receipt: r.providerRef, amount: r.amount ?? 0 };
+  }
   async setListingStatus(id: string, status: string, adminId?: string, reason?: string) {
     await this.p.listing.update({ where: { id }, data: { status: status as never } });
     if (adminId) {
@@ -1840,17 +1892,44 @@ class PrismaStore implements Store {
     const rec = await this.p.review.create({
       data: {
         orderId: r.orderId ?? null, listingId: r.listingId ?? null, shopSlug: r.shopSlug ?? null,
-        sellerName: r.sellerName ?? null, authorName: r.authorName,
+        sellerName: r.sellerName ?? null, authorId: r.authorId ?? null, authorName: r.authorName,
         rating: r.rating, body: r.body ?? null,
         verifiedPurchase: r.verifiedPurchase, status: "pending",
       },
     });
     return {
       id: rec.id, orderId: r.orderId, listingId: r.listingId, shopSlug: r.shopSlug,
-      sellerName: r.sellerName, authorName: rec.authorName ?? r.authorName,
+      sellerName: r.sellerName, authorId: r.authorId, authorName: rec.authorName ?? r.authorName,
       rating: rec.rating, body: rec.body ?? undefined,
       verifiedPurchase: rec.verifiedPurchase, status: rec.status, createdAt: rec.createdAt.toISOString(),
     };
+  }
+  async getReview(id: string) {
+    const r = await this.p.review.findUnique({ where: { id } }).catch(() => null) as {
+      id: string; orderId: string | null; listingId: string | null; shopSlug: string | null;
+      sellerName: string | null; authorId: string | null; authorName: string | null;
+      rating: number; body: string | null; verifiedPurchase: boolean; status: string; createdAt: Date;
+    } | null;
+    if (!r) return null;
+    return {
+      id: r.id, orderId: r.orderId ?? undefined, listingId: r.listingId ?? undefined,
+      shopSlug: r.shopSlug ?? undefined, sellerName: r.sellerName ?? undefined,
+      authorId: r.authorId ?? undefined, authorName: r.authorName ?? "Buyer",
+      rating: r.rating, body: r.body ?? undefined,
+      verifiedPurchase: r.verifiedPurchase, status: r.status, createdAt: r.createdAt.toISOString(),
+    };
+  }
+  async updateReview(id: string, patch: { body?: string; rating?: number }) {
+    const data: { body?: string; rating?: number } = {};
+    if (patch.body !== undefined) data.body = patch.body.slice(0, 1000);
+    if (patch.rating !== undefined && patch.rating >= 1 && patch.rating <= 5) data.rating = Math.round(patch.rating);
+    if (Object.keys(data).length === 0) return this.getReview(id);
+    try {
+      await this.p.review.update({ where: { id }, data });
+    } catch {
+      return null;
+    }
+    return this.getReview(id);
   }
   async listApprovedReviewsForSeller(sellerName: string) {
     const recs = await this.p.review.findMany({
@@ -1889,12 +1968,17 @@ class PrismaStore implements Store {
     }));
   }
   async findReviewByOrder(orderId: string) {
-    const r = await this.p.review.findFirst({ where: { orderId }, orderBy: { createdAt: "desc" } });
+    const r = await this.p.review.findFirst({ where: { orderId }, orderBy: { createdAt: "desc" } }) as {
+      id: string; orderId: string | null; listingId: string | null; shopSlug: string | null;
+      sellerName: string | null; authorId: string | null; authorName: string | null;
+      rating: number; body: string | null; verifiedPurchase: boolean; status: string; createdAt: Date;
+    } | null;
     if (!r) return null;
     return {
       id: r.id, orderId: r.orderId ?? undefined, listingId: r.listingId ?? undefined,
       shopSlug: r.shopSlug ?? undefined, sellerName: r.sellerName ?? undefined,
-      authorName: r.authorName ?? "Buyer", rating: r.rating, body: r.body ?? undefined,
+      authorId: r.authorId ?? undefined, authorName: r.authorName ?? "Buyer",
+      rating: r.rating, body: r.body ?? undefined,
       verifiedPurchase: r.verifiedPurchase, status: r.status, createdAt: r.createdAt.toISOString(),
     };
   }

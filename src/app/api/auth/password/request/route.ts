@@ -27,7 +27,11 @@ export async function POST(req: NextRequest) {
     const base = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
     const link = `${base}/auth/password/reset?token=${encodeURIComponent(token)}`;
     const { isNotifyLive } = await import("@/lib/notify");
-    if (!isNotifyLive("email")) console.log(`[reset-link] to=${user.email} link=${link}`);
+    // Never log the token/link: reset URLs are credentials. In non-prod the
+    // link is returned in the response body instead (see below).
+    if (!isNotifyLive("email") && process.env.NODE_ENV === "production") {
+      console.warn("[reset-link] email provider not configured — reset link undeliverable");
+    }
     await sendNotification({
       channel: "email",
       to: user.email,

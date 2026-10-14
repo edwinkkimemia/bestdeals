@@ -9,7 +9,7 @@ import { resolveSellerProfile, getSellerListings, sellerSlug, withLiveVerificati
 import { ReviewsBlock } from "@/components/reviews-block";
 import { ReviewForm } from "@/components/review-form";
 import { ListingCard } from "@/components/ui/listing-card";
-import { Badge, PlanCheckmark } from "@/components/ui/badge";
+import { Badge, PlanCheckmark, TenureBadge } from "@/components/ui/badge";
 import { ratingLabel } from "@/lib/ratings";
 import { ShareRow } from "@/components/share-row";
 import { SafeImage } from "@/components/ui/safe-image";
@@ -89,6 +89,7 @@ export default async function SellerPage({ params }: { params: { slug: string } 
             {profile.name}
             <PlanCheckmark plan={sellerPlan?.planId} />
             {profile.verified ? <Badge tone="green">✓ Verified seller</Badge> : <Badge>Unverified seller</Badge>}
+            <TenureBadge since={profile.memberSince} />
           </h1>
           <p className="text-sm text-ink-500">
             {profile.businessName ? `${profile.businessName} · ` : ""}

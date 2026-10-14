@@ -27,8 +27,11 @@ export async function requestOtp(phone: string): Promise<{ ok: true; demoCode?: 
     await sendNotification({ channel: "sms", to: phone, message: `Chap verification code: ${code}. Valid 10 min. Never share it.` }).catch(() => {});
     return { ok: true };
   }
-  // Demo mode: log + return code so manual testing isn't blocked.
-  console.log(`[otp] to=${phone} code=${code}`);
+  // Demo mode: never log the code (PII + credential in log streams) — return
+  // it only outside production so manual testing isn't blocked.
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[otp] demo code requested for verification (see API response in dev only)`);
+  }
   return { ok: true, demoCode: process.env.NODE_ENV === "production" ? undefined : code };
 }
 

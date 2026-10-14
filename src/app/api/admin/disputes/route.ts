@@ -5,8 +5,8 @@ import { logAudit } from "@/lib/audit";
 import { notifyLater } from "@/lib/notify";
 
 /**
- * Admin-only: resolve a dispute. "refund" cancels the order and marks payment
- * refunded (Daraja reversal attempted when live, else ledger-only);
+ * Admin-only: resolve a dispute. "refund" cancels the order, attempts a live
+ * Daraja reversal for M-Pesa payments, and always writes the ledger entry;
  * "reject" closes in the seller's favour. Every decision is recorded + notified.
  */
 export async function POST(req: NextRequest) {
@@ -33,7 +33,25 @@ export async function POST(req: NextRequest) {
         const refunds = ((await store.getSetting("refunds").catch(() => null)) as { id: string; orderId: string; amount: number; at: string }[] | null) ?? [];
         refunds.unshift({ id, orderId: order.id, amount: order.total, at: new Date().toISOString() });
         await store.setSetting("refunds", refunds.slice(0, 500)).catch(() => {});
-        notifyLater({ channel: "sms", to: order.phone, message: `Chap: dispute on order ${order.id} resolved with refund. ${order.paymentMethod === "mpesa" ? "M-Pesa reversal initiated." : ""}` });
+        // Real M-Pesa reversal when possible; otherwise say exactly that.
+        let reversalNote = "";
+        if (order.paymentMethod === "mpesa" && order.paymentStatus === "paid" && (order.total || 0) > 0) {
+          const receipt = await store.getOrderReceipt(order.id).catch(() => null);
+          if (receipt) {
+            const { requestDarajaReversal } = await import("@/lib/payments");
+            const rev = await requestDarajaReversal({ receipt: receipt.receipt, amount: receipt.amount || order.total, occasion: `dispute-${id.slice(-8)}` }).catch(() => null);
+            if (rev?.ok) {
+              reversalNote = " M-Pesa reversal submitted — funds typically return within 24h.";
+              await logAudit({ actorId: user.id, actorEmail: user.email, action: "dispute.reversal", entity: "dispute", entityId: id, reason: rev.conversationId ?? "submitted" }).catch(() => {});
+            } else {
+              reversalNote = " Our team will complete the M-Pesa reversal manually and confirm by SMS.";
+              await logAudit({ actorId: user.id, actorEmail: user.email, action: "dispute.reversal_pending", entity: "dispute", entityId: id, reason: rev?.message ?? "unavailable" }).catch(() => {});
+            }
+          } else {
+            reversalNote = " Our team will complete the M-Pesa reversal manually and confirm by SMS.";
+          }
+        }
+        notifyLater({ channel: "sms", to: order.phone, message: `Chap: dispute on order ${order.id} resolved with refund.${reversalNote}` });
       }
     }
   } else if (outcome === "reject") {

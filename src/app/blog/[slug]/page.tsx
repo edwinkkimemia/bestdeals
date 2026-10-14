@@ -5,6 +5,8 @@ import { storeRead } from "@/lib/store";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { ShareRow } from "@/components/share-row";
 import { BlogSidebar } from "@/components/blog-sidebar";
+import { InArticleAd } from "@/components/ads";
+import { AD_SLOTS } from "@/lib/ads";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,7 @@ export default async function BlogArticle({ params }: { params: { slug: string }
         )}
         {/* bodyHtml is sanitized to an allowlist on write (admin API) */}
         <div className="blog-body mt-5 text-[15px] leading-relaxed text-ink-700" dangerouslySetInnerHTML={{ __html: post.bodyHtml }} />
+        <InArticleAd slot={AD_SLOTS.article} />
         <div className="mt-6"><ShareRow title={post.title} text={post.excerpt ?? post.title} /></div>
       </article>
       {more.length > 0 && (

@@ -10,7 +10,9 @@ import { formatKES } from "@/lib/format";
 const buySchema = z.object({
   listingId: z.string().min(1),
   productId: z.string().min(1),
-  phone: z.string().regex(/^(\+254|0)[17]\d{8}$/, "Use a valid Kenyan phone e.g. 0712345678").optional(),
+  // Required up front: without it the STK push is guaranteed to fail and the
+  // promo strands in pending_payment with no retry path.
+  phone: z.string().regex(/^(\+254|0)[17]\d{8}$/, "Use a valid Kenyan phone e.g. 0712345678"),
 });
 
 /** My promotions (receipts + statuses). Expired boosts settle first so lists read true. */

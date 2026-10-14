@@ -8,7 +8,7 @@ import { storeRead } from "@/lib/store";
 import { ReviewsBlock } from "@/components/reviews-block";
 import { ReviewForm } from "@/components/review-form";
 import { ListingCard } from "@/components/ui/listing-card";
-import { Badge, PlanCheckmark } from "@/components/ui/badge";
+import { Badge, PlanCheckmark, TenureBadge } from "@/components/ui/badge";
 import { localBusinessJsonLd, breadcrumbJsonLd } from "@/lib/seo";
 import { ratingLabel } from "@/lib/ratings";
 import { ShareRow } from "@/components/share-row";
@@ -105,7 +105,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
               )}
             </span>
             <div className="min-w-0 flex-1">
-              <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{nonNull.name} <PlanCheckmark plan={nonNull.planId} /> {nonNull.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</h1>
+              <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{nonNull.name} <PlanCheckmark plan={nonNull.planId} /> {nonNull.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>} <TenureBadge since={nonNull.createdAt} /></h1>
               <p className="text-sm text-ink-500">{nonNull.businessCategory} · {nonNull.town}, {nonNull.county} · {ratingLabel(storedReviews)}{nonNull.hours ? ` · 🕒 ${nonNull.hours}` : ""}</p>
               <p className="mt-1 text-sm">{nonNull.description}</p>
             </div>

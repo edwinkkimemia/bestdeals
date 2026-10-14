@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { CATEGORIES, categoryBySlug } from "@/data/catalog";
 import { searchAll, shuffleFeaturedFirst } from "@/lib/search";
 import { ListingCard } from "@/components/ui/listing-card";
+import { AdAfterEvery } from "@/components/ads";
+import { AD_SLOTS } from "@/lib/ads";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 // Fresh order every visit: featured/promoted lead, the rest shuffle.
@@ -48,7 +51,12 @@ export default async function CategoryPage({ params }: { params: { category: str
         </div>
       ) : (
         <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-          {items.map((l) => <ListingCard key={l.id} listing={l} />)}
+          {items.map((l, i) => (
+          <Fragment key={l.id}>
+            <ListingCard listing={l} />
+            <AdAfterEvery index={i} slot={AD_SLOTS.feed} />
+          </Fragment>
+        ))}
         </div>
       )}
     </div>

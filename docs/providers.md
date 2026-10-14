@@ -6,6 +6,8 @@
 
 1. Create an app at developer.safaricom.co.ke (sandbox first).
 2. Set `MPESA_CONSUMER_KEY/SECRET`, `MPESA_SHORTCODE`, `MPESA_PASSKEY`, `MPESA_CALLBACK_URL`.
+3. Set `MPESA_CALLBACK_SECRET` (32+ random hex) — it is appended as `?key=` and verified on every callback. Without it, forged callbacks can mark orders paid.
+4. For dispute refunds: set `MPESA_INITIATOR_NAME` + pre-encrypted `MPESA_SECURITY_CREDENTIAL`; reversals submit live, otherwise refunds stay ledger-only with manual follow-up.
 3. Flow: `POST /api/orders` reserves the order → `POST /api/payments/initiate` sends STK push →
    Daraja calls `POST /api/payments/mpesa-callback` → server validates amount/reference/result code,
    writes the ledger idempotently (unique `providerRef`), then transitions `pending → paid`.

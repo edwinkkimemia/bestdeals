@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isDbConfigured } from "@/lib/db";
 import { getStorageHealth } from "@/lib/store";
-import { isPaymentsLive } from "@/lib/payments";
+import { isPaymentsLive, isCallbackAuthEnforced } from "@/lib/payments";
 import { isNotifyLive } from "@/lib/notify";
 import { isRedisConfigured } from "@/lib/rate-limit";
 import { isStrongSecret } from "@/lib/auth";
@@ -19,6 +19,7 @@ export async function GET() {
     reachable: health?.reachable ?? false,
     note: health?.note ?? null,
     payments: isPaymentsLive() ? "live" : "not-live",
+    callbackAuth: isCallbackAuthEnforced() ? "enforced" : "open",
     email: isNotifyLive("email") ? "live" : "log",
     sms: isNotifyLive("sms") ? "live" : "log",
     redis: isRedisConfigured() ? "configured" : "memory",

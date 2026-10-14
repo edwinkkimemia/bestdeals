@@ -30,6 +30,8 @@ import { Badge, ConditionBadge, VerifiedBadge, PlanCheckmark } from "@/component
 import { WmImage } from "@/components/ui/wm-image";
 import { SafeImage } from "@/components/ui/safe-image";
 import { ProductGallery } from "@/components/product-gallery";
+import { InArticleAd } from "@/components/ads";
+import { AD_SLOTS } from "@/lib/ads";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { Price } from "@/components/ui/listing-card";
 import { useCart } from "@/components/cart-provider";
@@ -324,6 +326,8 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
 
       </div>
 
+      {/* Sponsored unit below the buy flow (never between price and seller CTAs). */}
+      <InArticleAd slot={AD_SLOTS.article} />
       {/* Seller + report — full width BELOW the grid. Anything sharing the
           sticky buy rail's column would scroll up underneath it while pinned;
           down here nothing can pass under the rail. */}

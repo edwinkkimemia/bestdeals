@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import type { Metadata } from "next";
 import { ArrowRight, BadgeCheck, MapPin, Search, ShieldCheck, Store, Truck } from "lucide-react";
 import { CATEGORIES, LISTINGS, SHOPS, POPULAR_SEARCHES, shopListings } from "@/data/catalog";
@@ -8,6 +9,8 @@ import { HeroCategories } from "@/components/hero-categories";
 import { COUNTY_NAMES, KENYA_COUNTIES } from "@/lib/kenya";
 import { shuffleFeaturedFirst } from "@/lib/search";
 import { ratingLabel } from "@/lib/ratings";
+import { AdAfterEvery } from "@/components/ads";
+import { AD_SLOTS } from "@/lib/ads";
 
 export const metadata: Metadata = {
   title: "chap.co.ke — Kenya's Marketplace for Everything",
@@ -94,6 +97,12 @@ export default async function HomePage() {
       })),
   ];
   const shopRail = shuffleFeaturedFirst(shopCards).slice(0, 4);
+  // Live trust stats (real counts, fresh every visit).
+  const verifiedSellers = await storeRead(
+    async (s) => (await s.listUsers().catch(() => [])).filter((u) => u.verified).length,
+    0
+  );
+  const shopCount = SHOPS.length + communityShops.filter((s) => !SHOPS.some((d) => d.slug === s.slug)).length;
   // Real ratings only: average of approved reviews per shown shop (no static stars).
   const shopRailLive = await Promise.all(
     shopRail.map(async (c) => ({
@@ -132,6 +141,9 @@ export default async function HomePage() {
                 <Link key={s} href={`/search?q=${encodeURIComponent(s)}`} className="chip hover:border-brand-600">{s}</Link>
               ))}
             </div>
+            <p className="mt-3 text-xs text-ink-400" aria-live="polite">
+              {all.length.toLocaleString()} live listings · {verifiedSellers.toLocaleString()} verified sellers · {shopCount} shops across all 47 counties
+            </p>
           </div>
           {/* Desktop collage */}
           <div className="hidden grid-cols-2 gap-3 lg:grid" aria-hidden={false}>
@@ -229,7 +241,12 @@ export default async function HomePage() {
             <Link href="/deals" className="link-bd">All deals →</Link>
           </div>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-            {deals.map((l) => <ListingCard key={l.id} listing={l} />)}
+            {deals.map((l, i) => (
+              <Fragment key={l.id}>
+                <ListingCard listing={l} />
+                <AdAfterEvery index={i} slot={AD_SLOTS.feed} />
+              </Fragment>
+            ))}
           </div>
         </div>
       </section>
@@ -313,7 +330,12 @@ export default async function HomePage() {
           <Link href="/search?sort=newest" className="link-bd">View newest →</Link>
         </div>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-          {fresh.map((l) => <ListingCard key={l.id} listing={l} />)}
+          {fresh.map((l, i) => (
+            <Fragment key={l.id}>
+              <ListingCard listing={l} />
+              <AdAfterEvery index={i} slot={AD_SLOTS.feed} />
+            </Fragment>
+          ))}
         </div>
       </section>
 

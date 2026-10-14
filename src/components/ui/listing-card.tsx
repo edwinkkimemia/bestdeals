@@ -5,7 +5,7 @@ import { Badge } from "./badge";
 import { Heart } from "lucide-react";
 import { WishlistButton } from "./wishlist-button";
 import { WmImage } from "./wm-image";
-import { PlanCheckmark } from "./badge";
+import { PlanCheckmark, tenureLabel } from "./badge";
 
 export function Price({ value, compareAt }: { value: number; compareAt?: number | null }) {
   const pct = compareAt ? savings(compareAt, value) : null;
@@ -29,6 +29,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
       : listing.listingType === "service"
         ? `/services/${listing.slug}`
         : `/product/${listing.slug}`;
+  const tenure = tenureLabel(listing.sellerSince);
   return (
     <div className="card group overflow-hidden transition hover:shadow-lg">
       <Link href={href} className="relative block aspect-[4/3] overflow-hidden bg-sand-100">
@@ -57,6 +58,11 @@ export function ListingCard({ listing }: { listing: Listing }) {
             {listing.verified && listing.planId !== "silver" && listing.planId !== "gold" ? `✓ ${listing.sellerName}` : listing.sellerName}
           </span>
           <PlanCheckmark plan={listing.planId} size="sm" />
+          {tenure && (
+            <span className="shrink-0 text-ink-400" title={`Seller on Chap for ${tenure}`}>
+              · {tenure}
+            </span>
+          )}
         </p>
       </div>
     </div>

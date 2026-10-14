@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { initiateSTKPush, validateMpesaCallback, resolveMpesaOrderId } from "@/lib/payments";
+import { initiateSTKPush } from "@/lib/payments";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { getStore } from "@/lib/store";
-import { logAudit } from "@/lib/audit";
 
 /** Step 1: initiate provider payment for a reserved order. */
 export async function POST(req: NextRequest) {
@@ -35,41 +34,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: result.ok, status: result.status, message: result.message, providerRef: result.providerRef });
 }
 
-/** Step 2: Daraja callback (alternate URL) — same logic as /mpesa-callback. */
-export async function PUT(req: NextRequest) {
-  const body = await req.json().catch(() => null);
-  const v = validateMpesaCallback(body);
-  if (!v.valid) return NextResponse.json({ error: "Invalid callback" }, { status: 400 });
-  if (v.resultCode !== 0) {
-    if (v.orderRef) {
-      const mapped: { orderId?: string; amount?: number } = await resolveMpesaOrderId(v.orderRef).catch(() => ({}));
-      if (mapped.orderId) {
-        await getStore().setOrderPayment(mapped.orderId, "failed").catch(() => {});
-        await logAudit({ action: "payment.failed", entity: "order", entityId: mapped.orderId, reason: `result=${v.resultCode}` }).catch(() => {});
-      }
-    }
-    return NextResponse.json({ ok: true, status: "failed", message: "Payment failed or cancelled by user." });
-  }
-  // Idempotent ledger write: repeated callbacks with the same receipt are deduped.
-  const store = getStore();
-  const mapped2: { orderId?: string; amount?: number } = v.orderRef ? await resolveMpesaOrderId(v.orderRef).catch(() => ({})) : {};
-  const orderId = mapped2.orderId || v.orderRef || "unknown";
-  if (v.providerRef) {
-    const { duplicate } = await store.recordPayment({
-      orderId,
-      method: "mpesa",
-      amount: v.amount ?? mapped2.amount ?? 0,
-      status: "paid",
-      providerRef: v.providerRef,
-    });
-    if (duplicate) return NextResponse.json({ ok: true, status: "paid", providerRef: v.providerRef, duplicate: true });
-    if (orderId !== "unknown") {
-      const order = await store.getOrder(orderId);
-      if (order && (v.amount === undefined || v.amount === (mapped2.amount ?? order.total)) && order.paymentStatus !== "paid") {
-        await store.setOrderPayment(order.id, "paid", v.providerRef).catch(() => {});
-        await store.setOrderStatus(order.id, "confirmed").catch(() => {});
-      }
-    }
-  }
-  return NextResponse.json({ ok: true, status: "paid", providerRef: v.providerRef });
+// NOTE: there is exactly one callback entry point — POST /api/payments/mpesa-callback
+// (secret-checked, rate-limited, amount-verified). A weaker PUT alternate lived
+// here and was removed: duplicate lax entry points are how forged payments happen.
+export async function PUT() {
+  return NextResponse.json({ error: "Use POST /api/payments/mpesa-callback." }, { status: 405 });
 }
+
+

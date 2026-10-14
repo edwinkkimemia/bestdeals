@@ -52,7 +52,9 @@ export async function GET(req: NextRequest) {
   if (!order) return NextResponse.json({ dispute: null });
   const user = await currentUser().catch(() => null);
   const phone = new URL(req.url).searchParams.get("phone") ?? "";
-  const phoneOk = phone && order.phone === phone;
+  // Exact phone alone is enumerable — guests must pass the OTP check.
+  const { isPhoneVerified } = await import("@/lib/otp");
+  const phoneOk = phone && order.phone === phone && (await isPhoneVerified(phone).catch(() => false));
   const mine = user && (order.buyerId === user.id || user.role === "ADMIN");
   let sellerOk = false;
   if (user && !mine) {
