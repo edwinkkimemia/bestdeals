@@ -267,6 +267,12 @@ describe("related", () => {
     assert.ok(fromSeller.every((l) => l.sellerName === base.sellerName));
     assert.ok(fromOthers.some((l) => l.listingType === "classified" || l.shopSlug), "expected classifieds/stores in mix");
   });
+  it("fills 6-col rails (seller strip up to 12, others default 6)", () => {
+    const base = getListing("samsung-galaxy-a55-128gb-nairobi")!; // FonZone Nairobi, 18 listings
+    const { fromOthers, fromSeller } = getRelated(base);
+    assert.ok(fromOthers.length > 0 && fromOthers.length <= 6);
+    assert.ok(fromSeller.length > 4 && fromSeller.length <= 12, `expected 5–12 same-seller picks, got ${fromSeller.length}`);
+  });
   it("builds canonical urls per type", () => {
     assert.equal(listingHref({ listingType: "classified", slug: "x" }), "/classifieds/x");
     assert.equal(listingHref({ listingType: "service", slug: "x" }), "/services/x");

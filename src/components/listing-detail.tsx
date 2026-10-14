@@ -395,7 +395,14 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
 
       {moreFromSeller && moreFromSeller.length > 0 && (
         <section className="mt-10 scroll-mt-36" id="more-from-seller">
-          <h2 className="section-title">More from {listing.sellerName}</h2>
+          <div className="flex items-end justify-between">
+            <h2 className="section-title">More from {listing.sellerName}</h2>
+            {listing.shopSlug ? (
+              <Link href={`/shops/${listing.shopSlug}`} className="link-bd">View all →</Link>
+            ) : (
+              <Link href={sellerPageUrl(listing.ownerId, listing.sellerName)} className="link-bd">View all →</Link>
+            )}
+          </div>
           <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
             {moreFromSeller.map((r) => (
               <Link key={r.id} href={listingHref(r)} className="card p-2.5">

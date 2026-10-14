@@ -248,6 +248,16 @@ async function seedShops(users: Map<string, { id: string; profileId: string | nu
       },
     });
     ids.set(s.slug, shop.id);
+    // Demo plan floor from the static shop catalogue (≤5 free, 6–30 silver,
+    // 31+ gold): shops like FonZone (18 listings) must show Silver instead of
+    // Free. Upgrades only — an admin downgrade is never reverted by re-seeding.
+    const shopCount = LISTINGS.filter((l) => l.shopSlug === s.slug).length;
+    const shopFloor = shopCount > 30 ? "gold" : shopCount > 5 ? "silver" : "free";
+    const shopRank = (p: string | null | undefined) => ["free", "silver", "gold"].indexOf(p ?? "free");
+    if (shopRank(shopFloor) > shopRank(shop.planId)) {
+      await prisma.shop.update({ where: { slug: s.slug }, data: { planId: shopFloor } });
+      console.log(`[seed] shop ${s.slug} holds ${shopCount} catalogue listings → ${shopFloor} plan.`);
+    }
     const ownerListing = LISTINGS.find((l) => l.shopSlug === s.slug);
     const owner = ownerListing ? users.get(ownerListing.sellerName) : undefined;
     if (owner) {

@@ -21,7 +21,6 @@ export async function ShopsSection({ status, sort }: { status: string; sort: str
         ? +new Date(a.createdAt) - +new Date(b.createdAt)
         : +new Date(b.createdAt) - +new Date(a.createdAt)
   );
-  const owners = new Map((await store.listUsers().catch(() => [])).map((u) => [u.id, u.name]));
   const { pendingPlanKey } = await import("@/lib/plans");
   const pendings = new Map<string, { planId: string; amount: number }>();
   for (const s of items) {
@@ -42,7 +41,7 @@ export async function ShopsSection({ status, sort }: { status: string; sort: str
         ))}
       </div>
       <AdminTable
-        columns={["Shop", "Owner", "Plan", "Verified", "Location", "Storefront", "Payment", "Actions"]}
+        columns={["Shop", "Plan", "Location", "Storefront", "Actions"]}
         empty={`No shops ${tab === "all" ? "yet" : tab}.`}
       >
         {items.map((s) => {
@@ -65,24 +64,22 @@ export async function ShopsSection({ status, sort }: { status: string; sort: str
                   </span>
                 </span>
               </Td>
-              <Td>{s.ownerId ? owners.get(s.ownerId) ?? "owner" : <span className="text-ink-400">no owner</span>}</Td>
               <Td className="whitespace-nowrap">
                 <span className="text-ink-700">{normalizePlan(s.planId)}</span>
                 {pending && <Badge tone="amber" className="ml-1.5">awaiting {pending.planId} payment</Badge>}
               </Td>
-              <Td>{s.verified ? <Badge tone="green">✓ verified</Badge> : <Badge>pending</Badge>}</Td>
               <Td className="whitespace-nowrap text-ink-500">{s.town}, {s.county}</Td>
               <Td>
                 <Link href={`/shops/${s.slug}`} className="link-bd text-xs">View →</Link>
               </Td>
               <Td>
-                {pending ? (
-                  <PlanConfirmButton shopSlug={s.slug} planId={pending.planId} amount={pending.amount} />
-                ) : (
-                  <span className="text-xs text-ink-400">—</span>
-                )}
+                <span className="flex flex-wrap items-center gap-1.5">
+                  <AdminButtons kind="shop" id={s.slug} extra={{ verified: s.verified }} />
+                  {pending && (
+                    <PlanConfirmButton shopSlug={s.slug} planId={pending.planId} amount={pending.amount} />
+                  )}
+                </span>
               </Td>
-              <Td><AdminButtons kind="shop" id={s.slug} extra={{ verified: s.verified }} /></Td>
             </tr>
           );
         })}

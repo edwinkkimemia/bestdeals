@@ -38,12 +38,14 @@ function score(candidate: Listing, base: Listing): number {
  * is never empty. Same-seller items are returned separately for a
  * "More from this seller" strip.
  */
-export function getRelated(base: Listing, count = 4): RelatedGroups {
+export function getRelated(base: Listing, count = 6): RelatedGroups {
   const pool = LISTINGS.filter((l) => l.id !== base.id && l.stock > 0);
+  // Same-seller strip fills two 6-col rows (was hard-capped at 4 while
+  // sellers like FonZone hold 18) — the section links to the full catalogue.
   const fromSeller = pool
     .filter((l) => l.sellerName === base.sellerName)
     .sort((a, b) => score(b, base) - score(a, base))
-    .slice(0, 4);
+    .slice(0, 12);
   const sellerIds = new Set(fromSeller.map((l) => l.id));
   const fromOthers = pool
     .filter((l) => l.sellerName !== base.sellerName && !sellerIds.has(l.id))

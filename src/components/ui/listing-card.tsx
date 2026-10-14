@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { formatKES, savings, timeAgo, formatDay, formatFull } from "@/lib/format";
+import { formatKES, savings } from "@/lib/format";
 import type { Listing } from "@/data/catalog";
-import { Badge, ConditionBadge } from "./badge";
+import { Badge } from "./badge";
 import { Heart } from "lucide-react";
 import { WishlistButton } from "./wishlist-button";
 import { WmImage } from "./wm-image";
@@ -46,24 +46,18 @@ export function ListingCard({ listing }: { listing: Listing }) {
           <WishlistButton id={listing.id} title={listing.title} />
         </div>
       </Link>
-      <div className="space-y-1.5 p-2.5">
-        <div className="flex items-center gap-1.5">
-          <ConditionBadge condition={listing.condition} />
-          <span className="truncate text-[11px] text-ink-400">
-            {listing.town}, {listing.county}
-          </span>
-        </div>
-        <Link href={href} className="clamp-2 text-[13px] font-semibold leading-snug text-ink-900 hover:text-brand-700">
+      <div className="space-y-1 p-2.5">
+        <Link href={href} className="clamp-2 min-h-9 text-[13px] font-semibold leading-snug text-ink-900 hover:text-brand-700">
           {listing.title}
         </Link>
-        <Price value={listing.price} compareAt={listing.compareAt} />
-        <div className="flex items-center justify-between text-[11px] text-ink-500">
-          <span className="flex min-w-0 items-center gap-1">
-            <span className="truncate">{listing.verified ? `✓ ${listing.sellerName}` : listing.sellerName}</span>
-            <PlanCheckmark plan={listing.planId} size="sm" />
+        <p className="text-base font-bold text-ink-900">{formatKES(listing.price)}</p>
+        <p className="flex min-w-0 items-center gap-1 text-[11px] text-ink-500">
+          {/* Plan check replaces the verified tick (never both); free verified sellers keep the tick. */}
+          <span className="truncate">
+            {listing.verified && listing.planId !== "silver" && listing.planId !== "gold" ? `✓ ${listing.sellerName}` : listing.sellerName}
           </span>
-          <span className="shrink-0" title={`Posted ${formatFull(listing.createdAt)}`}>{timeAgo(listing.createdAt)} · {formatDay(listing.createdAt)}</span>
-        </div>
+          <PlanCheckmark plan={listing.planId} size="sm" />
+        </p>
       </div>
     </div>
   );

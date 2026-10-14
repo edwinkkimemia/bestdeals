@@ -43,13 +43,13 @@ export default async function HomePage() {
   const { getLiveStoreListings, mergeStaticAndLive } = await import("@/lib/live-listings");
   const liveAll = await getLiveStoreListings();
   const all = mergeStaticAndLive(LISTINGS, liveAll);
-  const deals = shuffleFeaturedFirst(all.filter((l) => l.compareAt && l.compareAt > l.price)).slice(0, 4);
-  const featured = shuffleFeaturedFirst(all.filter((l) => l.featured)).slice(0, 8);
-  const fresh = shuffleFeaturedFirst([...all].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 24)).slice(0, 8);
+  const deals = shuffleFeaturedFirst(all.filter((l) => l.compareAt && l.compareAt > l.price)).slice(0, 6);
+  const featured = shuffleFeaturedFirst(all.filter((l) => l.featured)).slice(0, 12);
+  const fresh = shuffleFeaturedFirst([...all].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 36)).slice(0, 12);
   const freshClassifieds = shuffleFeaturedFirst(all.filter((l) => l.listingType === "classified")
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 12)).slice(0, 4);
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 18)).slice(0, 6);
   const fromShops = shuffleFeaturedFirst(all.filter((l) => l.shopSlug)
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 12)).slice(0, 4);
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 18)).slice(0, 6);
   const countiesByListings = [...KENYA_COUNTIES]
     .map((c) => ({
       ...c,
