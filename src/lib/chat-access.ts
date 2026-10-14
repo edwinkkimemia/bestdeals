@@ -18,6 +18,22 @@ export function validPhone(p: string): boolean {
   return KENYAN_PHONE.test(p);
 }
 
+/**
+ * What listingId should a new chat be filed under? Never discards the raw
+ * `?listing=` param: catalogue hits use the canonical id, but seller-posted
+ * (store) listings are NOT in the static catalogue — dropping them to
+ * "general" orphans the thread (no seller to deliver to) and the seller's
+ * inbox stays empty. The server pins the real owner from the preserved id.
+ */
+export function newChatListingId(listingParam: string, catalogId: string | undefined, shopSlug: string): string {
+  if (catalogId) return catalogId;
+  const raw = listingParam.trim().slice(0, 80);
+  if (raw) return raw;
+  const slug = shopSlug.trim().slice(0, 60);
+  if (slug) return `shop:${slug}`;
+  return "general";
+}
+
 export function identityOf(user: { id: string; phone: string } | null, phone: string): ChatIdentity | null {
   const q = validPhone(phone.trim()) ? phone.trim() : undefined;
   if (user) {

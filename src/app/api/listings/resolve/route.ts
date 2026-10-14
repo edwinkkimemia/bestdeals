@@ -7,15 +7,15 @@ export async function GET(req: NextRequest) {
   const ids = (new URL(req.url).searchParams.get("ids") || "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 50);
   if (ids.length === 0) return NextResponse.json({ items: [] });
   const store = getStore();
-  const items: { id: string; slug: string; title: string; price: number; stock: number; seller: string; images: string[]; txMethod: string }[] = [];
+  const items: { id: string; slug: string; title: string; price: number; stock: number; seller: string; images: string[]; txMethod: string; listingType: string }[] = [];
   for (const id of ids) {
     const c = getListing(id);
     if (c) {
-      items.push({ id: c.id, slug: c.slug, title: c.title, price: c.price, stock: c.stock, seller: c.sellerName, images: c.images, txMethod: c.transactionMethod });
+      items.push({ id: c.id, slug: c.slug, title: c.title, price: c.price, stock: c.stock, seller: c.sellerName, images: c.images, txMethod: c.transactionMethod, listingType: c.listingType });
       continue;
     }
     const s = await store.getListing(id).catch(() => null);
-    if (s && s.status === "active") items.push({ id: s.id, slug: s.slug, title: s.title, price: s.price, stock: s.stock, seller: s.sellerName, images: s.images, txMethod: s.txMethod });
+    if (s && s.status === "active") items.push({ id: s.id, slug: s.slug, title: s.title, price: s.price, stock: s.stock, seller: s.sellerName, images: s.images, txMethod: s.txMethod, listingType: s.type });
   }
   return NextResponse.json({ items });
 }

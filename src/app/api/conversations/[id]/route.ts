@@ -91,7 +91,27 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const { notifyUser } = await import("@/lib/notifications");
     const { toExcerpt } = await import("@/lib/richtext");
     const senderIsBuyer = viewer === convo.buyerId || (convo.buyerPhone != null && viewer === `phone:${convo.buyerPhone}`);
-    const otherId = senderIsBuyer ? convo.sellerId : convo.buyerId;
+    let otherId = senderIsBuyer ? convo.sellerId : convo.buyerId;
+    // Legacy threads never pinned a seller account id (`seller:<name>` stub):
+    // fall back to the listing/shop owner so the bell still reaches them.
+    if (senderIsBuyer && (!otherId || otherId.startsWith("seller:") || otherId === "unknown")) {
+      try {
+        const lid = convo.listingId ?? "";
+        if (lid.startsWith("shop:")) {
+          const slug = lid.slice(5);
+          const s = await store.getShopBySlug(slug).catch(() => null);
+          if (s?.ownerId && s.ownerId !== viewer) otherId = s.ownerId;
+          if ((!otherId || otherId.startsWith("seller:")) && s) {
+            const members = await store.listShopMembers(slug).catch(() => []);
+            const owner = members.find((m) => m.userId !== viewer);
+            if (owner) otherId = owner.userId;
+          }
+        } else if (lid && lid !== "general") {
+          const l = await store.getListing(lid).catch(() => null);
+          if (l?.ownerId && l.ownerId !== viewer) otherId = l.ownerId;
+        }
+      } catch {}
+    }
     const looksLikeUser = !!otherId && !otherId.startsWith("phone:") && !otherId.startsWith("seller:") && otherId !== viewer;
     if (looksLikeUser) {
       await notifyUser({

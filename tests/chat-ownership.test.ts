@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 delete process.env.DATABASE_URL;
 
 import { freshDemoStore } from "../src/lib/store.ts";
-import { identityOf, isParticipant, mineOf, isChatSeller, resolveThreadSeller } from "../src/lib/chat-access.ts";
+import { identityOf, isParticipant, mineOf, isChatSeller, resolveThreadSeller, newChatListingId } from "../src/lib/chat-access.ts";
 
 const ME = { id: "u_me", name: "Buyer Bob", role: "SELLER", phone: "0712345678" };
 const OTHER_PHONE = "0799999999";
@@ -172,6 +172,62 @@ describe("chat ownership (sender lockout regression)", () => {
     assert.equal(await isChatSeller(store, c, { id: b.id, name: b.name, role: "SELLER" }), true, "owner can open the thread");
     await store.addMessage({ conversationId: c.id, senderId: b.id, senderLabel: b.name, body: "Hi A", bodyHtml: "Hi A" });
     assert.equal((await store.listMessages(c.id)).length, 2, "reply delivered");
+  });
+  it("new-chat keeps store listing ids (never orphans to general)", async () => {
+    // Regression: the new-chat page used to resolve ?listing= via the static
+    // catalogue only, so seller-posted listings were sent as "general" and
+    // the seller never saw them.
+    assert.equal(newChatListingId("p1", "p1", ""), "p1", "catalogue hit uses canonical id");
+    assert.equal(newChatListingId("listing_abc123", undefined, ""), "listing_abc123", "store id preserved");
+    assert.equal(newChatListingId("  listing_abc123  ", undefined, ""), "listing_abc123", "trims whitespace");
+    assert.equal(newChatListingId("", undefined, "my-shop"), "shop:my-shop", "shop fallback");
+    assert.equal(newChatListingId("", undefined, ""), "general", "true general stays general");
+  });
+  it("two accounts chat via a seller-posted listing (full user journey)", async () => {
+    // B posts a listing; A taps Message seller (?listing=<store-id>); the
+    // message must land in B's inbox and B's reply must come back to A.
+    const store = freshDemoStore();
+    const a = await store.createUser({
+      name: "Buyer Ann", email: "ann@x.co.ke", phone: "0710000201",
+      role: "SELLER", verified: true, passwordHash: "h",
+    });
+    const b = await store.createUser({
+      name: "Seller Ben", email: "ben@x.co.ke", phone: "0710000202",
+      role: "SELLER", verified: true, passwordHash: "h",
+    });
+    const listing = await store.createListing({
+      title: "Sofa set", description: "A very nice sofa set for sale in Nairobi, barely used",
+      type: "classified", price: 25000, compareAt: null, condition: "used_good", txMethod: "contact_seller",
+      negotiable: true, stock: 1, county: "Nairobi", town: "Westlands", images: [], attributes: {},
+      ownerId: b.id, sellerName: b.name,
+    });
+    await store.setListingStatus(listing.id, "active");
+    // Client: ?listing=<store-id> is not in the catalogue, id still sent.
+    const sentId = newChatListingId(listing.id, undefined, "");
+    assert.equal(sentId, listing.id);
+    // Server: display-name link + owner fallback pin the real seller.
+    let sellerId = (await store.findUserByDisplayName(listing.sellerName).catch(() => null))?.id;
+    if (!sellerId) {
+      const l = await store.getListing(listing.id).catch(() => null);
+      if (l?.ownerId && l.ownerId !== a.id) sellerId = l.ownerId;
+    }
+    assert.equal(sellerId, b.id, "seller pinned to listing owner");
+    const c = await store.createConversation({
+      listingId: sentId, listingTitle: listing.title, sellerName: listing.sellerName,
+      sellerId, buyerId: a.id, buyerName: a.name, buyerPhone: a.phone,
+      firstMessage: { senderId: a.id, senderLabel: a.name, body: "Hi, is this available?", bodyHtml: "Hi" },
+    });
+    const inboxB = await store.listConversations({ userId: b.id, phone: b.phone, sellerName: b.name });
+    assert.ok(inboxB.some((x) => x.id === c.id), "seller inbox receives the enquiry");
+    const idB = identityOf({ id: b.id, phone: b.phone }, "")!;
+    assert.equal(isParticipant(c, idB, { id: b.id, name: b.name, role: "SELLER" }), b.id, "seller can open the thread");
+    await store.addMessage({ conversationId: c.id, senderId: b.id, senderLabel: b.name, body: "Yes, available!", bodyHtml: "Yes" });
+    const inboxA = await store.listConversations({ userId: a.id, phone: a.phone, sellerName: a.name });
+    assert.ok(inboxA.some((x) => x.id === c.id), "buyer inbox keeps the thread");
+    const msgs = await store.listMessages(c.id);
+    assert.equal(msgs.length, 2, "both messages persisted");
+    assert.equal(mineOf(msgs[0].senderId, a.id, a.phone), true);
+    assert.equal(mineOf(msgs[1].senderId, a.id, a.phone), false);
   });
   it("two accounts message each other directly (explicit target, no name match needed)", async () => {
     const store = freshDemoStore();
