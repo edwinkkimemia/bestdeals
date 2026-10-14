@@ -62,6 +62,7 @@ export async function VerificationsSection({ status }: { status: string }) {
             <Td>
               <span className="flex flex-wrap items-center gap-2">
                 {v.docPath && <Link href={`/api/admin/verifications/${v.id}/doc`} target="_blank" className="link-bd text-xs">View doc →</Link>}
+                {v.docPath && <Link href={`/api/admin/verifications/${v.id}/doc?dl=1`} className="link-bd text-xs">Download ↓</Link>}
                 {v.status === "pending" && <AdminButtons kind="verify" id={v.id} />}
               </span>
             </Td>
