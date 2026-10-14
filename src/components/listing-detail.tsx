@@ -305,6 +305,54 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
             <p className="mt-4 text-xs text-ink-400">Posted {formatFull(listing.createdAt)} ({timeAgo(listing.createdAt)}) · Listing ID: {listing.id.toUpperCase()}</p>
           </div>
 
+          {/* Seller — directly after description so buyers see who they're
+              dealing with (plus Message / Visit shop) before delivery info. */}
+          <div className="card mt-4 space-y-3 p-5">
+            <div className="flex items-center gap-3">
+              <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-lg font-black text-white">
+                {avatarUrl ? (
+                  <SafeImage src={avatarUrl} alt="" className="h-full w-full object-cover" fallback={(shopCard ? shopCard.name : listing.sellerName).charAt(0).toUpperCase()} />
+                ) : (
+                  (shopCard ? shopCard.name : listing.sellerName).charAt(0).toUpperCase()
+                )}
+              </span>
+              <div className="min-w-0 flex-1">
+                {shopCard ? (
+                  <>
+                    <p className="flex flex-wrap items-center gap-2 font-bold">
+                      {shopCard.name} <PlanCheckmark plan={shopCard.planId} size="sm" /> {shopCard.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}
+                    </p>
+                    <p className="truncate text-xs text-ink-500">
+                      {shopCard.businessCategory} · {shopCard.town}, {shopCard.county} · Enquiries go straight to their inbox
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    {/* listing.planId covers name-matched static rows where ownerId is absent. */}
+                    <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <PlanCheckmark plan={sellerPlan ?? listing.planId} size="sm" /> <VerifiedBadge verified={listing.verified} /></p>
+                    <p className="truncate text-xs text-ink-500">
+                      {listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}, {listing.county} · Enquiries go straight to their inbox
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Link href={`/dashboard/messages/new?listing=${listing.id}`} onClick={() => trackReveal("chat")} className="btn-primary !px-3">
+                <MessageCircle className="h-4 w-4" /> Message
+              </Link>
+              {listing.shopSlug ? (
+                <Link href={`/shops/${listing.shopSlug}`} className="btn-secondary !px-3">
+                  <Store className="h-4 w-4" /> Visit shop
+                </Link>
+              ) : (
+                <Link href={sellerPageUrl(listing.ownerId, listing.sellerName)} className="btn-secondary !px-3">
+                  <Store className="h-4 w-4" /> Visit seller
+                </Link>
+              )}
+            </div>
+          </div>
+
           {/* Delivery & payments */}
           <div className="card mt-4 space-y-2 p-5 text-sm">
             <h2 className="flex items-center gap-2 font-bold"><Truck className="h-4 w-4 text-brand-600" /> Delivery & payments</h2>
@@ -328,56 +376,11 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
 
       {/* Sponsored unit below the buy flow (never between price and seller CTAs). */}
       <InArticleAd slot={AD_SLOTS.article} />
-      {/* Seller + report — full width BELOW the grid. Anything sharing the
-          sticky buy rail's column would scroll up underneath it while pinned;
-          down here nothing can pass under the rail. */}
-      <section className="mt-6 grid gap-3 lg:grid-cols-2" aria-label="Seller and report">
-        <div className="card space-y-3 p-5">
-          <div className="flex items-center gap-3">
-            <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-lg font-black text-white">
-              {avatarUrl ? (
-                <SafeImage src={avatarUrl} alt="" className="h-full w-full object-cover" fallback={(shopCard ? shopCard.name : listing.sellerName).charAt(0).toUpperCase()} />
-              ) : (
-                (shopCard ? shopCard.name : listing.sellerName).charAt(0).toUpperCase()
-              )}
-            </span>
-            <div className="min-w-0 flex-1">
-              {shopCard ? (
-                <>
-                  <p className="flex flex-wrap items-center gap-2 font-bold">
-                    {shopCard.name} <PlanCheckmark plan={shopCard.planId} size="sm" /> {shopCard.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}
-                  </p>
-                  <p className="truncate text-xs text-ink-500">
-                    {shopCard.businessCategory} · {shopCard.town}, {shopCard.county} · Enquiries go straight to their inbox
-                  </p>
-                </>
-              ) : (
-                <>
-                  {/* listing.planId covers name-matched static rows where ownerId is absent. */}
-                  <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <PlanCheckmark plan={sellerPlan ?? listing.planId} size="sm" /> <VerifiedBadge verified={listing.verified} /></p>
-                  <p className="truncate text-xs text-ink-500">
-                    {listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}, {listing.county} · Enquiries go straight to their inbox
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <Link href={`/dashboard/messages/new?listing=${listing.id}`} onClick={() => trackReveal("chat")} className="btn-primary !px-3">
-              <MessageCircle className="h-4 w-4" /> Message
-            </Link>
-            {listing.shopSlug ? (
-              <Link href={`/shops/${listing.shopSlug}`} className="btn-secondary !px-3">
-                <Store className="h-4 w-4" /> Visit shop
-              </Link>
-            ) : (
-              <Link href={sellerPageUrl(listing.ownerId, listing.sellerName)} className="btn-secondary !px-3">
-                <Store className="h-4 w-4" /> Visit seller
-              </Link>
-            )}
-          </div>
-        </div>
-
+      {/* Report — full width BELOW the grid. The seller card lives up in the
+          left column (before Delivery) so buyers see Message / Visit shop
+          first; anything sharing the sticky buy rail's column would scroll up
+          underneath it while pinned, down here nothing can pass under it. */}
+      <section className="mt-6" aria-label="Report">
         <div className="card p-5">
           <h2 className="flex items-center gap-2 text-sm font-bold"><Flag className="h-4 w-4" /> Report this listing</h2>
           {reportDone ? (
