@@ -82,6 +82,16 @@ export async function POST(req: NextRequest) {
       fileName: (fileName2 ?? "owner-id").slice(0, 120),
     });
   }
+  try {
+    const { notifyUser } = await import("@/lib/notifications");
+    await notifyUser({
+      userId: user.id,
+      type: "verification",
+      title: "Verification received",
+      body: "We’ve got your documents. Reviews take 24–48h — we’ll notify you here.",
+      link: "/dashboard/verify",
+    });
+  } catch {}
   return NextResponse.json({ ok: true, id: rec.id, status: rec.status });
 }
 

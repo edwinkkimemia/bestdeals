@@ -152,6 +152,20 @@ export async function POST(req: NextRequest) {
 
   await store.recordPayment({ orderId, method: paymentMethod, amount: totals.total, status: "pending" }).catch(() => {});
   if (d.idempotencyKey) await store.setSetting(`order_idem:${d.idempotencyKey}`, orderId).catch(() => {});
+  if (buyer?.id) {
+    try {
+      const { notifyUser } = await import("@/lib/notifications");
+      await notifyUser({
+        userId: buyer.id,
+        type: "order",
+        title: `Order ${orderId} received`,
+        body: paymentMethod === "mpesa"
+          ? `Total ${totals.total.toLocaleString("en-KE")} KES — complete the M-Pesa prompt to pay.`
+          : `Total ${totals.total.toLocaleString("en-KE")} KES — pay cash on delivery. Never send money in advance.`,
+        link: `/orders/${orderId}`,
+      });
+    } catch {}
+  }
 
   notifyLater({ channel: "sms", to: d.phone, message: paymentMethod === "mpesa" ? `Chap: order ${orderId} reserved (${totals.total} KES). Complete the M-Pesa prompt on your phone.` : `Chap: order ${orderId} received (${totals.total} KES). Pay cash on delivery — never send money in advance.` });
 

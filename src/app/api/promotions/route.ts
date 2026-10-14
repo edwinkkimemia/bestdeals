@@ -70,6 +70,16 @@ export async function POST(req: NextRequest) {
     if (spent.ok) {
       await store.activatePromotion(promo.id).catch(() => {});
       await store.setListingFeatured(listing.id, true).catch(() => {});
+      try {
+        const { notifyUser } = await import("@/lib/notifications");
+        await notifyUser({
+          userId: user.id,
+          type: "promotion",
+          title: "Boost is live 🚀",
+          body: `${product.name} for “${listing.title.slice(0, 80)}” is active for ${product.days}d.`,
+          link: "/dashboard/promotion",
+        });
+      } catch {}
       return NextResponse.json({
         ok: true,
         promotion: { ...(await store.getPromotion(promo.id).catch(() => promo)), },
@@ -87,6 +97,16 @@ export async function POST(req: NextRequest) {
   // Free/zero-amount promos (referral rewards) activate immediately.
   if (product.price === 0) {
     await store.activatePromotion(promo.id).catch(() => {});
+    try {
+      const { notifyUser } = await import("@/lib/notifications");
+      await notifyUser({
+        userId: user.id,
+        type: "promotion",
+        title: "Boost is live 🚀",
+        body: `${product.name} for “${listing.title.slice(0, 80)}” is active for ${product.days}d.`,
+        link: "/dashboard/promotion",
+      });
+    } catch {}
   }
   return NextResponse.json({
     ok: true,

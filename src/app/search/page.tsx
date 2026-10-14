@@ -4,6 +4,7 @@ import { searchAll } from "@/lib/search";
 import { ListingCard } from "@/components/ui/listing-card";
 import { COUNTY_NAMES, resolveCounty, townsFor } from "@/lib/kenya";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
+import { SaveSearchButton } from "@/components/save-search-button";
 
 export const metadata = { title: "Search" };
 
@@ -103,9 +104,25 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
   return (
     <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: params.q ? `Search: ${params.q.slice(0, 40)}` : "Search" }]} />
-      <h1 className="section-title mt-2">
-        {params.q ? `Results for “${params.q}”` : "Browse the marketplace"} ({total})
-      </h1>
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <h1 className="section-title">
+          {params.q ? `Results for “${params.q}”` : "Browse the marketplace"} ({total})
+        </h1>
+        <SaveSearchButton
+          query={{
+            q: params.q || undefined,
+            category: params.category,
+            subcategory: params.subcategory,
+            county: params.county,
+            town: params.town,
+            min: params.min,
+            max: params.max,
+            condition: params.condition,
+            type: params.type,
+          }}
+          name={params.q ? `“${params.q.slice(0, 40)}”` : cat ? cat.name : county !== "all" ? county : "Marketplace watch"}
+        />
+      </div>
       {countyFallback && (
         <p className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">
           Location “{rawCounty}” isn&apos;t a recognised county — showing all of Kenya instead. Try the Location filter.
@@ -226,7 +243,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
           {items.length === 0 ? (
             <div className="card p-8 text-center">
               <p className="text-lg font-bold">No results found</p>
-              <p className="mt-1 text-sm text-ink-500">Try a different keyword, widen the price range, or browse categories.</p>
+              <p className="mt-1 text-sm text-ink-500">Try a different keyword, widen the price range, or browse categories — or save this search and we’ll ring the bell when a matching ad lands.</p>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {params.type !== "all" && (
                   <Link href={tabHref("all")} className="btn-primary">Show all types ({counts.all})</Link>

@@ -59,6 +59,17 @@ export async function POST(req: NextRequest) {
     subcategory: (d.subcategory ?? "").trim() || undefined,
     shopSlug: plan.shopSlug,
   });
+  // Jiji-style feed: confirm receipt so the bell explains the pending state.
+  try {
+    const { notifyUser } = await import("@/lib/notifications");
+    await notifyUser({
+      userId: user.id,
+      type: "listing",
+      title: "Listing under review",
+      body: `“${d.title.slice(0, 80)}” was received and is queued for moderation. We’ll notify you once it’s live.`,
+      link: "/dashboard/listings",
+    });
+  } catch {}
   return NextResponse.json({ ok: true, id: rec.id, status: "pending", message: "Saved and queued for moderation." });
 }
 

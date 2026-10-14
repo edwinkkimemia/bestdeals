@@ -72,6 +72,29 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     await store.setListingStatus(params.id, "pending");
   }
   const fresh = await store.getListing(params.id);
+  // Price-drop + newly-in-budget bells (best-effort, never blocks the edit).
+  try {
+    if (fresh && d.price < res.listing.price) {
+      const { fanoutPriceDrop } = await import("@/lib/search-alerts");
+      await fanoutPriceDrop(
+        {
+          id: fresh.id,
+          slug: fresh.slug,
+          title: fresh.title,
+          description: fresh.description,
+          categorySlug: fresh.categorySlug,
+          subcategory: fresh.subcategory,
+          price: d.price,
+          county: fresh.county,
+          town: fresh.town,
+          condition: fresh.condition,
+          type: fresh.type,
+          ownerId: (fresh as { ownerId?: string }).ownerId,
+        },
+        res.listing.price
+      );
+    }
+  } catch {}
   return NextResponse.json({ ok: true, id: params.id, status: fresh?.status ?? "pending", item: fresh });
 }
 

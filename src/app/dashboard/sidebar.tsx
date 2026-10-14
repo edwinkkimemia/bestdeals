@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   BadgeCheck,
   BarChart3,
+  Bell,
+  Bookmark,
   CreditCard,
   LayoutDashboard,
   LogOut,
@@ -20,6 +22,8 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/dashboard", label: "Overview", Icon: LayoutDashboard, exact: true },
+  { href: "/dashboard/notifications", label: "Notifications", Icon: Bell },
+  { href: "/dashboard/saved-searches", label: "Saved searches", Icon: Bookmark },
   { href: "/dashboard/listings", label: "My listings", Icon: Package },
   { href: "/dashboard/messages", label: "Messages", Icon: MessageCircle },
   { href: "/dashboard/analytics", label: "Analytics", Icon: BarChart3 },
@@ -31,7 +35,7 @@ const NAV = [
   { href: "/dashboard/settings", label: "Settings", Icon: Settings },
 ];
 
-export function DashboardSidebar({ unread }: { unread: number }) {
+export function DashboardSidebar({ unread, notifUnread = 0 }: { unread: number; notifUnread?: number }) {
   const path = usePathname();
   const router = useRouter();
   const isActive = (href: string, exact?: boolean) =>
@@ -67,6 +71,11 @@ export function DashboardSidebar({ unread }: { unread: number }) {
                   {unread > 99 ? "99+" : unread}
                 </span>
               )}
+              {href === "/dashboard/notifications" && notifUnread > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-bold text-white">
+                  {notifUnread > 99 ? "99+" : notifUnread}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -98,6 +107,11 @@ export function DashboardSidebar({ unread }: { unread: number }) {
             {href === "/dashboard/messages" && unread > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-500 px-1 text-[10px] font-bold text-white">
                 {unread > 9 ? "9+" : unread}
+              </span>
+            )}
+            {href === "/dashboard/notifications" && notifUnread > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-500 px-1 text-[10px] font-bold text-white">
+                {notifUnread > 9 ? "9+" : notifUnread}
               </span>
             )}
           </Link>

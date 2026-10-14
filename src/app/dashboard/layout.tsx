@@ -11,8 +11,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const store = getStore();
   const fresh = await store.findUserById(user.id).catch(() => null);
 
-  // Unread message count for the sidebar badge (best-effort).
+  // Unread message + notification counts for the sidebar badges (best-effort).
   let unread = 0;
+  let notifUnread = 0;
   try {
     const convos = await store.listConversations({
       userId: user.id,
@@ -21,11 +22,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     });
     unread = convos.reduce((s, c) => s + (c.unread ?? 0), 0);
   } catch {}
+  try {
+    notifUnread = await store.countUnreadNotifications(user.id);
+  } catch {}
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8">
       <div className="flex flex-row gap-3 lg:gap-8">
-        <DashboardSidebar unread={unread} />
+        <DashboardSidebar unread={unread} notifUnread={notifUnread} />
         <div className="min-w-0 flex-1 py-4 lg:py-8">{children}</div>
       </div>
     </div>

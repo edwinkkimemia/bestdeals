@@ -20,6 +20,7 @@ export type SeedCounts = {
   plans: number;
   posts: number;
   users: number;
+  admins: number;
   shops: number;
   listings: number;
 };
@@ -31,7 +32,7 @@ async function main(): Promise<SeedCounts> {
     await prisma.$queryRaw`SELECT 1`;
   } catch {
     console.warn("[seed] no database reachable — skipping (demo mode).");
-    return { skipped: true, categories: 0, plans: 0, posts: 0, users: 0, shops: 0, listings: 0 };
+    return { skipped: true, categories: 0, plans: 0, posts: 0, users: 0, admins: 0, shops: 0, listings: 0 };
   }
   // Unreachable database (e.g. preview builds without Postgres): skip loudly,
   // don't fail the deploy — the app falls back to demo mode.
@@ -39,7 +40,7 @@ async function main(): Promise<SeedCounts> {
     await prisma.$queryRaw`SELECT 1`;
   } catch {
     console.warn("[seed] no database reachable — skipping (demo mode).");
-    return { skipped: true, categories: 0, plans: 0, posts: 0, users: 0, shops: 0, listings: 0 };
+    return { skipped: true, categories: 0, plans: 0, posts: 0, users: 0, admins: 0, shops: 0, listings: 0 };
   }
 
   for (const c of CATEGORIES) {
@@ -86,11 +87,12 @@ async function main(): Promise<SeedCounts> {
   }
 
   const users = await seedUsers();
+  const admins = await seedAdmins();
   const shops = await seedShops(users);
   const listings = await seedListings(users, shops);
 
   console.log(`Seeded ${CATEGORIES.length} categories, ${SHOP_PLANS.length} plans, ${BLOG_POSTS.length} blog posts.`);
-  console.log(`Seeded ${users.size} users, ${shops.size} shops, ${listings} product listings.`);
+  console.log(`Seeded ${users.size} users (${admins} admins), ${shops.size} shops, ${listings} product listings.`);
   console.log(`Demo catalogue ships in src/data/catalog.ts (${SHOPS.length} shops, ${LISTINGS.length} listings).`);
   return {
     skipped: false,
@@ -98,6 +100,7 @@ async function main(): Promise<SeedCounts> {
     plans: SHOP_PLANS.length,
     posts: BLOG_POSTS.length,
     users: users.size,
+    admins,
     shops: shops.size,
     listings,
   };
@@ -153,6 +156,64 @@ async function seedUsers(): Promise<Map<string, { id: string; profileId: string 
   }
   console.log(`[seed] demo users ready (password: ${process.env.SEED_USER_PASSWORD ? "(from SEED_USER_PASSWORD)" : "ChapDemo123!"} — e.g. ${slugifyName([...names.keys()][0])}@demo.chap.co.ke).`);
   return out;
+}
+
+/**
+ * Admin survival across redeploys.
+ *
+ * Root cause of "admin deleted after redeploy": without DATABASE_URL the app
+ * runs on in-memory DemoStore (wiped every restart), and even with Postgres
+ * a fresh/branch database has no admin row until someone signs up. The deploy
+ * seed (`vercel-build`: migrate deploy + seed) is the one hook guaranteed to
+ * run on every deploy, so it must ensure admins exist:
+ * - Existing rows whose email is in ADMIN_EMAILS are PROMOTED to ADMIN
+ *   (never demoted, never touches passwordHash). This also heals accounts
+ *   created via signup before ADMIN_EMAILS was configured (they'd be SELLER).
+ * - Missing rows are CREATED only when ADMIN_PASSWORD (or SEED_USER_PASSWORD
+ *   fallback) is set — never with a hardcoded default, so a fresh prod DB
+ *   doesn't grow a well-known admin login. Without it we log and skip: create
+ *   the admin once via signup with an ADMIN_EMAILS address.
+ */
+async function seedAdmins(): Promise<number> {
+  const emails = (process.env.ADMIN_EMAILS || "admin@chap.co.ke")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (emails.length === 0) return 0;
+  const initialPassword = (process.env.ADMIN_PASSWORD || process.env.SEED_USER_PASSWORD || "").trim();
+  const passwordHash = initialPassword ? await bcrypt.hash(initialPassword, 10) : null;
+  let n = 0;
+  for (const email of emails) {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      if (existing.role !== "ADMIN") {
+        await prisma.user.update({ where: { email }, data: { role: "ADMIN", verified: true, emailVerified: true } });
+        console.log(`[seed] promoted ${email} to ADMIN (was ${String(existing.role)}).`);
+      }
+      n += 1;
+      continue;
+    }
+    if (!passwordHash) {
+      console.warn(`[seed] admin ${email} not found — sign up once at /auth/signup, or set ADMIN_PASSWORD to auto-create it on deploy.`);
+      continue;
+    }
+    await prisma.user.create({
+      data: {
+        name: "Admin",
+        email,
+        phone: "0700000000",
+        passwordHash,
+        role: "ADMIN",
+        verified: true,
+        emailVerified: true,
+        sellerKind: "individual",
+        seller: { create: { displayName: "Admin" } },
+      },
+    });
+    console.log(`[seed] created ADMIN ${email} (initial password from ${process.env.ADMIN_PASSWORD ? "ADMIN_PASSWORD" : "SEED_USER_PASSWORD"} — change it after first login).`);
+    n += 1;
+  }
+  return n;
 }
 
 /** Demo shops with owner memberships derived from their catalogue listings. */

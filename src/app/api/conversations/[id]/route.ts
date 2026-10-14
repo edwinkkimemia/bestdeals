@@ -82,6 +82,23 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (user && convo.sellerId === user.id) {
     await store.setSetting(`reply_speed:${params.id}`, { at: new Date().toISOString() }).catch(() => {});
   }
+  // In-app bell for the other participant (best-effort, never blocks chat).
+  try {
+    const { notifyUser } = await import("@/lib/notifications");
+    const { toExcerpt } = await import("@/lib/richtext");
+    const senderIsBuyer = viewer === convo.buyerId || (convo.buyerPhone != null && viewer === `phone:${convo.buyerPhone}`);
+    const otherId = senderIsBuyer ? convo.sellerId : convo.buyerId;
+    const looksLikeUser = !!otherId && !otherId.startsWith("phone:") && !otherId.startsWith("seller:") && otherId !== viewer;
+    if (looksLikeUser) {
+      await notifyUser({
+        userId: otherId!,
+        type: "message",
+        title: `New message from ${label}`,
+        body: `“${toExcerpt(plain, 90)}” — tap to reply.`,
+        link: `/dashboard/messages/${params.id}`,
+      });
+    }
+  } catch {}
   // Ping the other side (best-effort SMS; console in demo mode).
   try {
     const { notifyLater } = await import("@/lib/notify");

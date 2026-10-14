@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronDown, Heart, LogOut, MapPin, Menu, MessageCircle, Search, ShoppingCart, Store, User, X } from "lucide-react";
 import { useCart } from "../cart-provider";
+import { NotificationsBell } from "../notifications-bell";
 import { KENYA_COUNTIES } from "@/lib/kenya";
 import { POPULAR_SEARCHES } from "@/data/catalog";
 
@@ -339,6 +340,9 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
             {wishCount > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-bold text-white">{wishCount > 99 ? "99+" : wishCount}</span>}
           </Link>
           {user && (
+            <NotificationsBell />
+          )}
+          {user && (
             <Link href="/dashboard/messages" className="relative rounded-lg p-2 hover:bg-sand-100" aria-label={unread > 0 ? `Messages, ${unread} unread` : "Messages"}>
               <MessageCircle className="h-5 w-5" />
               {unread > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-bold text-white">{unread > 99 ? "99+" : unread}</span>}
@@ -424,6 +428,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
             <div className="grid gap-2 border-t border-neutral-200 pt-4">
               {!user && <Link href="/auth/signin" onClick={() => setOpen(false)} className="btn-primary">Sign in / Register</Link>}
               {user && <Link href={user.role === "ADMIN" ? "/admin" : "/dashboard"} onClick={() => setOpen(false)} className="btn-secondary">My dashboard</Link>}
+              {user && <Link href="/dashboard/notifications" onClick={() => setOpen(false)} className="btn-secondary">Notifications</Link>}
               <Link href="/cart" onClick={() => setOpen(false)} className="btn-secondary">Cart ({count})</Link>
               {user && (
                 <button onClick={signOut} className="flex items-center justify-center gap-2 rounded-xl border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50">

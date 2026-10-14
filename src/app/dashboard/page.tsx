@@ -5,6 +5,7 @@ import {
   ArrowRight,
   BadgeCheck,
   BarChart3,
+  Bell,
   CreditCard,
   Eye,
   Mail,
@@ -84,6 +85,14 @@ export default async function DashboardPage() {
     },
   ];
 
+  // Jiji-style recent activity for the bell feed (best-effort, max 5).
+  let recentNotifs: { id: string; title: string; body: string; link?: string; readAt?: string | null; createdAt: string }[] = [];
+  let notifUnread = 0;
+  try {
+    recentNotifs = await store.listNotifications(user.id, { limit: 5 });
+    notifUnread = await store.countUnreadNotifications(user.id).catch(() => 0);
+  } catch {}
+
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -142,6 +151,36 @@ export default async function DashboardPage() {
       </div>
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
+        <div className="card p-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 font-bold">
+              <Bell className="h-4 w-4 text-brand-600" /> Latest notifications
+              {notifUnread > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1.5 text-[11px] font-bold text-white">
+                  {notifUnread > 99 ? "99+" : notifUnread}
+                </span>
+              )}
+            </p>
+            <Link href="/dashboard/notifications" className="link-bd text-sm">View all →</Link>
+          </div>
+          {recentNotifs.length === 0 ? (
+            <p className="mt-2 text-sm text-ink-500">No notifications yet — chats, approvals and order updates will appear here.</p>
+          ) : (
+            <ul className="mt-2 divide-y divide-neutral-100">
+              {recentNotifs.map((n) => (
+                <li key={n.id}>
+                  <Link href={n.link || "/dashboard/notifications"} className="flex items-start gap-2 py-2">
+                    {!n.readAt && <span aria-label="Unread" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent-500" />}
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-semibold">{n.title}</span>
+                      <span className="block truncate text-xs text-ink-500">{n.body}</span>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <div className="card p-5">
           <p className="font-bold">Next actions</p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-ink-700">

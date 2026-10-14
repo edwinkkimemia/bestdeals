@@ -87,6 +87,18 @@ export async function POST(req: NextRequest) {
         conversationId: existing.id, senderId: viewerId, senderLabel: name,
         body: plain, bodyHtml: toSafeHtml(plain),
       });
+      if (sellerId && sellerId !== viewerId) {
+        try {
+          const { notifyUser } = await import("@/lib/notifications");
+          await notifyUser({
+            userId: sellerId,
+            type: "message",
+            title: `New message from ${name}`,
+            body: `“${toExcerpt(plain, 90)}” — ${title.slice(0, 80)}`,
+            link: `/dashboard/messages/${existing.id}`,
+          });
+        } catch {}
+      }
       return NextResponse.json({ ok: true, id: existing.id, reused: true });
     }
   } catch {}
@@ -100,6 +112,18 @@ export async function POST(req: NextRequest) {
     buyerPhone: phone,
     firstMessage: { senderId: viewerId, senderLabel: name, body: plain, bodyHtml: toSafeHtml(plain) },
   });
+  if (sellerId && sellerId !== viewerId) {
+    try {
+      const { notifyUser } = await import("@/lib/notifications");
+      await notifyUser({
+        userId: sellerId,
+        type: "message",
+        title: `New enquiry from ${name}`,
+        body: `“${toExcerpt(plain, 90)}” — ${title.slice(0, 80)}`,
+        link: `/dashboard/messages/${convo.id}`,
+      });
+    } catch {}
+  }
   notifyLater({ channel: "sms", to: phone, message: `Chap: chat opened with ${seller} — "${toExcerpt(plain, 80)}"` });
   return NextResponse.json({ ok: true, id: convo.id });
 }

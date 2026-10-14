@@ -266,6 +266,17 @@ export type ConversationWithMeta = ConversationRecord & {
   unread: number;
 };
 
+export type AppNotificationRecord = {
+  id: string;
+  userId: string;
+  type: string; // message | listing | order | verification | promotion | system
+  title: string;
+  body: string;
+  link?: string;
+  readAt?: string | null;
+  createdAt: string;
+};
+
 /**
  * A promotion only counts while its window hasn't passed. Readers apply this
  * so an `active` boost past `endsAt` behaves as `expired` even before the
@@ -385,6 +396,12 @@ export interface Store {
   claimGuestConversations(userId: string, phone: string): Promise<number>;
   /** Find an existing thread for the same buyer + seller + listing (WhatsApp-style: no dupes). */
   findConversationMatch(m: { buyerIds: string[]; sellerId?: string; sellerName: string; listingId: string }): Promise<ConversationRecord | null>;
+  // notifications (Jiji-style bell + /dashboard/notifications feed)
+  createNotification(d: { userId: string; type: string; title: string; body: string; link?: string }): Promise<AppNotificationRecord>;
+  listNotifications(userId: string, opts?: { unreadOnly?: boolean; limit?: number }): Promise<AppNotificationRecord[]>;
+  countUnreadNotifications(userId: string): Promise<number>;
+  markNotificationRead(id: string, userId: string): Promise<void>;
+  markAllNotificationsRead(userId: string): Promise<number>;
 }
 
 const now = () => new Date().toISOString();
@@ -992,6 +1009,54 @@ class DemoStore implements Store {
         ((m.sellerId != null && c.sellerId != null && m.sellerId === c.sellerId) || c.sellerName === m.sellerName)
     );
     return hit ?? null;
+  }
+
+  notifications: AppNotificationRecord[] = [];
+
+  async createNotification(d: { userId: string; type: string; title: string; body: string; link?: string }) {
+    const rec: AppNotificationRecord = {
+      id: uid("notif"),
+      userId: d.userId,
+      type: d.type,
+      title: d.title.slice(0, 120),
+      body: d.body.slice(0, 500),
+      link: d.link?.slice(0, 500),
+      readAt: null,
+      createdAt: now(),
+    };
+    this.notifications.unshift(rec);
+    // Cap demo memory (latest 200 per user is plenty for the bell + feed).
+    const mine = this.notifications.filter((n) => n.userId === d.userId);
+    if (mine.length > 200) {
+      const drop = new Set(mine.slice(200).map((n) => n.id));
+      this.notifications = this.notifications.filter((n) => !drop.has(n.id));
+    }
+    return { ...rec };
+  }
+  async listNotifications(userId: string, opts?: { unreadOnly?: boolean; limit?: number }) {
+    let items = this.notifications.filter((n) => n.userId === userId);
+    if (opts?.unreadOnly) items = items.filter((n) => !n.readAt);
+    items = items.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    const limit = Math.min(100, Math.max(1, opts?.limit ?? 50));
+    return items.slice(0, limit).map((n) => ({ ...n }));
+  }
+  async countUnreadNotifications(userId: string) {
+    return this.notifications.filter((n) => n.userId === userId && !n.readAt).length;
+  }
+  async markNotificationRead(id: string, userId: string) {
+    const n = this.notifications.find((x) => x.id === id && x.userId === userId);
+    if (n && !n.readAt) n.readAt = now();
+  }
+  async markAllNotificationsRead(userId: string) {
+    let n = 0;
+    const t = now();
+    for (const x of this.notifications) {
+      if (x.userId === userId && !x.readAt) {
+        x.readAt = t;
+        n += 1;
+      }
+    }
+    return n;
   }
 }
 
@@ -2061,6 +2126,71 @@ class PrismaStore implements Store {
     if (!hit) return null;
     const h = hit as { id: string; listingId: string | null; buyerId: string; sellerId: string; createdAt: Date };
     return { id: h.id, listingId: h.listingId ?? undefined, buyerId: h.buyerId, sellerId: h.sellerId, sellerName: m.sellerName, createdAt: h.createdAt.toISOString() };
+  }
+
+  private mapNotification(r: {
+    id: string; userId: string; template: string;
+    payload: unknown; sentAt: Date | null; createdAt: Date;
+  }): AppNotificationRecord {
+    const p = (r.payload ?? {}) as { title?: unknown; body?: unknown; link?: unknown };
+    return {
+      id: r.id,
+      userId: r.userId,
+      type: r.template,
+      title: typeof p.title === "string" ? p.title : r.template,
+      body: typeof p.body === "string" ? p.body : "",
+      link: typeof p.link === "string" ? p.link : undefined,
+      readAt: r.sentAt ? r.sentAt.toISOString() : null,
+      createdAt: r.createdAt.toISOString(),
+    };
+  }
+
+  async createNotification(d: { userId: string; type: string; title: string; body: string; link?: string }) {
+    const rec = await (this.p as unknown as {
+      notification: {
+        create: (a: { data: { userId: string; channel: string; template: string; payload: unknown } }) => Promise<{
+          id: string; userId: string; template: string; payload: unknown; sentAt: Date | null; createdAt: Date;
+        }>;
+      };
+    }).notification.create({
+      data: {
+        userId: d.userId,
+        channel: "inapp",
+        template: d.type.slice(0, 40),
+        payload: { title: d.title.slice(0, 120), body: d.body.slice(0, 500), link: d.link?.slice(0, 500) },
+      },
+    });
+    return this.mapNotification(rec);
+  }
+  async listNotifications(userId: string, opts?: { unreadOnly?: boolean; limit?: number }) {
+    const limit = Math.min(100, Math.max(1, opts?.limit ?? 50));
+    const recs = await (this.p as unknown as {
+      notification: {
+        findMany: (a: unknown) => Promise<{ id: string; userId: string; template: string; payload: unknown; sentAt: Date | null; createdAt: Date }[]>;
+      };
+    }).notification.findMany({
+      where: { userId, channel: "inapp", ...(opts?.unreadOnly ? { sentAt: null } : {}) },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+    });
+    return recs.map((r) => this.mapNotification(r));
+  }
+  async countUnreadNotifications(userId: string) {
+    const n = await (this.p as unknown as {
+      notification: { count: (a: unknown) => Promise<number> };
+    }).notification.count({ where: { userId, channel: "inapp", sentAt: null } });
+    return n;
+  }
+  async markNotificationRead(id: string, userId: string) {
+    await (this.p as unknown as {
+      notification: { updateMany: (a: unknown) => Promise<unknown> };
+    }).notification.updateMany({ where: { id, userId, channel: "inapp" }, data: { sentAt: new Date() } }).catch(() => null);
+  }
+  async markAllNotificationsRead(userId: string) {
+    const r = await (this.p as unknown as {
+      notification: { updateMany: (a: unknown) => Promise<{ count: number }> };
+    }).notification.updateMany({ where: { userId, channel: "inapp", sentAt: null }, data: { sentAt: new Date() } }).catch(() => ({ count: 0 }));
+    return r.count;
   }
 }
 

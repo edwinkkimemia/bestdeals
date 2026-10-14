@@ -35,6 +35,59 @@ export async function POST(req: NextRequest) {
     if (existing) {
       await store.setListingStatus(id, status, user.id, reasonCode ? `${reasonCode}: ${reason}` : reason);
       done += 1;
+      // Jiji-style seller feed: approval / fix-and-resubmit / hide.
+      try {
+        const { notifyUser } = await import("@/lib/notifications");
+        const ownerId = (existing as { ownerId?: string }).ownerId;
+        if (ownerId) {
+          const short = existing.title.slice(0, 80);
+          if (status === "active") {
+            await notifyUser({
+              userId: ownerId,
+              type: "listing",
+              title: "Listing approved 🎉",
+              body: `“${short}” is now live. Share it or boost it to reach more buyers.`,
+              link: "/dashboard/listings",
+            });
+          } else if (status === "rejected") {
+            await notifyUser({
+              userId: ownerId,
+              type: "listing",
+              title: "Listing needs fixes",
+              body: `“${short}” was declined: ${reasonCode ? `${reasonCode} — ` : ""}${reason.slice(0, 200)}. Edit and resubmit.`,
+              link: "/dashboard/listings",
+            });
+          } else if (status === "hidden") {
+            await notifyUser({
+              userId: ownerId,
+              type: "listing",
+              title: "Listing hidden",
+              body: `“${short}” was hidden: ${reason.slice(0, 200)}. Contact support if this looks wrong.`,
+              link: "/dashboard/listings",
+            });
+          }
+        }
+      } catch {}
+      // New-ad alerts: buyers watching this query get a bell (best-effort).
+      if (status === "active") {
+        try {
+          const { fanoutNewListingAlert } = await import("@/lib/search-alerts");
+          await fanoutNewListingAlert({
+            id: existing.id,
+            slug: existing.slug,
+            title: existing.title,
+            description: existing.description,
+            categorySlug: existing.categorySlug,
+            subcategory: existing.subcategory,
+            price: existing.price,
+            county: existing.county,
+            town: existing.town,
+            condition: existing.condition,
+            type: existing.type,
+            ownerId: (existing as { ownerId?: string }).ownerId,
+          });
+        } catch {}
+      }
     } else {
       await logAudit({ actorId: user.id, actorEmail: user.email, action: `moderate.${action}`, entity: "catalogue", entityId: id, reason }).catch(() => {});
     }
