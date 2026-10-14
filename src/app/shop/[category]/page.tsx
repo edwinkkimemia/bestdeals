@@ -47,7 +47,7 @@ export default async function CategoryPage({ params }: { params: { category: str
           <p className="text-sm text-ink-500">Be the first to <Link href="/sell" className="link-bd">list an item here</Link>.</p>
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {items.map((l) => <ListingCard key={l.id} listing={l} />)}
         </div>
       )}

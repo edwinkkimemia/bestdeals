@@ -50,7 +50,7 @@ export default async function DealsPage() {
           <Link href="/shop" className="btn-primary mt-4">Browse Shop</Link>
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {deals.map((l) => <ListingCard key={l.id} listing={l} />)}
         </div>
       )}

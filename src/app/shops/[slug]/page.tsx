@@ -137,7 +137,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
               </p>
             </div>
           ) : (
-            <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
               {catalogue.map((l) => <ListingCard key={l.id} listing={l} />)}
             </div>
           )}
@@ -213,7 +213,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
           <div className="card p-4 text-sm"><p className="font-bold">Policies</p><p className="text-ink-500">7-day returns on sealed electronics. Bulk quotes within 24h.</p></div>
         </div>
         <h2 className="section-title mt-8">Catalogue ({items.length})</h2>
-        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {items.map((l) => <ListingCard key={l.id} listing={l} />)}
         </div>
         <ReviewsBlock reviews={reviews} title={`Reviews for ${v.name}`} />

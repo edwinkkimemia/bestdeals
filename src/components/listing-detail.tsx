@@ -396,9 +396,9 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
       {moreFromSeller && moreFromSeller.length > 0 && (
         <section className="mt-10 scroll-mt-36" id="more-from-seller">
           <h2 className="section-title">More from {listing.sellerName}</h2>
-          <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
             {moreFromSeller.map((r) => (
-              <Link key={r.id} href={listingHref(r)} className="card p-3">
+              <Link key={r.id} href={listingHref(r)} className="card p-2.5">
                 <WmImage src={r.images[0]} alt={r.title} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
                 <p className="clamp-2 mt-2 text-sm font-semibold">{r.title}</p>
                 <p className="text-sm font-bold">{formatKES(r.price)}</p>
@@ -412,9 +412,9 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
         <section className="mt-10">
           <h2 className="section-title">Related from other sellers</h2>
           <p className="mt-1 text-sm text-ink-500">Similar items from classifieds and stores across Kenya — compare prices and sellers.</p>
-          <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
             {related.map((r) => (
-              <Link key={r.id} href={listingHref(r)} className="card p-3">
+              <Link key={r.id} href={listingHref(r)} className="card p-2.5">
                 <WmImage src={r.images[0]} alt={r.title} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
                 <p className="clamp-2 mt-2 text-sm font-semibold">{r.title}</p>
                 <p className="text-sm font-bold">{formatKES(r.price)}</p>
@@ -428,9 +428,9 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
       {recent.length > 0 && (
         <section className="mt-10">
           <h2 className="section-title">Recently viewed</h2>
-          <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
             {recent.map((r) => (
-              <Link key={r.id} href={listingHref(r)} className="card p-3">
+              <Link key={r.id} href={listingHref(r)} className="card p-2.5">
                 <WmImage src={r.images[0]} alt={r.title} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
                 <p className="clamp-2 mt-2 text-sm font-semibold">{r.title}</p>
                 <p className="text-sm font-bold">{formatKES(r.price)}</p>

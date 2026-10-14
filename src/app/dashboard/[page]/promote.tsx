@@ -94,18 +94,33 @@ export function PromotePanel({ listings, phone: defaultPhone, isAdmin, focusList
                   : <span className="chip">{eligible ? "Eligible ✓" : l.status !== "active" ? "Needs approval" : "Add photos"}</span>}
               </div>
               {eligible && !active && (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <select
-                    aria-label={`Boost product for ${l.title}`}
-                    className="input-bd max-w-xs"
-                    value={product[l.id] ?? BOOST_PRODUCTS[0].id}
-                    onChange={(e) => setProduct((p) => ({ ...p, [l.id]: e.target.value }))}
-                  >
-                    {BOOST_PRODUCTS.map((b) => <option key={b.id} value={b.id}>{b.name} — {formatKES(b.price)}</option>)}
-                  </select>
-                  <button className="btn-primary !px-4 !py-2 text-sm" disabled={busy === l.id} onClick={() => buy(l.id)}>
-                    {busy === l.id ? "Processing…" : "Boost with M-Pesa"}
+                <div className="mt-3">
+                  <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label={`Boost option for ${l.title}`}>
+                    {BOOST_PRODUCTS.map((b) => {
+                      const selected = (product[l.id] ?? BOOST_PRODUCTS[0].id) === b.id;
+                      return (
+                        <button
+                          key={b.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          onClick={() => setProduct((p) => ({ ...p, [l.id]: b.id }))}
+                          className={`rounded-xl border p-3 text-left text-sm transition ${selected ? "border-brand-600 bg-brand-50 ring-2 ring-brand-600/30" : "border-neutral-200 hover:border-brand-600"}`}
+                        >
+                          <span className="flex items-center justify-between gap-1 font-bold">
+                            {b.name}
+                            {b.id === "boost-30" && <Badge tone="green">Best value</Badge>}
+                          </span>
+                          <span className="mt-0.5 block font-extrabold">{formatKES(b.price)}</span>
+                          <span className="mt-0.5 block text-xs text-ink-500">{b.blurb}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button className="btn-primary mt-2 w-full !py-2 text-sm sm:w-auto sm:!px-6" disabled={busy === l.id} onClick={() => buy(l.id)}>
+                    {busy === l.id ? "Processing…" : `Boost for ${formatKES((BOOST_PRODUCTS.find((b) => b.id === (product[l.id] ?? BOOST_PRODUCTS[0].id)) ?? BOOST_PRODUCTS[0]).price)}`}
                   </button>
+                  <p className="mt-1 text-xs text-ink-400">Wallet balance pays instantly — otherwise an M-Pesa prompt goes to the number above.</p>
                 </div>
               )}
               {msg[l.id] && <p role="status" className="mt-2 rounded-lg bg-sand-50 p-2">{msg[l.id]}</p>}

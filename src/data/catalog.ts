@@ -152,17 +152,17 @@ export const planListings = (p: { listings: number }): string =>
 
 export const COMMISSION_BPS_DEFAULT = 500; // 5%
 
-/** Paid visibility products: Featured boosts + TOP pins (Jiji-style bump economics). */
+/**
+ * Paid visibility: exactly 3 Featured boosts (7 / 14 / 30 days). Each earns
+ * the Featured badge and leads rails for its window. Retired products
+ * (top-7, top-30, premium, vip) are rejected at checkout, but already-active
+ * promos of those kinds keep working until they expire — legacy TOP pins
+ * still pin via live promo kinds in search ranking.
+ */
 export const BOOST_PRODUCTS = [
-  { id: "boost-7", name: "Featured · 7 days", kind: "featured", days: 7, price: 199 },
-  { id: "boost-14", name: "Featured · 14 days", kind: "featured", days: 14, price: 299 },
-  { id: "boost-30", name: "Featured · 30 days", kind: "featured", days: 30, price: 499 },
-  // TOP pins sit above organics for 7/30 days (single-ad pin, Jiji-style).
-  { id: "top-7", name: "TOP pin · 7 days", kind: "top", days: 7, price: 349 },
-  { id: "top-30", name: "TOP pin · 30 days", kind: "top", days: 30, price: 899 },
-  // Portfolio tiers: longer window + auto-bump cadence handled in search ranking.
-  { id: "boost-premium-30", name: "Boost Premium · 30 days (5× reach)", kind: "boost_premium", days: 30, price: 1299 },
-  { id: "boost-vip-30", name: "Boost VIP · 30 days (7× reach + Similar Ads)", kind: "boost_vip", days: 30, price: 2499 },
+  { id: "boost-7", name: "Boost · 7 days", kind: "featured", days: 7, price: 199, blurb: "Featured badge · leads rails for a week. Best first try." },
+  { id: "boost-14", name: "Boost · 14 days", kind: "featured", days: 14, price: 299, blurb: "Featured badge for two weeks. Most flexible." },
+  { id: "boost-30", name: "Boost · 30 days", kind: "featured", days: 30, price: 499, blurb: "Featured badge for a full month. Best value." },
 ];
 
 export const boostProductById = (id: string) => BOOST_PRODUCTS.find((p) => p.id === id) ?? null;

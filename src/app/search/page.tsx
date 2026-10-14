@@ -253,7 +253,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-4">
               {items.map((l) => <ListingCard key={l.id} listing={l} />)}
             </div>
           )}

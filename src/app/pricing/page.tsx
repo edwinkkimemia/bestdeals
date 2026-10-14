@@ -68,9 +68,9 @@ export default function PricingPage() {
       <div className="mt-4 grid gap-4 sm:grid-cols-3">
         {BOOST_PRODUCTS.map((b) => (
           <div key={b.id} className="card flex flex-col p-5">
-            <p className="text-lg font-bold">{b.name}</p>
+            <p className="text-lg font-bold">{b.name} <Badge tone="green">Featured</Badge></p>
             <p className="mt-1 text-2xl font-extrabold">{formatKES(b.price)}<span className="text-sm font-normal text-ink-400"> one-time</span></p>
-            <p className="mt-1 flex-1 text-sm text-ink-500">Featured badge · homepage, search & related rails · labelled Featured throughout.</p>
+            <p className="mt-1 flex-1 text-sm text-ink-500">{b.blurb} Labelled Featured throughout.</p>
             <Link href="/dashboard/promotion" className="btn-primary mt-4 w-full">Boost a listing</Link>
           </div>
         ))}

@@ -184,7 +184,7 @@ export default async function HomePage() {
             </div>
             <Link href="/dashboard/promotion" className="link-bd">Promote yours →</Link>
           </div>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
             {featured.map((l) => <ListingCard key={l.id} listing={l} />)}
           </div>
         </section>
@@ -226,7 +226,7 @@ export default async function HomePage() {
             </div>
             <Link href="/deals" className="link-bd">All deals →</Link>
           </div>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
             {deals.map((l) => <ListingCard key={l.id} listing={l} />)}
           </div>
         </div>
@@ -310,7 +310,7 @@ export default async function HomePage() {
           </div>
           <Link href="/search?sort=newest" className="link-bd">View newest →</Link>
         </div>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {fresh.map((l) => <ListingCard key={l.id} listing={l} />)}
         </div>
       </section>
@@ -325,7 +325,7 @@ export default async function HomePage() {
             </div>
             <Link href="/classifieds" className="link-bd">All classifieds →</Link>
           </div>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
             {freshClassifieds.map((l) => <ListingCard key={l.id} listing={l} />)}
           </div>
         </div>
@@ -340,7 +340,7 @@ export default async function HomePage() {
           </div>
           <Link href="/shops" className="link-bd">All shops →</Link>
         </div>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {fromShops.map((l) => <ListingCard key={l.id} listing={l} />)}
         </div>
       </section>

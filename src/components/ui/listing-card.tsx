@@ -46,21 +46,21 @@ export function ListingCard({ listing }: { listing: Listing }) {
           <WishlistButton id={listing.id} title={listing.title} />
         </div>
       </Link>
-      <div className="space-y-2 p-3.5">
+      <div className="space-y-1.5 p-2.5">
         <div className="flex items-center gap-1.5">
           <ConditionBadge condition={listing.condition} />
-          <span className="text-xs text-ink-400">
+          <span className="truncate text-[11px] text-ink-400">
             {listing.town}, {listing.county}
           </span>
         </div>
-        <Link href={href} className="clamp-2 text-sm font-semibold leading-snug text-ink-900 hover:text-brand-700">
+        <Link href={href} className="clamp-2 text-[13px] font-semibold leading-snug text-ink-900 hover:text-brand-700">
           {listing.title}
         </Link>
         <Price value={listing.price} compareAt={listing.compareAt} />
-        <div className="flex items-center justify-between text-xs text-ink-500">
+        <div className="flex items-center justify-between text-[11px] text-ink-500">
           <span className="flex min-w-0 items-center gap-1">
-            <PlanCheckmark plan={listing.planId} size="sm" />
             <span className="truncate">{listing.verified ? `✓ ${listing.sellerName}` : listing.sellerName}</span>
+            <PlanCheckmark plan={listing.planId} size="sm" />
           </span>
           <span className="shrink-0" title={`Posted ${formatFull(listing.createdAt)}`}>{timeAgo(listing.createdAt)} · {formatDay(listing.createdAt)}</span>
         </div>

@@ -45,7 +45,7 @@ export default function WishlistPage() {
           <Link href="/shop" className="btn-primary mt-4">Discover products</Link>
         </div>
       ) : (
-        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {items.map((l) => <ListingCard key={l!.id} listing={l!} />)}
         </div>
       )}

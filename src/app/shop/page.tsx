@@ -72,7 +72,7 @@ export default async function ShopIndex() {
         <h2 className="font-bold">All shoppable products ({products.length})</h2>
         <Link href="/search?type=product&sort=newest" className="link-bd text-sm">Newest first →</Link>
       </div>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
         {products.map((l) => <ListingCard key={l.id} listing={l} />)}
       </div>
     </div>

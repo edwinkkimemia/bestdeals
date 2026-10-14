@@ -376,6 +376,8 @@ export interface Store {
   listPromotions(status?: string): Promise<PromotionRecord[]>;
   listPromotionsForOwner(ownerId: string): Promise<PromotionRecord[]>;
   listPromotionsByListing(listingId: string): Promise<PromotionRecord[]>;
+  /** Live promo kind per listing (`top` wins when stacked) — powers TOP-pin ranking. */
+  livePromoKinds(ids: string[], now?: number): Promise<Map<string, string>>;
   setPromotionStatus(id: string, status: string): Promise<void>;
   /** Activate a boost; if its window already lapsed (late payment), restart it from now. */
   activatePromotion(id: string, now?: number): Promise<PromotionRecord | null>;
@@ -837,6 +839,15 @@ class DemoStore implements Store {
       .filter((p) => p.listingId === listingId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
       .map((p) => ({ ...p, status: promoDisplayStatus(p) }));
+  }
+  async livePromoKinds(ids: string[], now = Date.now()): Promise<Map<string, string>> {
+    const kinds = new Map<string, string>();
+    for (const p of this.promotions.values()) {
+      if (!ids.includes(p.listingId) || !promoIsLive(p, now)) continue;
+      // A stacked TOP pin outranks a plain Featured boost for ranking.
+      if (p.kind === "top" || !kinds.has(p.listingId)) kinds.set(p.listingId, p.kind);
+    }
+    return kinds;
   }
   async sweepExpiredPromotions(now = Date.now()): Promise<number> {
     let flipped = 0;
@@ -1321,6 +1332,20 @@ class PrismaStore implements Store {
       select: { listingId: true, endsAt: true },
     });
     return new Set(rows.filter((r: { endsAt: Date }) => +r.endsAt > now).map((r: { listingId: string }) => r.listingId));
+  }
+  async livePromoKinds(ids: string[], now = Date.now()): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.p.promotion.findMany({
+      where: { listingId: { in: ids }, status: "active" },
+      select: { listingId: true, kind: true, endsAt: true },
+    }).catch(() => []);
+    const kinds = new Map<string, string>();
+    for (const r of rows as { listingId: string; kind: string; endsAt: Date }[]) {
+      if (+r.endsAt <= now) continue;
+      // A stacked TOP pin outranks a plain Featured boost for ranking.
+      if (r.kind === "top" || !kinds.has(r.listingId)) kinds.set(r.listingId, r.kind);
+    }
+    return kinds;
   }
   /** Owner seller-✓ flags, batched (missing accounts read as unverified). */
   private async userVerifiedMap(userIds: (string | null | undefined)[]): Promise<Map<string, boolean>> {

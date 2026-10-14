@@ -227,8 +227,10 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
     else if (sort === "price_desc") items = [...items].sort((a, b) => b.price - a.price);
     else if (sort === "newest") items = [...items].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
     else items = [...items].sort((a, b) => score(b, tokens) - score(a, tokens) || +new Date(b.createdAt) - +new Date(a.createdAt));
-    // TOP/featured lead deterministically.
-    items = rankDeterministic(items.map((l) => ({ ...l, topPinned: (l as { kind?: string }).kind === "top" }))) as typeof items;
+    // TOP pins lead deterministically — kinds come from live promos (a
+    // listing object never carries one, so reading it off was a no-op).
+    const kinds = await store.livePromoKinds(items.map((l) => l.id)).catch(() => new Map<string, string>());
+    items = rankDeterministic(items.map((l) => ({ ...l, topPinned: kinds.get(l.id) === "top" }))) as typeof items;
     // Badges follow the live user record, not the catalogue flag.
     try {
       const { withLiveVerification } = await import("./live-listings");

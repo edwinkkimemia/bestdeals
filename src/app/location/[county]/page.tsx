@@ -53,7 +53,7 @@ export default async function CountyPage({ params }: { params: { county: string 
           </div>
           <Link href={moreHref} className="link-bd">View all →</Link>
         </div>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {list.slice(0, 8).map((l) => <ListingCard key={l.id} listing={l} />)}
         </div>
       </section>

@@ -45,7 +45,7 @@ export default async function ClassifiedsIndex() {
       </div>
 
       <h2 className="mb-2 mt-8 font-bold">Latest classifieds ({items.length})</h2>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
         {items.map((l) => <ListingCard key={l.id} listing={l} />)}
       </div>
 

@@ -132,7 +132,7 @@ export default async function SellerPage({ params }: { params: { slug: string } 
           <p className="mt-1 text-sm text-ink-500">New listings appear here once approved by moderation.</p>
         </div>
       ) : (
-        <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {liveItems.map((l) => (
             <ListingCard key={l.id} listing={l} />
           ))}

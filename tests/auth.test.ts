@@ -119,15 +119,18 @@ describe("promotion-expiry", () => {
 });
 
 describe("boost-products", () => {
-  it("lists fixed-price featured boosts + TOP pins", () => {
-    assert.equal(BOOST_PRODUCTS.length, 7);
+  it("lists exactly 3 fixed-price Featured boosts (7/14/30 days)", () => {
+    assert.equal(BOOST_PRODUCTS.length, 3);
     for (const b of BOOST_PRODUCTS) {
-      assert.ok(b.price > 0 && b.days > 0 && ["featured", "top", "boost_premium", "boost_vip"].includes(b.kind));
+      assert.ok(b.price > 0 && b.days > 0 && b.kind === "featured");
+      assert.ok(b.blurb && b.blurb.length > 0);
     }
     assert.equal(boostProductById("boost-7")?.price, 199);
     assert.equal(boostProductById("boost-14")?.price, 299);
     assert.equal(boostProductById("boost-30")?.price, 499);
-    assert.equal(boostProductById("top-7")?.kind, "top");
+    // Retired products are rejected at checkout (old active promos still run).
+    assert.equal(boostProductById("top-7"), null);
+    assert.equal(boostProductById("boost-premium-30"), null);
     assert.equal(boostProductById("nope"), null);
   });
 });

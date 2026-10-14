@@ -151,6 +151,17 @@ async function seedUsers(): Promise<Map<string, { id: string; profileId: string 
         seller: { create: { displayName: name } },
       },
     });
+    // Demo plan floor from the static catalogue count (≤5 free, 6–30
+    // silver, 31+ gold): sellers like Baraka T (6 listings) must show Silver
+    // + checkmark instead of Free. Upgrades only — an admin downgrade is never
+    // reverted by re-seeding (same rule as passwords above).
+    const staticCount = LISTINGS.filter((l) => l.sellerName === name).length;
+    const floor = staticCount > 30 ? "gold" : staticCount > 5 ? "silver" : "free";
+    const rank = (p: string | null | undefined) => ["free", "silver", "gold"].indexOf(p ?? "free");
+    if (rank(floor) > rank(user.planId)) {
+      await prisma.user.update({ where: { email }, data: { planId: floor } });
+      console.log(`[seed] ${email} holds ${staticCount} catalogue listings → ${floor} plan.`);
+    }
     const profile = await prisma.sellerProfile.findUnique({ where: { userId: user.id } });
     out.set(name, { id: user.id, profileId: profile?.id ?? null });
   }
