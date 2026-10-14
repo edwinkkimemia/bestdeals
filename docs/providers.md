@@ -30,5 +30,27 @@
 
 ## Object storage
 
-- Set `S3_*` vars; product images go to the public CDN prefix, seller/ID documents to a **private** prefix with signed URLs.
+- Production needs persistent storage: `public/uploads` is git-ignored and
+  Vercel `/tmp` is wiped on every redeploy, so profile photos, shop
+  logos/covers and listing images disappear without it. `DATABASE_URL`
+  (Postgres) is required regardless — without it the whole store (including
+  image URLs) is per-instance memory.
+- Set `S3_BUCKET` + `S3_ACCESS_KEY` + `S3_SECRET_KEY` (plus `S3_REGION`,
+  optional `S3_ENDPOINT` for R2/MinIO); S3 auto-enables as soon as the keys
+  exist. `UPLOAD_DRIVER` is optional: `s3` forces S3, `local` forces local.
+  Product images go to the public `public/` prefix, seller/ID documents to a
+  **private** prefix with signed URLs.
+- Without S3 on serverless, public uploads fall back to DB-backed
+  `/api/files/db/…` URLs — the bytes (not just the URL string) are staged in
+  Postgres, capped ~1.65MB after compression, so avatars/logos/covers survive
+  redeploys; large listing batches still need S3. `/api/health` shows
+  `uploads: s3|db-fallback|local` plus `uploadsDurable` (db-fallback counts as
+  durable only when `DATABASE_URL` is set).
+- All uploads require sign-in; deleting a staged image requires the uploader
+  (or an admin).
+- S3 buckets must allow public reads on the `public/*` prefix (bucket
+  policy, not per-object ACLs) — the watermark endpoint fetches the public
+  URL to bake the Chap mark, and product photos load from it directly. If
+  the bucket is private, new product photos 404 and the gallery shows a
+  placeholder instead of the photo.
 - Uploads validated: JPG/PNG/WebP, ≤5MB, ≤8 per listing (`/api/upload`).

@@ -385,6 +385,8 @@ export interface Store {
   // site settings (Admin → Settings, key/value JSON)
   getSetting(key: string): Promise<unknown | null>;
   setSetting(key: string, value: unknown): Promise<void>;
+  /** Remove a setting row entirely (staged image bytes — never tombstones). */
+  deleteSetting(key: string): Promise<void>;
   // conversations (in-app messaging)
   createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }): Promise<ConversationRecord>;
   getConversation(id: string): Promise<ConversationRecord | null>;
@@ -933,6 +935,9 @@ class DemoStore implements Store {
   async setSetting(key: string, value: unknown) {
     this.settings.set(key, value);
   }
+  async deleteSetting(key: string) {
+    this.settings.delete(key);
+  }
 
   async createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }) {
     const rec: ConversationRecord = {
@@ -1303,7 +1308,9 @@ class PrismaStore implements Store {
     const recs = await this.p.listing.findMany({
       where: { sellerProfileId: profile.id },
       orderBy: { createdAt: "desc" }, take: 200,
-      include: { images: { orderBy: { position: "asc" }, take: 1 } },
+      // All ordered images — truncating to 1 here starves the product
+      // gallery (and cards) down to the cover photo for every seller listing.
+      include: { images: { orderBy: { position: "asc" } } },
     });
     const live = await this.livePromoListingIds(recs.map((r: { id: string }) => r.id));
     const slugs = await this.shopSlugMap(recs.map((r) => (r as { shopId?: string | null }).shopId));
@@ -1327,7 +1334,9 @@ class PrismaStore implements Store {
     const recs = await this.p.listing.findMany({
       where: { shopId: (shop as { id: string }).id },
       orderBy: { createdAt: "desc" }, take: 200,
-      include: { images: { orderBy: { position: "asc" }, take: 1 }, seller: true },
+      // All ordered images — truncating to 1 starves the product gallery
+      // (and cards) down to the cover photo for every seller listing.
+      include: { images: { orderBy: { position: "asc" } }, seller: true },
     });
     const live = await this.livePromoListingIds(recs.map((r: { id: string }) => r.id));
     const vmap = await this.userVerifiedMap(recs.map((r) => (r as { seller?: { userId?: string } | null }).seller?.userId));
@@ -1349,7 +1358,9 @@ class PrismaStore implements Store {
     const recs = await this.p.listing.findMany({
       where: { status: status as never },
       orderBy: { createdAt: "desc" }, take: 200,
-      include: { images: { orderBy: { position: "asc" }, take: 1 }, seller: true },
+      // All ordered images — truncating to 1 starves the product gallery
+      // (and cards) down to the cover photo for every seller listing.
+      include: { images: { orderBy: { position: "asc" } }, seller: true },
     });
     const live = await this.livePromoListingIds(recs.map((r: { id: string }) => r.id));
     const slugs = await this.shopSlugMap(recs.map((r) => (r as { shopId?: string | null }).shopId));
@@ -2034,6 +2045,9 @@ class PrismaStore implements Store {
       update: { value: value as never },
       create: { key, value: value as never },
     }).catch(() => null);
+  }
+  async deleteSetting(key: string) {
+    await this.p.setting.delete({ where: { key } }).catch(() => null);
   }
 
   async createConversation(c: Omit<ConversationRecord, "id" | "createdAt"> & { firstMessage: { senderId: string; senderLabel: string; body: string; bodyHtml: string } }) {

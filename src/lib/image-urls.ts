@@ -1,8 +1,8 @@
 /**
  * Shared allow-list for listing/product image URLs.
- * - https://… external links
+ * - https://… external links (incl. S3 public URLs)
  * - /uploads/… local-disk uploads (single-server dev)
- * - /api/files/… serverless uploads (Vercel /tmp, served via API)
+ * - /api/files/… serverless uploads (incl. durable /api/files/db/… DB fallback)
  *
  * These MUST stay in sync everywhere: the upload response, the sell/edit
  * form, and the POST/PUT listings APIs. They drifted once — /api/files/

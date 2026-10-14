@@ -28,6 +28,8 @@ import { ViewTracker } from "./view-tracker";
 import { ViewCount } from "./view-count";
 import { Badge, ConditionBadge, VerifiedBadge } from "@/components/ui/badge";
 import { WmImage } from "@/components/ui/wm-image";
+import { SafeImage } from "@/components/ui/safe-image";
+import { ProductGallery } from "@/components/product-gallery";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { Price } from "@/components/ui/listing-card";
 import { useCart } from "@/components/cart-provider";
@@ -106,9 +108,8 @@ function ShareButtons({ title }: { title: string }) {
   );
 }
 
-export function ListingDetail({ listing, related, moreFromSeller, reviews, listingReviews, jsonLd, sellerPhotoUrl, previewStatus, shopInfo }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; listingReviews?: ReviewRecord[]; jsonLd: Record<string, unknown>; sellerPhotoUrl?: string | null; previewStatus?: string | null; shopInfo?: { name: string; logoUrl: string | null; verified: boolean; businessCategory: string; town: string; county: string } | null }) {
+export function ListingDetail({ listing, related, moreFromSeller, reviews, listingReviews, jsonLd, sellerPhotoUrl, previewStatus, shopInfo }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; listingReviews?: ReviewRecord[]; jsonLd: Record<string, unknown>; sellerPhotoUrl?: string | null; previewStatus?: string | null; shopInfo?: { name: string; logoUrl: string | null; verified: boolean; businessCategory: string; town: string; county: string; phone?: string | null } | null }) {
   const { add } = useCart();
-  const [img, setImg] = useState(0);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
   const [report, setReport] = useState("");
@@ -121,11 +122,13 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
   // Avatar: owner's photo for individual sellers, shop logo for shop listings.
   const avatarUrl = shopCard ? shopCard.logoUrl : (sellerPhotoUrl ?? null);
   // WhatsApp ordering always uses the verified number: the snapshot taken at
-  // posting time first, then the shop's approved contact. No number, no button.
+  // posting time first, then the shop's approved contact (store twin wins —
+  // the catalogue phone goes stale after seller edits). No number, no button.
+  const shopPhone = shopInfo?.phone ?? shop?.phone;
   const waPhone = listing.sellerPhone
     ? toWhatsApp(listing.sellerPhone)
-    : shop?.phone
-      ? toWhatsApp(shop.phone)
+    : shopPhone
+      ? toWhatsApp(shopPhone)
       : null;
   const waOrderHref = waPhone
     ? `https://wa.me/${waPhone}?text=${encodeURIComponent(`Hello ${listing.sellerName}! I'd like to order "${listing.title}" (${formatKES(listing.price)}) I saw on Chap. Is it available?`)}`
@@ -133,7 +136,6 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
 
   useEffect(() => {
     setQty(1);
-    setImg(0);
     try {
       const raw = JSON.parse(localStorage.getItem("chap_recent_v1") || "[]") as string[];
       const next = [listing.id, ...raw.filter((x) => x !== listing.id)].slice(0, 12);
@@ -196,19 +198,8 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
       <div className="container-bd">
       <div className="mt-6 flex flex-col gap-6 lg:grid lg:grid-cols-[1.2fr_1fr] lg:items-start">
         <div className="order-1 min-w-0 lg:order-1">
-          <div className="card overflow-hidden">
-            <WmImage src={listing.images[img]} alt={listing.title} className="aspect-[4/3] w-full object-cover" />
-          </div>
-          {listing.images.length > 1 && (
-            <div className="mt-2 flex gap-2">
-              {listing.images.map((s, i) => (
-                <button key={s + i} onClick={() => setImg(i)} aria-label={`View image ${i + 1}`} className={`overflow-hidden rounded-lg border-2 ${i === img ? "border-brand-600" : "border-transparent"}`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={s} alt="" className="h-16 w-20 object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Keyed by listing: same-title listings must never inherit gallery state. */}
+          <ProductGallery key={listing.id} images={listing.images} title={listing.title} />
         </div>
 
         {/* Buy card — right after gallery on mobile, sticky rail on desktop.
@@ -341,8 +332,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
           <div className="flex items-center gap-3">
             <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-lg font-black text-white">
               {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                <SafeImage src={avatarUrl} alt="" className="h-full w-full object-cover" fallback={(shopCard ? shopCard.name : listing.sellerName).charAt(0).toUpperCase()} />
               ) : (
                 (shopCard ? shopCard.name : listing.sellerName).charAt(0).toUpperCase()
               )}

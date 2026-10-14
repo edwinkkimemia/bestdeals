@@ -9,11 +9,19 @@ export const metadata = {
   description: "Browse products, classifieds and services across all 47 Kenyan counties — pick your county and see what's listed near you.",
 };
 
-export default function LocationIndex() {
+// Live counts must include seller listings — a static prerender would freeze
+// counts at build time and hide every product posted afterwards.
+export const dynamic = "force-dynamic";
+
+export default async function LocationIndex() {
+  const { getLiveStoreListings, mergeStaticAndLive } = await import("@/lib/live-listings");
+  const { countyMatches } = await import("@/lib/kenya");
+  const live = await getLiveStoreListings();
+  const all = mergeStaticAndLive(LISTINGS, live);
   const counties = [...KENYA_COUNTIES]
     .map((c) => ({
       ...c,
-      count: LISTINGS.filter((l) => l.county.trim().toLowerCase() === c.county.toLowerCase()).length,
+      count: all.filter((l) => countyMatches(l.county, c.county)).length,
     }))
     .sort((a, b) => a.county.localeCompare(b.county));
   const totalTowns = KENYA_COUNTIES.reduce((s, c) => s + c.towns.length, 0);
@@ -30,7 +38,7 @@ export default function LocationIndex() {
         {[
           { t: `${KENYA_COUNTIES.length} counties`, d: "Full national coverage, from Mombasa to Turkana." },
           { t: `${totalTowns}+ towns`, d: "Major towns and subcounty headquarters in every county." },
-          { t: `${LISTINGS.length} listings`, d: "Live catalogue spread across the country — growing daily." },
+          { t: `${all.length} listings`, d: "Live catalogue spread across the country — growing daily." },
         ].map((c) => (
           <div key={c.t} className="card p-4">
             <p className="font-bold">{c.t}</p>

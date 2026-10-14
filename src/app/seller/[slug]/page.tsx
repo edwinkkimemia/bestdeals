@@ -12,7 +12,12 @@ import { ListingCard } from "@/components/ui/listing-card";
 import { Badge } from "@/components/ui/badge";
 import { ratingLabel } from "@/lib/ratings";
 import { ShareRow } from "@/components/share-row";
+import { SafeImage } from "@/components/ui/safe-image";
 import { breadcrumbJsonLd } from "@/lib/seo";
+
+// Seller catalogues change as sellers post and admins moderate — a static
+// prerender would freeze them at build time and hide new products.
+export const dynamic = "force-dynamic";
 
 export function generateStaticParams() {
   const names = [...new Set(LISTINGS.map((l) => l.sellerName))];
@@ -61,8 +66,7 @@ export default async function SellerPage({ params }: { params: { slug: string } 
       <div className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
         <span aria-hidden className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-2xl font-black text-white">
           {profile.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={profile.photoUrl} alt="" className="h-full w-full object-cover" />
+            <SafeImage src={profile.photoUrl} alt="" className="h-full w-full object-cover" fallback={profile.name.charAt(0).toUpperCase()} />
           ) : (
             profile.name.charAt(0).toUpperCase()
           )}

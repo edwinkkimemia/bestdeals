@@ -4,17 +4,33 @@ import { storeRead } from "@/lib/store";
 import { ratingLabel } from "@/lib/ratings";
 import { Badge } from "@/components/ui/badge";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
+import { SafeImage } from "@/components/ui/safe-image";
 
 export const metadata = {
   title: "Business Shops",
   description: "Branded Kenyan storefronts with catalogues, delivery info, wholesale enquiries and verified reviews.",
 };
 
+// New shops open daily — a static prerender would freeze this index at build time.
+export const dynamic = "force-dynamic";
+
 export default async function ShopsIndex() {
   const community = await storeRead((s) => s.listShops(), []);
+  const twins = new Map(community.map((c) => [c.slug, c]));
+  const { mergeShopDisplay } = await import("@/lib/live-listings");
   const withRatings = await Promise.all(
     SHOPS.map(async (s) => ({
-      shop: s,
+      // Store twin (admin verification + header edits) wins over the frozen
+      // catalogue copy — otherwise featured cards disagree with admin.
+      shop: mergeShopDisplay(
+        {
+          slug: s.slug, name: s.name, description: s.description,
+          businessCategory: s.businessCategory, county: s.county, town: s.town,
+          phone: s.phone, logo: s.logo, cover: s.cover, verified: s.verified,
+          deliveryInfo: s.deliveryInfo, hours: s.hours,
+        },
+        twins.get(s.slug) ?? null
+      ),
       rating: ratingLabel(await storeRead((st) => st.listApprovedReviewsForShop(s.slug), [])),
     }))
   );
@@ -41,8 +57,11 @@ export default async function ShopsIndex() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {withRatings.map(({ shop: s, rating }) => (
             <Link key={s.slug} href={`/shops/${s.slug}`} className="card overflow-hidden hover:shadow-lg">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={s.cover} alt={`${s.name} cover`} loading="lazy" className="h-28 w-full object-cover" />
+              <div aria-hidden className="h-28 w-full bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800">
+                {s.cover && (
+                  <SafeImage src={s.cover} alt={`${s.name} cover`} loading="lazy" className="h-28 w-full object-cover" />
+                )}
+              </div>
               <div className="p-4">
                 <p className="font-bold">{s.name} {s.verified ? <Badge tone="green">✓ Verified</Badge> : <Badge>Unverified</Badge>}</p>
                 <p className="text-xs text-ink-500">{s.businessCategory} · {s.town}, {s.county} · {rating}</p>
@@ -58,17 +77,15 @@ export default async function ShopsIndex() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {community.map((s) => (
               <Link key={s.slug} href={`/shops/${s.slug}`} className="card overflow-hidden hover:border-brand-600">
-                {s.coverUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s.coverUrl} alt={`${s.name} cover`} loading="lazy" className="h-28 w-full object-cover" />
-                ) : (
-                  <div aria-hidden className="h-16 w-full bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800" />
-                )}
+                <div aria-hidden className="h-28 w-full bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800">
+                  {s.coverUrl && (
+                    <SafeImage src={s.coverUrl} alt={`${s.name} cover`} loading="lazy" className="h-28 w-full object-cover" />
+                  )}
+                </div>
                 <div className="flex items-start gap-2.5 p-4">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-600 font-black text-white">
                     {s.logoUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={s.logoUrl} alt="" className="h-full w-full object-cover" />
+                      <SafeImage src={s.logoUrl} alt="" className="h-full w-full object-cover" fallback={s.name.charAt(0).toUpperCase()} />
                     ) : (
                       s.name.charAt(0).toUpperCase()
                     )}

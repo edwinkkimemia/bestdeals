@@ -21,10 +21,17 @@ export default async function DashPage({ params, searchParams }: { params: { pag
   const fresh = await store.findUserById(user.id).catch(() => null);
 
   if (params.page === "profile") {
+    const { isDbConfigured } = await import("@/lib/db");
+    const showDemoHint = !isDbConfigured();
     return (
       <div>
         <h1 className="section-title flex items-center gap-2"><User className="h-6 w-6 text-brand-600" /> Profile</h1>
         <p className="mt-1 text-sm text-ink-500">This is what buyers see on your listings. Verification is handled separately and can&rsquo;t be self-awarded.</p>
+        {showDemoHint && (
+          <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            Demo storage is active (no DATABASE_URL) — your profile photo resets on restart/redeploy. Set DATABASE_URL to keep it.
+          </p>
+        )}
         <div className="mt-4"><EmailVerifyPanel verified={fresh?.emailVerified ?? false} email={user.email} /></div>
         <div className="card mt-4 space-y-4 p-5">
           <ProfilePhotoForm initialUrl={fresh?.photoUrl ?? null} name={fresh?.name ?? user.name} />

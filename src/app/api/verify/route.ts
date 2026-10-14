@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Upload your document first (JPG/PNG/WebP, ≤5MB)." }, { status: 400 });
   }
   // Prove the file exists and was uploaded (not a forged private: string).
-  const { privateBaseDir } = await import("@/lib/storage");
+  const { privateBaseDir, isS3Configured } = await import("@/lib/storage");
   const { isDbDocRef, dbDocKey } = await import("@/lib/privdocs");
   const { join } = await import("path");
   const { existsSync } = await import("fs");
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
     const rel = p.replace(/^private:/, "");
     if (rel.includes("..")) return NextResponse.json({ error: "Invalid document path." }, { status: 400 });
-    if ((process.env.UPLOAD_DRIVER || "local") !== "s3" && !existsSync(join(privateBaseDir(), rel))) {
+    if (!isS3Configured() && !existsSync(join(privateBaseDir(), rel))) {
       return NextResponse.json({ error: "Document upload not found. Upload again." }, { status: 400 });
     }
   }

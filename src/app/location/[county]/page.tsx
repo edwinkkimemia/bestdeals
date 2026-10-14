@@ -7,6 +7,10 @@ import { KENYA_COUNTIES, countyMatches } from "@/lib/kenya";
 import { ListingCard } from "@/components/ui/listing-card";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
+// Live seller listings must appear instantly — a static prerender would freeze
+// this page at build time and hide every product posted afterwards.
+export const dynamic = "force-dynamic";
+
 export function generateStaticParams() {
   return KENYA_COUNTIES.map((c) => ({ county: c.county }));
 }

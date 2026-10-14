@@ -238,38 +238,117 @@ export type ShopInfo = {
   businessCategory: string;
   town: string;
   county: string;
+  /** Store-twin phone (admin/seller editable) — catalogue copy goes stale. */
+  phone?: string | null;
+};
+
+/** Display fields shared by the static catalogue and store shop rows. */
+export type ShopDisplay = {
+  slug: string;
+  name: string;
+  description: string;
+  businessCategory: string;
+  county: string;
+  town: string;
+  phone: string;
+  logo: string | null;
+  cover: string | null;
+  verified: boolean;
+  deliveryInfo: string;
+  hours: string;
+};
+
+export type ShopTwin = {
+  name?: string | null;
+  description?: string | null;
+  businessCategory?: string | null;
+  county?: string | null;
+  town?: string | null;
+  phone?: string | null;
+  logoUrl?: string | null;
+  coverUrl?: string | null;
+  verified?: boolean;
+  deliveryInfo?: string | null;
+  hours?: string | null;
 };
 
 /**
- * Shop identity for product pages: static catalogue first, then
- * seller-created stores. Lets shop listings show the shop (logo, name,
- * business badge) instead of the owner's personal profile.
+ * Store twin wins over the hardcoded catalogue: admin verification plus
+ * seller header edits (logo/cover/name/…) live in the store, while the
+ * catalogue copy is frozen at seed time. Without this, demo shops (e.g.
+ * Rift Hardware) show "Verification pending" publicly after being verified
+ * in admin — the exact mismatch reported. Blank store fields fall back to
+ * catalogue values; logo/cover trust the twin once it exists.
+ */
+export function mergeShopDisplay(demo: ShopDisplay, stored: ShopTwin | null): ShopDisplay {
+  if (!stored) return demo;
+  const text = (v: string | null | undefined, fb: string) => (v ?? "").trim() || fb;
+  return {
+    ...demo,
+    name: text(stored.name, demo.name),
+    description: text(stored.description, demo.description),
+    businessCategory: text(stored.businessCategory, demo.businessCategory),
+    county: text(stored.county, demo.county),
+    town: text(stored.town, demo.town),
+    phone: text(stored.phone, demo.phone),
+    // Art falls back to the catalogue (seeded twins always carry it; legacy
+    // NULL rows predate the columns). An explicit logo removal on a demo shop
+    // re-shows the catalogue art — accepted over dropping art entirely.
+    logo: stored.logoUrl ?? demo.logo,
+    cover: stored.coverUrl ?? demo.cover,
+    verified: stored.verified ?? demo.verified,
+    deliveryInfo: text(stored.deliveryInfo, demo.deliveryInfo),
+    hours: text(stored.hours, demo.hours),
+  };
+}
+
+/**
+ * Shop identity for product pages: the store twin (admin verification +
+ * seller header edits) wins, the static catalogue is the fallback. Lets
+ * shop listings show the shop (logo, name, business badge) instead of the
+ * owner's personal profile.
  */
 export async function resolveShopInfo(shopSlug?: string): Promise<ShopInfo | null> {
   if (!shopSlug) return null;
+  const stored = await storeRead((st) => st.getShopBySlug(shopSlug), null);
   const { getShop } = await import("@/data/catalog");
   const demo = getShop(shopSlug);
-  if (demo) {
+  if (stored) {
+    const base: ShopDisplay = demo
+      ? {
+          slug: demo.slug, name: demo.name, description: demo.description,
+          businessCategory: demo.businessCategory, county: demo.county, town: demo.town,
+          phone: demo.phone, logo: demo.logo, cover: demo.cover, verified: demo.verified,
+          deliveryInfo: demo.deliveryInfo, hours: demo.hours,
+        }
+      : {
+          slug: stored.slug, name: stored.name, description: stored.description ?? "",
+          businessCategory: stored.businessCategory ?? "", county: stored.county ?? "",
+          town: stored.town ?? "", phone: stored.phone ?? "", logo: null, cover: null,
+          verified: stored.verified ?? false, deliveryInfo: "", hours: "",
+        };
+    const v = mergeShopDisplay(base, stored);
     return {
-      slug: demo.slug,
-      name: demo.name,
-      logoUrl: demo.logo,
-      verified: demo.verified,
-      businessCategory: demo.businessCategory,
-      town: demo.town,
-      county: demo.county,
+      slug: v.slug,
+      name: v.name,
+      logoUrl: v.logo,
+      verified: v.verified,
+      businessCategory: v.businessCategory,
+      town: v.town,
+      county: v.county,
+      phone: v.phone,
     };
   }
-  const stored = await storeRead((st) => st.getShopBySlug(shopSlug), null);
-  if (!stored) return null;
+  if (!demo) return null;
   return {
-    slug: stored.slug,
-    name: stored.name,
-    logoUrl: stored.logoUrl ?? null,
-    verified: stored.verified,
-    businessCategory: stored.businessCategory,
-    town: stored.town,
-    county: stored.county,
+    slug: demo.slug,
+    name: demo.name,
+    logoUrl: demo.logo,
+    verified: demo.verified,
+    businessCategory: demo.businessCategory,
+    town: demo.town,
+    county: demo.county,
+    phone: demo.phone,
   };
 }
 

@@ -32,9 +32,22 @@ export default async function ShopDash({ searchParams }: { searchParams: { new?:
     user.role === "ADMIN" ||
     active?.ownerId === user.id ||
     members.some((m) => m.userId === user.id && m.role === "owner");
+  const { isDbConfigured } = await import("@/lib/db");
+  const { isS3Configured, isServerlessUploads } = await import("@/lib/storage");
+  const ephemeralUploads = !isS3Configured() && isServerlessUploads();
   return (
     <div>
       <h1 className="section-title flex items-center gap-2"><Store className="h-6 w-6 text-brand-600" /> My shop</h1>
+      {!isDbConfigured() && (
+        <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          Demo storage is active (no DATABASE_URL) — shops, logos and covers reset on restart/redeploy. Set DATABASE_URL + run migrations to keep them.
+        </p>
+      )}
+      {isDbConfigured() && ephemeralUploads && (
+        <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          File storage is DB-backed fallback (no S3) — logos/covers survive redeploys, but large batches need S3 (docs/providers.md).
+        </p>
+      )}
       {searchParams.new === "business" && (
         <p className="mt-3 rounded-xl bg-brand-50 p-3 text-sm text-brand-700">
           Welcome aboard ✓ — two steps to open your shop: 1) verify your business below, 2) create your storefront.

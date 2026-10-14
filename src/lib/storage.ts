@@ -32,8 +32,17 @@ export function isServerlessUploads(): boolean {
 }
 
 export function isS3Configured(): boolean {
-  return (process.env.UPLOAD_DRIVER || "local") === "s3" && Boolean(process.env.S3_BUCKET && process.env.S3_ACCESS_KEY && process.env.S3_SECRET_KEY);
+  const driver = (process.env.UPLOAD_DRIVER || "").trim().toLowerCase();
+  // Explicit opt-out always wins (local/ephemeral even if keys exist).
+  if (driver === "local") return false;
+  const hasKeys = Boolean(process.env.S3_BUCKET && process.env.S3_ACCESS_KEY && process.env.S3_SECRET_KEY);
+  // Auto-enable when keys exist so setting S3_* alone is enough; explicit
+  // UPLOAD_DRIVER=s3 keeps working for backwards compatibility.
+  if (driver === "s3") return hasKeys;
+  return hasKeys;
 }
+
+
 
 export function s3PublicUrl(key: string): string {
   const bucket = process.env.S3_BUCKET || "chap-media";

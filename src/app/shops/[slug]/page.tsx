@@ -12,6 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { localBusinessJsonLd, breadcrumbJsonLd } from "@/lib/seo";
 import { ratingLabel } from "@/lib/ratings";
 import { ShareRow } from "@/components/share-row";
+import { SafeImage } from "@/components/ui/safe-image";
+
+// Shop catalogues change as sellers post and admins moderate — a static
+// prerender would freeze them at build time and hide new products.
+export const dynamic = "force-dynamic";
 
 const SOCIAL_LABELS: Record<string, string> = {
   facebook: "Facebook",
@@ -43,9 +48,13 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const s = getShop(params.slug);
   if (s) {
+    // Twin wins for name/description so tab titles track admin/seller edits.
+    const twin = await storeRead((st) => st.getShopBySlug(params.slug), null);
+    const name = (twin?.name ?? "").trim() || s.name;
+    const description = (twin?.description ?? "").trim() || s.description;
     return {
-      title: `${s.name} — Shop on Chap`,
-      description: s.description.slice(0, 160),
+      title: `${name} — Shop on Chap`,
+      description: description.slice(0, 160),
       alternates: { canonical: `https://chap.co.ke/shops/${s.slug}` },
     };
   }
@@ -76,18 +85,16 @@ export default async function ShopPage({ params }: { params: { slug: string } })
     const catalogue = await getLiveShopListings(nonNull.slug);
     return (
       <div>
-        {nonNull.coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={nonNull.coverUrl} alt={`${nonNull.name} cover`} className="h-48 w-full object-cover sm:h-64" />
-        ) : (
-          <div aria-hidden className="h-32 w-full bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 sm:h-44" />
-        )}
+        <div aria-hidden className="relative h-32 w-full overflow-hidden bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 sm:h-44">
+          {nonNull.coverUrl && (
+            <SafeImage src={nonNull.coverUrl} alt={`${nonNull.name} cover`} className="absolute inset-0 h-full w-full object-cover" />
+          )}
+        </div>
         <div className="container-bd py-6">
           <div className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
             <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-600 text-2xl font-black text-white">
               {nonNull.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={nonNull.logoUrl} alt={`${nonNull.name} logo`} className="h-full w-full object-cover" />
+                <SafeImage src={nonNull.logoUrl} alt={`${nonNull.name} logo`} className="h-full w-full object-cover" fallback={nonNull.name.charAt(0).toUpperCase()} />
               ) : (
                 nonNull.name.charAt(0).toUpperCase()
               )}
@@ -140,42 +147,60 @@ export default async function ShopPage({ params }: { params: { slug: string } })
   const liveForShop = await getLiveForStatic(s.slug);
   const items = mergeStaticAndLive(staticItems, liveForShop);
   const reviews = await storeRead((st) => st.listApprovedReviewsForShop(s.slug), []);
-  // Seller-managed contacts live on the store twin (seeded shops have one).
+  // Seller-managed header + verification live on the store twin (seeded
+  // shops have one) — the catalogue copy is frozen, so the twin wins or the
+  // storefront shows stale badges/logos after admin verification or edits.
   const contacts = await storeRead((st) => st.getShopBySlug(s.slug), null);
+  const { mergeShopDisplay } = await import("@/lib/live-listings");
+  const v = mergeShopDisplay(
+    {
+      slug: s.slug, name: s.name, description: s.description,
+      businessCategory: s.businessCategory, county: s.county, town: s.town,
+      phone: s.phone, logo: s.logo, cover: s.cover, verified: s.verified,
+      deliveryInfo: s.deliveryInfo, hours: s.hours,
+    },
+    contacts
+  );
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
-      localBusinessJsonLd({ name: s.name, description: s.description, url: `https://chap.co.ke/shops/${s.slug}`, phone: s.phone, area: `${s.town}, ${s.county}` }),
-      breadcrumbJsonLd([{ name: "Home", url: "https://chap.co.ke/" }, { name: "Shops", url: "https://chap.co.ke/shops" }, { name: s.name, url: `https://chap.co.ke/shops/${s.slug}` }]),
+      localBusinessJsonLd({ name: v.name, description: v.description, url: `https://chap.co.ke/shops/${v.slug}`, phone: v.phone, area: `${v.town}, ${v.county}` }),
+      breadcrumbJsonLd([{ name: "Home", url: "https://chap.co.ke/" }, { name: "Shops", url: "https://chap.co.ke/shops" }, { name: v.name, url: `https://chap.co.ke/shops/${v.slug}` }]),
     ],
   };
   return (
     <div>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={s.cover} alt={`${s.name} cover`} className="h-48 w-full object-cover sm:h-64" />
+      <div aria-hidden className="relative h-32 w-full overflow-hidden bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 sm:h-44">
+        {v.cover && <SafeImage src={v.cover} alt={`${v.name} cover`} className="absolute inset-0 h-full w-full object-cover" />}
+      </div>
       <div className="container-bd py-6">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
         <div className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={s.logo} alt={`${s.name} logo`} className="h-16 w-16 rounded-xl object-cover" />
+          {v.logo ? (
+            <SafeImage src={v.logo} alt={`${v.name} logo`} className="h-16 w-16 rounded-xl object-cover" fallback={v.name.charAt(0).toUpperCase()} />
+          ) : (
+            <span aria-hidden className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-2xl font-black text-white">
+              {v.name.charAt(0).toUpperCase()}
+            </span>
+          )}
           <div className="flex-1">
-            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{s.name} {s.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</h1>
-            <p className="text-sm text-ink-500">{s.businessCategory} · {s.town}, {s.county} · {ratingLabel(reviews)} · 🕒 {s.hours}</p>
-            <p className="mt-1 text-sm">{s.description}</p>
+            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{v.name} {v.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</h1>
+            <p className="text-sm text-ink-500">{v.businessCategory} · {v.town}, {v.county} · {ratingLabel(reviews)}{v.hours ? ` · 🕒 ${v.hours}` : ""}</p>
+            <p className="mt-1 text-sm">{v.description}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href={`/search?q=${encodeURIComponent(s.name)}`} className="btn-secondary">All products</Link>
-            <a href={`tel:${s.phone.replace(/\s/g, "")}`} className="btn-secondary"><Phone className="h-4 w-4" /> Call</a>
-            <a href={`https://wa.me/${s.phone.replace(/\D/g, "").replace(/^0/, "254")}?text=${encodeURIComponent(`Hello ${s.name}! I found your shop on Chap.`)}`} target="_blank" rel="noopener" className="btn-whatsapp"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
-            <Link href={`/dashboard/messages/new?shop=${s.slug}`} className="btn-primary"><MessageCircle className="h-4 w-4" /> Message shop</Link>
+            <Link href={`/search?q=${encodeURIComponent(v.name)}`} className="btn-secondary">All products</Link>
+            <a href={`tel:${v.phone.replace(/\s/g, "")}`} className="btn-secondary"><Phone className="h-4 w-4" /> Call</a>
+            <a href={`https://wa.me/${v.phone.replace(/\D/g, "").replace(/^0/, "254")}?text=${encodeURIComponent(`Hello ${v.name}! I found your shop on Chap.`)}`} target="_blank" rel="noopener" className="btn-whatsapp"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
+            <Link href={`/dashboard/messages/new?shop=${v.slug}`} className="btn-primary"><MessageCircle className="h-4 w-4" /> Message shop</Link>
           </div>
         </div>
-        <div className="mt-3"><ShareRow title={`${s.name} on Chap`} text={`${s.name} — ${s.businessCategory} in ${s.town}, ${s.county}`} /></div>
+        <div className="mt-3"><ShareRow title={`${v.name} on Chap`} text={`${v.name} — ${v.businessCategory} in ${v.town}, ${v.county}`} /></div>
         <div className="mt-4 grid gap-3 lg:grid-cols-3">
-          <div className="card p-4 text-sm"><p className="font-bold">Delivery</p><p className="text-ink-500">{s.deliveryInfo}</p></div>
+          <div className="card p-4 text-sm"><p className="font-bold">Delivery</p><p className="text-ink-500">{v.deliveryInfo}</p></div>
           <div className="card p-4 text-sm">
             <p className="font-bold">Contact</p>
-            <p className="text-ink-500">{s.phone} · {s.town}, {s.county}</p>
+            <p className="text-ink-500">{v.phone} · {v.town}, {v.county}</p>
             {contacts?.website && <p className="mt-1"><a href={contacts.website} target="_blank" rel="noopener" className="link-bd break-all">{contacts.website.replace(/^https?:\/\//, "")}</a></p>}
             {contacts?.email && <p className="mt-1"><a href={`mailto:${contacts.email}`} className="link-bd break-all">{contacts.email}</a></p>}
             <SocialLinks socials={contacts?.socials} />
@@ -186,8 +211,8 @@ export default async function ShopPage({ params }: { params: { slug: string } })
         <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {items.map((l) => <ListingCard key={l.id} listing={l} />)}
         </div>
-        <ReviewsBlock reviews={reviews} title={`Reviews for ${s.name}`} />
-        <ReviewForm shopSlug={s.slug} sellerName={s.name} />
+        <ReviewsBlock reviews={reviews} title={`Reviews for ${v.name}`} />
+        <ReviewForm shopSlug={v.slug} sellerName={v.name} />
       </div>
     </div>
   );

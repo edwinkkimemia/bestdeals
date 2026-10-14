@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { SafeImage } from "@/components/ui/safe-image";
 
 /** Public profile photo — shown to everyone on listings + shop pages. */
 export function ProfilePhotoForm({ initialUrl, name }: { initialUrl: string | null; name: string }) {
@@ -51,8 +52,7 @@ export function ProfilePhotoForm({ initialUrl, name }: { initialUrl: string | nu
     <div className="flex items-center gap-4">
       <span className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-2xl font-black text-white">
         {url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={`${name} profile photo`} className="h-full w-full object-cover" />
+          <SafeImage src={url} alt={`${name} profile photo`} className="h-full w-full object-cover" fallback={name.charAt(0).toUpperCase()} />
         ) : (
           name.charAt(0).toUpperCase()
         )}

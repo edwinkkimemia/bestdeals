@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { SafeImage } from "@/components/ui/safe-image";
 
 export type ShopHeader = {
   slug: string;
@@ -112,12 +113,13 @@ export function ShopHeaderForm({ shop }: { shop: ShopHeader }) {
       <p className="text-sm text-ink-500">Your public cover, logo and shop info — live at <Link href={`/shops/${shop.slug}`} className="link-bd">/shops/{shop.slug}</Link>.</p>
       <div>
         <span className="label-bd">Cover photo</span>
-        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-sand-50">
+        {/* Fixed height lives on the container: a 404 cover collapses to the
+            gradient instead of zero height. */}
+        <div className="relative h-32 overflow-hidden rounded-xl border border-neutral-200 bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800">
           {coverUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={coverUrl} alt={`${name} cover`} className="h-32 w-full object-cover" />
+            <SafeImage src={coverUrl} alt={`${name} cover`} className="h-32 w-full object-cover" />
           ) : (
-            <p className="flex h-32 items-center justify-center text-xs text-ink-400">No cover yet — upload a wide shop photo.</p>
+            <p className="flex h-32 items-center justify-center bg-sand-50 text-xs text-ink-400">No cover yet — upload a wide shop photo.</p>
           )}
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
@@ -135,8 +137,7 @@ export function ShopHeaderForm({ shop }: { shop: ShopHeader }) {
       <div className="flex items-center gap-3">
         <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-sand-100 text-xl font-black text-ink-400">
           {logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt={`${name} logo`} className="h-full w-full object-cover" />
+            <SafeImage src={logoUrl} alt={`${name} logo`} className="h-full w-full object-cover" fallback={name.charAt(0).toUpperCase()} />
           ) : (
             name.charAt(0).toUpperCase()
           )}

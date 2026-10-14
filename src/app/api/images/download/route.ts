@@ -46,16 +46,28 @@ export async function GET(req: NextRequest) {
   let name = "photo.jpg";
   try {
     if (src.startsWith("/uploads/") || src.startsWith("/api/files/")) {
-      const rel = src.replace(/^\/uploads\//, "").replace(/^\/api\/files\//, "");
-      if (!rel || rel.includes("..") || /[^A-Za-z0-9._/-]/.test(rel)) {
-        return NextResponse.json({ error: "Invalid image path." }, { status: 400 });
+      // DB-backed durable images survive redeploys — read from the store.
+      if (src.startsWith("/api/files/db/")) {
+        const { dbPubImageKey } = await import("@/lib/pubimages");
+        if (!dbPubImageKey(src)) return NextResponse.json({ error: "Invalid image path." }, { status: 400 });
+        const { getStore } = await import("@/lib/store");
+        const { readDbPubImage } = await import("@/lib/pubimages");
+        const hit = await readDbPubImage(getStore(), src).catch(() => null);
+        if (!hit) return NextResponse.json({ error: "Could not read image." }, { status: 422 });
+        buf = hit.bytes;
+        name = basename(src);
+      } else {
+        const rel = src.replace(/^\/uploads\//, "").replace(/^\/api\/files\//, "");
+        if (!rel || rel.includes("..") || /[^A-Za-z0-9._/-]/.test(rel)) {
+          return NextResponse.json({ error: "Invalid image path." }, { status: 400 });
+        }
+        const base = uploadsBaseDir();
+        const file = join(base, rel);
+        if (!file.startsWith(base)) return NextResponse.json({ error: "Invalid image path." }, { status: 400 });
+        buf = await readFile(file);
+        name = basename(rel);
+        // Uploads are stored clean — the single mark is applied below on serve.
       }
-      const base = uploadsBaseDir();
-      const file = join(base, rel);
-      if (!file.startsWith(base)) return NextResponse.json({ error: "Invalid image path." }, { status: 400 });
-      buf = await readFile(file);
-      name = basename(rel);
-      // Uploads are stored clean — the single mark is applied below on serve.
     } else if (/^https:\/\//i.test(src)) {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 10_000);
