@@ -31,11 +31,23 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   // share image (falls back to the profile photo).
   const description = (p.bio ?? "").trim() || `${p.businessName ? `${p.businessName} · ` : ""}${p.verified ? "Verified seller" : "Seller"} on Chap marketplace.`;
   const shareImage = p.coverUrl || p.photoUrl || undefined;
+  // Thin-profile guard: no bio, listings, or shops → browsable but not indexed.
+  let noindex = false;
+  if (!(p.bio ?? "").trim()) {
+    const { getSellerListings } = await import("@/lib/live-listings");
+    const { storeRead } = await import("@/lib/store");
+    const [profileItems, profileShops] = await Promise.all([
+      getSellerListings(p).catch(() => []),
+      p.userId ? storeRead((s) => s.listShopsByOwner(p.userId as string), []).catch(() => []) : Promise.resolve([]),
+    ]);
+    noindex = profileItems.length === 0 && profileShops.length === 0;
+  }
   return {
     title: `${p.name} — Seller on Chap`,
     description: description.slice(0, 160),
     alternates: { canonical: `https://chap.co.ke/seller/${params.slug}` },
     ...(shareImage ? { openGraph: { title: `${p.name} — Seller on Chap`, description: description.slice(0, 160), images: [shareImage] } } : {}),
+    ...(noindex ? { robots: { index: false, follow: true } } : {}),
   };
 }
 

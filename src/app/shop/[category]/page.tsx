@@ -19,10 +19,19 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: { category: string } }): Promise<Metadata> {
   const c = categoryBySlug(params.category);
   if (!c) return { title: "Category" };
+  // Thin-inventory guard: empty categories stay browsable for users but out
+  // of the index until sellers fill them (approval-quality signal).
+  const { LISTINGS } = await import("@/data/catalog");
+  const { getLiveStoreListings } = await import("@/lib/live-listings");
+  const live = await getLiveStoreListings().catch(() => []);
+  const count =
+    LISTINGS.filter((l) => l.categorySlug === c.slug).length +
+    live.filter((l) => l.categorySlug === c.slug).length;
   return {
     title: `${c.name} for sale in Kenya`,
     description: `${c.blurb}. Compare prices from trusted sellers across Kenya.`,
     alternates: { canonical: `https://chap.co.ke/shop/${c.slug}` },
+    ...(count === 0 ? { robots: { index: false, follow: true } } : {}),
   };
 }
 

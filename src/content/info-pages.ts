@@ -534,6 +534,16 @@ export const INFO_PAGES: Record<string, InfoPage> = {
         ],
       },
       {
+        heading: "Advertising & cookies",
+        blocks: [
+          {
+            type: "p",
+            text: "Chap shows ads (including Google AdSense) to keep the marketplace free. Google may use cookies — including the DoubleClick cookie — to serve ads based on your visits here and on other sites. You can opt out of personalized advertising at google.com/ads/preferences, or choose “Basic ads only” in the consent notice on this site. Ads never appear on checkout, payment, account, or verification pages, and advertisers never receive your name, email, phone, or ID documents.",
+          },
+          { type: "links", links: [{ href: "/advertising", label: "Advertising on Chap" }] },
+        ],
+      },
+      {
         heading: "Sharing, retention & security",
         blocks: [
           {

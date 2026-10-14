@@ -18,9 +18,17 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: { county: string } }): Promise<Metadata> {
   const entry = KENYA_COUNTIES.find((c) => c.county.toLowerCase() === decodeURIComponent(params.county).toLowerCase());
   if (!entry) return { title: "Location not found" };
+  // Thin-inventory guard: empty counties stay browsable ("be the first to
+  // list") but out of the index until supply arrives.
+  const { countyMatches } = await import("@/lib/kenya");
+  const { getLiveStoreListings, mergeStaticAndLive } = await import("@/lib/live-listings");
+  const live = await getLiveStoreListings().catch(() => []);
+  const all = mergeStaticAndLive(LISTINGS, live);
+  const count = all.filter((l) => countyMatches(l.county, entry.county)).length;
   return {
     title: `${entry.county} — shop near you`,
     description: `Products, classifieds and services listed in ${entry.county} (${entry.towns.slice(0, 5).join(", ")}). Browse what's near you on Chap.`,
+    ...(count === 0 ? { robots: { index: false, follow: true } } : {}),
   };
 }
 
