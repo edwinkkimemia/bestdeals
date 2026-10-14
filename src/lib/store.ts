@@ -1037,6 +1037,31 @@ class DemoStore implements Store {
     if (identity.userId && (c.buyerId === identity.userId || c.sellerId === identity.userId)) return true;
     if (identity.phone && (c.buyerPhone === identity.phone || c.buyerId === `phone:${identity.phone}`)) return true;
     if (identity.sellerName && c.sellerName === identity.sellerName) return true;
+    // Listing/shop owner (or staff) sees buyer chats even when the stored
+    // sellerName went stale (rename) or was never linked to an account id.
+    // Without this, messages to a listing owner vanish from their inbox.
+    if (identity.userId && this.ownsConversation(c, identity.userId)) return true;
+    return false;
+  }
+  /** True when userId owns the listing (or its shop) behind this thread. */
+  private ownsConversation(c: ConversationRecord, userId: string): boolean {
+    const lid = c.listingId;
+    if (!lid || lid === "general") return false;
+    if (lid.startsWith("shop:")) {
+      const slug = lid.slice(5);
+      const shop = this.shops.get(slug);
+      if (shop?.ownerId === userId) return true;
+      if (this.shopMembers.some((m) => m.shopSlug === slug && m.userId === userId)) return true;
+      return false;
+    }
+    const l = this.listings.get(lid);
+    if (!l) return false;
+    if (l.ownerId === userId) return true;
+    if (l.shopSlug) {
+      const shop = this.shops.get(l.shopSlug);
+      if (shop?.ownerId === userId) return true;
+      if (this.shopMembers.some((m) => m.shopSlug === l.shopSlug && m.userId === userId)) return true;
+    }
     return false;
   }
   private viewerId(identity: { userId?: string; phone?: string }): string {
@@ -2240,10 +2265,56 @@ class PrismaStore implements Store {
   async getConversation(id: string) {
     const c = await this.p.conversation.findUnique({ where: { id } });
     if (!c) return null;
+    const listingId = (c as { listingId?: string | null }).listingId ?? undefined;
+    const buyerId = (c as { buyerId?: string }).buyerId;
+    const sellerId = (c as { sellerId?: string }).sellerId;
+    // Reconstruct display metadata lost by the minimal Conversation table
+    // (no sellerName/listingTitle columns) so thread headers + access checks
+    // still work on Postgres.
+    let listingTitle: string | undefined;
+    let sellerName: string | undefined;
+    let buyerName: string | undefined;
+    let buyerPhone: string | undefined;
+    try {
+      if (buyerId?.startsWith("phone:")) {
+        buyerPhone = buyerId.slice(6);
+      } else if (buyerId) {
+        const bu = await (this.p as any).user?.findUnique?.({ where: { id: buyerId } }).catch(() => null);
+        if (bu) {
+          buyerName = bu.name ?? undefined;
+          buyerPhone = bu.phone ?? undefined;
+        }
+      }
+      if (sellerId && !sellerId.startsWith("seller:") && sellerId !== "unknown") {
+        const su = await (this.p as any).user?.findUnique?.({ where: { id: sellerId } }).catch(() => null);
+        if (su) sellerName = (su.businessName || su.name) ?? undefined;
+      } else if (sellerId?.startsWith("seller:")) {
+        sellerName = sellerId.slice(7) || undefined;
+      }
+      if (listingId && listingId !== "general") {
+        if (listingId.startsWith("shop:")) {
+          const slug = listingId.slice(5);
+          const shop = await (this.p as any).shop?.findUnique?.({ where: { slug } }).catch(() => null);
+          if (shop) {
+            listingTitle = `Shop enquiry: ${shop.name}`;
+            sellerName = sellerName ?? shop.name ?? undefined;
+          }
+        } else {
+          const l = await (this.p as any).listing?.findUnique?.({ where: { id: listingId } }).catch(() => null);
+          if (l) {
+            listingTitle = l.title ?? undefined;
+            sellerName = sellerName ?? l.sellerName ?? undefined;
+          }
+        }
+      } else if (listingId === "general") {
+        listingTitle = "Direct message";
+      }
+    } catch {}
     return {
-      id: c.id, listingId: c.listingId ?? undefined,
-      buyerId: (c as { buyerId?: string }).buyerId, sellerId: (c as { sellerId?: string }).sellerId,
-      createdAt: c.createdAt.toISOString(),
+      id: c.id, listingId,
+      listingTitle, sellerName, buyerName, buyerPhone,
+      buyerId, sellerId,
+      createdAt: (c as { createdAt: Date }).createdAt.toISOString(),
     };
   }
   async listConversations(identity: { userId?: string; phone?: string; sellerName?: string }) {
@@ -2252,14 +2323,53 @@ class PrismaStore implements Store {
     if (identity.phone) ors.push({ buyerId: identity.phone }, { buyerId: `phone:${identity.phone}` });
     // Prisma stores the seller link as `seller:<display name>` when no account id is known.
     if (identity.sellerName) ors.push({ sellerId: `seller:${identity.sellerName}` });
-    if (ors.length === 0) return [];
+    if (ors.length === 0 && !identity.userId) return [];
     const viewer = identity.userId ?? (identity.phone ? `phone:${identity.phone}` : "");
-    const convos = await this.p.conversation.findMany({
-      where: { OR: ors },
-      orderBy: { createdAt: "desc" }, take: 100,
-      include: { messages: { orderBy: { createdAt: "desc" }, take: 20 } },
-    });
-    return convos.map((c: { id: string; listingId: string | null; createdAt: Date; messages: { body: string; createdAt: Date; senderId: string; readAt: Date | null }[] }) => {
+    const convos = ors.length
+      ? await this.p.conversation.findMany({
+          where: { OR: ors },
+          orderBy: { createdAt: "desc" }, take: 100,
+          include: { messages: { orderBy: { createdAt: "desc" }, take: 20 } },
+        })
+      : [];
+    // Owner fallback: listing/shop owner (or staff) sees buyer chats even when
+    // the stored seller link went stale (rename) or was never an account id.
+    // Without this, messages to a listing owner vanish from their inbox.
+    let owned: typeof convos = [];
+    if (identity.userId) {
+      try {
+        const ownedListingIds = new Set<string>();
+        const profile = await (this.p as any).sellerProfile?.findUnique?.({ where: { userId: identity.userId } }).catch(() => null);
+        if (profile) {
+          const ls = await this.p.listing.findMany({ where: { sellerProfileId: profile.id }, select: { id: true } }).catch(() => []);
+          for (const r of ls as { id: string }[]) ownedListingIds.add(r.id);
+        }
+        const memberships = await (this.p as any).shopMember?.findMany?.({ where: { userId: identity.userId }, include: { shop: true }, take: 50 }).catch(() => []);
+        const shopSlugs = new Set<string>();
+        const shopIds: string[] = [];
+        for (const m of (memberships ?? []) as { shop?: { id: string; slug: string } }[]) {
+          if (m.shop?.slug) {
+            shopSlugs.add(m.shop.slug);
+            shopIds.push(m.shop.id);
+            ownedListingIds.add(`shop:${m.shop.slug}`);
+          }
+        }
+        if (shopIds.length) {
+          const shopListings = await this.p.listing.findMany({ where: { shopId: { in: shopIds } }, select: { id: true } }).catch(() => []);
+          for (const r of shopListings as { id: string }[]) ownedListingIds.add(r.id);
+        }
+        if (ownedListingIds.size) {
+          owned = await this.p.conversation.findMany({
+            where: { listingId: { in: [...ownedListingIds] } },
+            orderBy: { createdAt: "desc" }, take: 100,
+            include: { messages: { orderBy: { createdAt: "desc" }, take: 20 } },
+          });
+        }
+      } catch {}
+    }
+    const seen = new Set<string>();
+    const all = [...convos, ...owned].filter((c: { id: string }) => (seen.has(c.id) ? false : (seen.add(c.id), true)));
+    return all.map((c: { id: string; listingId: string | null; createdAt: Date; messages: { body: string; createdAt: Date; senderId: string; readAt: Date | null }[] }) => {
       const last = c.messages[0];
       return {
         id: c.id, listingId: c.listingId ?? undefined, createdAt: c.createdAt.toISOString(),

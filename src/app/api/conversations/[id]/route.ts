@@ -41,9 +41,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     mine: mineOf(m.senderId, viewer, user?.phone),
   }));
   // Recipient + contact details for the chat header: the OTHER party, not you.
+  // Includes the listing-owner/staff fallback so renamed (stale sellerName)
+  // threads still show the buyer — not the seller — to the seller.
+  const sellerSide = viewer === user?.id ? await isChatSeller(store, convo, user).catch(() => false) : false;
   const viewerIsSeller =
-    (convo.sellerId && viewer === convo.sellerId) ||
-    (user?.id === viewer && user?.name === convo.sellerName);
+    (convo.sellerId != null && viewer === convo.sellerId) ||
+    (user?.id === viewer && user?.name === convo.sellerName) ||
+    sellerSide;
   let peer: { name: string; phone?: string; role: string };
   if (viewerIsSeller) {
     peer = { name: convo.buyerName || "Buyer", phone: convo.buyerPhone || undefined, role: "buyer" };

@@ -144,6 +144,35 @@ describe("chat ownership (sender lockout regression)", () => {
     });
     assert.equal(linked?.id, first.id, "name fallback bridges pre-link threads");
   });
+  it("listing owner inbox survives renames (stale sellerName still delivered)", async () => {
+    const store = freshDemoStore();
+    const a = await store.createUser({
+      name: "Account Alpha", email: "alpha2@x.co.ke", phone: "0710000201",
+      role: "SELLER", verified: true, passwordHash: "h",
+    });
+    const b = await store.createUser({
+      name: "Totally Different Beta", email: "beta2@x.co.ke", phone: "0710000202",
+      role: "SELLER", verified: true, passwordHash: "h",
+    });
+    const listing = await store.createListing({
+      title: "Test sofa for rename inbox", description: "A sofa used to test seller inbox delivery after rename",
+      type: "classified", price: 5000, compareAt: null, condition: "used_good", txMethod: "contact_seller",
+      negotiable: false, stock: 1, county: "Nairobi", town: "CBD", images: [], attributes: {},
+      ownerId: b.id, sellerName: "Old Name",
+    });
+    await store.setListingStatus(listing.id, "active");
+    // Legacy thread stored before owner pinning existed (sellerId unset, stale name).
+    const c = await store.createConversation({
+      listingId: listing.id, listingTitle: listing.title, sellerName: "Old Name",
+      sellerId: undefined, buyerId: a.id, buyerName: a.name, buyerPhone: a.phone,
+      firstMessage: { senderId: a.id, senderLabel: a.name, body: "Hello B", bodyHtml: "Hello B" },
+    });
+    const inboxB = await store.listConversations({ userId: b.id, phone: b.phone, sellerName: b.name });
+    assert.ok(inboxB.some((x) => x.id === c.id), "owner still receives the chat after rename");
+    assert.equal(await isChatSeller(store, c, { id: b.id, name: b.name, role: "SELLER" }), true, "owner can open the thread");
+    await store.addMessage({ conversationId: c.id, senderId: b.id, senderLabel: b.name, body: "Hi A", bodyHtml: "Hi A" });
+    assert.equal((await store.listMessages(c.id)).length, 2, "reply delivered");
+  });
   it("two accounts message each other directly (explicit target, no name match needed)", async () => {
     const store = freshDemoStore();
     const a = await store.createUser({

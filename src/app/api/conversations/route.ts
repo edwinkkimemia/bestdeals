@@ -66,6 +66,38 @@ export async function POST(req: NextRequest) {
       sellerId = hit?.id;
     } catch {}
   }
+  // Owner fallback: pin the real listing/shop owner so delivery doesn't depend
+  // on display-name coincidence (renames, businessName vs name, catalogue
+  // sellers with no account). Without this the seller's inbox never matches.
+  if (!sellerId && d.listingId !== "general") {
+    try {
+      if (d.listingId.startsWith("shop:")) {
+        const slug = d.listingId.slice(5);
+        const s = await store.getShopBySlug(slug).catch(() => null);
+        if (s?.ownerId && s.ownerId !== viewerId) sellerId = s.ownerId;
+        if (!sellerId && s) {
+          const members = await store.listShopMembers(slug).catch(() => []);
+          const owner = members.find((m) => m.role === "owner" && m.userId !== viewerId) ?? members.find((m) => m.userId !== viewerId);
+          if (owner) sellerId = owner.userId;
+        }
+      } else {
+        const l = stored ?? (await store.getListing(d.listingId).catch(() => null));
+        if (l?.ownerId && l.ownerId !== viewerId) sellerId = l.ownerId;
+        if (!sellerId && l?.shopSlug) {
+          const s = await store.getShopBySlug(l.shopSlug).catch(() => null);
+          if (s?.ownerId && s.ownerId !== viewerId) sellerId = s.ownerId;
+          if (!sellerId) {
+            const members = await store.listShopMembers(l.shopSlug).catch(() => []);
+            const owner = members.find((m) => m.role === "owner" && m.userId !== viewerId) ?? members.find((m) => m.userId !== viewerId);
+            if (owner) sellerId = owner.userId;
+          }
+        }
+      }
+    } catch {}
+  }
+  if (sellerId && sellerId === viewerId) {
+    return NextResponse.json({ error: "You can't message yourself." }, { status: 400 });
+  }
   // Blocked participants can't open new threads with each other on the same listing.
   try {
     const blocked = ((await store.getSetting(`blocked:${viewerId}`).catch(() => null)) as string[] | null) ?? [];
