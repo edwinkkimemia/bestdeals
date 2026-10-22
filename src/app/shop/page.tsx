@@ -5,7 +5,6 @@ import { ListingCard } from "@/components/ui/listing-card";
 import { AdAfterEvery } from "@/components/ads";
 import { AD_SLOTS } from "@/lib/ads";
 import { CategoryStrip } from "@/components/category-strip";
-import { StaticInfo } from "@/components/static-info";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { shuffleFeaturedFirst } from "@/lib/search";
 
@@ -31,19 +30,9 @@ export default async function ShopIndex() {
   return (
     <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Shop" }]} />
-      <h1 className="section-title mt-2">Shop Products</h1>
-      <p className="text-sm text-ink-500">New products from retailers, wholesalers and independent merchants — with cart, cash on delivery and delivery across all 47 counties.</p>
+      <h1 className="sr-only">Shop Products</h1>
 
-      <StaticInfo
-        className="mt-4"
-        items={[
-          { title: "Cart & cash on delivery", description: "One cart across sellers; pay the courier on arrival." },
-          { title: "Multi-seller carts", description: "Mixed orders split into per-seller suborders, tracked in one place." },
-          { title: "Compare and save", description: "See the same item from other sellers and classifieds side by side." },
-        ]}
-      />
-
-      <CategoryStrip className="mt-5" title="Shop by category" viewAllHref={null} />
+      <CategoryStrip className="mt-2" title="Shop by category" viewAllHref={null} />
 
       <div className="mb-2 mt-6 flex items-end justify-between">
         <h2 className="font-bold">All shoppable products ({products.length})</h2>

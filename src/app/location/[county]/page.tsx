@@ -6,6 +6,7 @@ import { LISTINGS } from "@/data/catalog";
 import { KENYA_COUNTIES, countyMatches } from "@/lib/kenya";
 import { ListingCard } from "@/components/ui/listing-card";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
+import { CountyStrip } from "@/components/county-strip";
 
 // Live seller listings must appear instantly — a static prerender would freeze
 // this page at build time and hide every product posted afterwards.
@@ -121,24 +122,13 @@ export default async function CountyPage({ params }: { params: { county: string 
       </section>
 
       {/* other counties */}
-      <section className="mt-10" aria-label="Other counties">
-        <div className="mb-4 flex items-end justify-between">
-          <h2 className="section-title">More counties</h2>
-          <Link href="/location" className="link-bd">All 47 →</Link>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {others.map((c) => (
-            <Link key={c.county} href={`/location/${encodeURIComponent(c.county)}`} className="card group overflow-hidden transition hover:shadow-lg">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={c.image} alt={c.county} loading="lazy" className="h-20 w-full object-cover transition duration-300 group-hover:scale-105" />
-              <div className="p-2.5">
-                <p className="truncate text-sm font-bold group-hover:text-brand-700">{c.county}</p>
-                <p className="text-xs text-ink-500">{c.count > 0 ? `${c.count} listings` : "Explore →"}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+      <CountyStrip
+        className="mt-10"
+        counties={others}
+        title="More counties"
+        viewAllHref="/location"
+        viewAllLabel="All 47 →"
+      />
     </div>
   );
 }

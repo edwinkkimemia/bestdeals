@@ -1,9 +1,8 @@
-import Link from "next/link";
-import { MapPin } from "lucide-react";
 import { LISTINGS } from "@/data/catalog";
 import { KENYA_COUNTIES } from "@/lib/kenya";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { StaticInfo } from "@/components/static-info";
+import { CountyStrip } from "@/components/county-strip";
 
 export const metadata = {
   title: "Shop by location",
@@ -44,26 +43,12 @@ export default async function LocationIndex() {
         ]}
       />
 
-      <h2 className="mb-2 mt-6 font-bold">All counties ({counties.length})</h2>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {counties.map((c) => (
-          <Link key={c.county} href={`/location/${encodeURIComponent(c.county)}`} className="card group overflow-hidden transition hover:shadow-lg">
-            <div className="relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={c.image} alt={c.county} loading="lazy" className="h-28 w-full object-cover transition duration-300 group-hover:scale-105" />
-              <span className="absolute bottom-2.5 left-2.5 flex items-center gap-1 rounded-xl bg-white/95 px-2.5 py-1 text-xs font-bold text-brand-700 shadow">
-                <MapPin className="h-3.5 w-3.5" /> {c.count > 0 ? `${c.count} listing${c.count === 1 ? "" : "s"}` : "Explore"}
-              </span>
-            </div>
-            <div className="p-4">
-              <p className="text-base font-bold leading-tight group-hover:text-brand-700">{c.county}</p>
-              <p className="clamp-2 mt-1 text-sm text-ink-500">
-                {c.towns.slice(0, 4).join(" · ")}{c.towns.length > 4 ? ` · +${c.towns.length - 4} more` : ""}
-              </p>
-            </div>
-          </Link>
-        ))}
-      </div>
+      <CountyStrip
+        className="mt-5"
+        counties={counties}
+        title={`All counties (${counties.length})`}
+        viewAllHref={null}
+      />
     </div>
   );
 }

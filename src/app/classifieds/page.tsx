@@ -5,7 +5,6 @@ import { ListingCard } from "@/components/ui/listing-card";
 import { AdAfterEvery } from "@/components/ads";
 import { AD_SLOTS } from "@/lib/ads";
 import { CategoryStrip } from "@/components/category-strip";
-import { StaticInfo } from "@/components/static-info";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { shuffleFeaturedFirst } from "@/lib/search";
 
@@ -33,25 +32,10 @@ export default async function ClassifiedsIndex() {
   return (
     <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Classifieds" }]} />
-      <h1 className="section-title mt-2">Classifieds</h1>
-      <p className="text-sm text-ink-500">New & secondhand from individuals and businesses. Enquire, negotiate and meet safely — no checkout pressure.</p>
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link href="/sell?type=classified" className="btn-primary">Post a free ad</Link>
-        <Link href="/safety" className="btn-secondary">Safety tips</Link>
-      </div>
-
-      <StaticInfo
-        className="mt-4"
-        numbered
-        items={[
-          { title: "Find & filter", description: "Search by keyword, price, condition and county." },
-          { title: "Enquire direct", description: "Message the seller, ask for photos and agree the price on-platform." },
-          { title: "Meet & inspect", description: "Public daytime meet-up; inspect and confirm details before paying." },
-        ]}
-      />
+      <h1 className="sr-only">Classifieds</h1>
 
       <CategoryStrip
-        className="mt-5"
+        className="mt-2"
         title="Browse by category"
         viewAllHref="/search?type=classified"
         viewAllLabel="View all ads →"
@@ -59,7 +43,7 @@ export default async function ClassifiedsIndex() {
         counts={Object.fromEntries(CATEGORIES.map((c) => [c.slug, catCount(c.slug)]))}
       />
 
-      <h2 className="mb-2 mt-6 font-bold">Latest classifieds ({items.length})</h2>
+      <h2 className="mb-2 mt-5 font-bold">Latest classifieds ({items.length})</h2>
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
         {items.map((l, i) => (
         <Fragment key={l.id}>

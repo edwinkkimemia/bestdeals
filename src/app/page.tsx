@@ -7,6 +7,7 @@ import { storeRead } from "@/lib/store";
 import { ListingCard } from "@/components/ui/listing-card";
 import { HeroCategories } from "@/components/hero-categories";
 import { CategoryStrip } from "@/components/category-strip";
+import { CountyStrip } from "@/components/county-strip";
 import { COUNTY_NAMES, KENYA_COUNTIES } from "@/lib/kenya";
 import { shuffleFeaturedFirst } from "@/lib/search";
 import { ratingLabel } from "@/lib/ratings";
@@ -61,8 +62,7 @@ export default async function HomePage() {
       ...c,
       count: all.filter((l) => l.county.trim().toLowerCase() === c.county.toLowerCase()).length,
     }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 12);
+    .sort((a, b) => b.count - a.count);
   // Trusted shops rail: catalogue shops + seller-created community shops.
   // Shops holding featured products lead; the rest shuffle fresh every visit.
   const communityShops = await storeRead((s) => s.listShops(), []);
@@ -216,24 +216,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* D: locations */}
-      <section className="container-bd py-10" aria-labelledby="loc">
-        <div className="mb-5 flex items-end justify-between">
-          <h2 id="loc" className="section-title">Shop by location</h2>
-          <Link href="/location" className="link-bd">View all →</Link>
-        </div>
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {countiesByListings.map((c) => (
-            <Link key={c.county} href={`/location/${encodeURIComponent(c.county)}`} className="card group overflow-hidden transition hover:shadow-lg">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={c.image} alt={c.county} loading="lazy" className="h-20 w-full object-cover transition duration-300 group-hover:scale-105 sm:h-24" />
-              <div className="p-2.5">
-                <p className="truncate text-sm font-bold leading-tight group-hover:text-brand-700">{c.county}</p>
-                <p className="mt-0.5 text-xs text-ink-500">{c.count > 0 ? `${c.count} listing${c.count === 1 ? "" : "s"}` : "Explore →"}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
+      {/* D: locations — compact national rail, listings stay close to the top */}
+      <section className="container-bd py-6">
+        <CountyStrip counties={countiesByListings} title="Shop by location" viewAllHref="/location" />
       </section>
 
       {/* E: trending near you */}
