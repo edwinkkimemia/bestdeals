@@ -19,7 +19,7 @@ Recommended: Vercel, or any Node host / Docker (do **not** use classic PHP-only 
    > Without `DATABASE_URL` the store is in-memory demo mode and **every** account (admin included) vanishes on restart/redeploy — that is the #1 cause of "admin keeps getting deleted". Verify `/api/health` reports `"db": "configured"`.
 4. Point `chap.co.ke` at the deployment; enforce HTTPS + HSTS.
 5. Configure provider webhooks:
-   - M-Pesa callback: `https://chap.co.ke/api/payments/mpesa-callback`
+   - M-Pesa callback: `https://www.chap.co.ke/api/payments/mpesa-callback` (use the final `www` URL — the apex redirects)
 6. Verify: `/api/health`, Search Console, sitemap at `/sitemap.xml`.
 
 ## Production hardening

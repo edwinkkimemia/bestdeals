@@ -29,11 +29,40 @@ export type PaymentResult = {
   message: string;
 };
 
+export type MpesaTransactionConfig = {
+  transactionType: "CustomerPayBillOnline" | "CustomerBuyGoodsOnline";
+  businessShortCode: string;
+  partyB: string;
+};
+
+/**
+ * Resolve the STK transaction shape from env. A Buy Goods Till sets PartyB to
+ * the store/Till number and switches the transaction type; a Paybill uses the
+ * same shortcode for both. `MPESA_TRANSACTION_TYPE` can override the inference.
+ */
+export function resolveMpesaTransaction(env: Record<string, string | undefined> = process.env): MpesaTransactionConfig {
+  const shortcode = (env.MPESA_SHORTCODE || "").trim();
+  const till = (env.MPESA_TILL || "").trim();
+  const override = (env.MPESA_TRANSACTION_TYPE || "").trim();
+  const transactionType =
+    override === "CustomerBuyGoodsOnline" || override === "CustomerPayBillOnline"
+      ? override
+      : till
+        ? "CustomerBuyGoodsOnline"
+        : "CustomerPayBillOnline";
+  return {
+    transactionType,
+    businessShortCode: shortcode || till,
+    partyB: till || shortcode,
+  };
+}
+
 export function isPaymentsLive(): boolean {
+  const tx = resolveMpesaTransaction();
   return Boolean(
     process.env.MPESA_CONSUMER_KEY &&
       process.env.MPESA_CONSUMER_SECRET &&
-      process.env.MPESA_SHORTCODE &&
+      tx.businessShortCode &&
       process.env.MPESA_PASSKEY
   );
 }
@@ -51,7 +80,7 @@ function darajaBase(): string {
  * Production MUST set it; without it any caller can forge callbacks.
  */
 export function mpesaCallbackUrl(): string {
-  const base = process.env.MPESA_CALLBACK_URL || "https://chap.co.ke/api/payments/mpesa-callback";
+  const base = process.env.MPESA_CALLBACK_URL || "https://www.chap.co.ke/api/payments/mpesa-callback";
   const secret = (process.env.MPESA_CALLBACK_SECRET || "").trim();
   if (!secret) return base;
   const joiner = base.includes("?") ? "&" : "?";
@@ -116,28 +145,32 @@ export async function initiateSTKPush(init: PaymentInit): Promise<PaymentResult>
     };
   }
   try {
-    const shortcode = process.env.MPESA_SHORTCODE!;
+    const { businessShortCode, partyB, transactionType } = resolveMpesaTransaction();
     const passkey = process.env.MPESA_PASSKEY!;
     const ts = timestamp();
-    const password = Buffer.from(`${shortcode}${passkey}${ts}`).toString("base64");
+    const password = Buffer.from(`${businessShortCode}${passkey}${ts}`).toString("base64");
     const token = await darajaToken();
     const callbackURL = mpesaCallbackUrl();
-    // AccountReference carries our order/promo id so the callback can map back.
+    // Daraja caps AccountReference at 12 and TransactionDesc at 13 characters.
+    // The callback maps back via the persisted CheckoutRequestID, not these labels.
+    const accountReference = init.orderId.replace(/[^A-Za-z0-9]/g, "").slice(-12) || "CHAP";
+    const descLabel = (init.label ?? "order").replace(/[^A-Za-z ]/g, "").trim().slice(0, 6) || "order";
+    const transactionDesc = `${descLabel} ${accountReference.slice(-5)}`.slice(0, 13);
     const r = await fetch(`${darajaBase()}/mpesa/stkpush/v1/processrequest`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        BusinessShortCode: shortcode,
+        BusinessShortCode: businessShortCode,
         Password: password,
         Timestamp: ts,
-        TransactionType: "CustomerPayBillOnline",
+        TransactionType: transactionType,
         Amount: Math.round(init.amount),
         PartyA: normalizeKEPhone(init.phone),
-        PartyB: shortcode,
+        PartyB: partyB,
         PhoneNumber: normalizeKEPhone(init.phone),
         CallBackURL: callbackURL,
-        AccountReference: init.orderId.slice(0, 20),
-        TransactionDesc: `${(init.label ?? "order").slice(0, 40)} ${init.orderId.slice(0, 12)}`,
+        AccountReference: accountReference,
+        TransactionDesc: transactionDesc,
       }),
     });
     const j = (await r.json().catch(() => ({}))) as {
@@ -198,7 +231,7 @@ export async function requestDarajaReversal(input: ReversalInput): Promise<Rever
         CommandID: "TransactionReversal",
         TransactionID: input.receipt,
         Amount: Math.round(input.amount),
-        ReceiverParty: process.env.MPESA_SHORTCODE!,
+        ReceiverParty: resolveMpesaTransaction().businessShortCode,
         ReceiverIdentifierType: "11",
         Remarks: "Chap dispute refund",
         Occasion: (input.occasion ?? `refund-${Date.now().toString(36)}`).slice(0, 40),
