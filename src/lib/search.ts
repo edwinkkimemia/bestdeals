@@ -71,13 +71,8 @@ function score(l: Listing, tokens: string[]): number {
   return s;
 }
 
-/** PostgreSQL full-text would power this in production; demo ranks in-memory. Same interface. */
-export function searchListings(p: SearchParams): {
-  items: Listing[];
-  total: number;
-  page: number;
-  perPage: number;
-} {
+/** All static-catalogue matches, ranked. Live listings are merged on top. */
+function staticMatches(p: SearchParams): Listing[] {
   const tokens = expandQuery(p.q ?? "");
   const sub = (p.subcategory ?? "").trim().toLowerCase();
   const town = (p.town ?? "").trim().toLowerCase();
@@ -105,7 +100,17 @@ export function searchListings(p: SearchParams): {
   else if (sort === "price_desc") items = [...items].sort((a, b) => b.price - a.price);
   else if (sort === "newest") items = [...items].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
   else items = relevanceRanked(items, tokens, (l) => score(l, tokens));
+  return items;
+}
 
+/** PostgreSQL full-text would power this in production; demo ranks in-memory. Same interface. */
+export function searchListings(p: SearchParams): {
+  items: Listing[];
+  total: number;
+  page: number;
+  perPage: number;
+} {
+  const items = staticMatches(p);
   const perPage = Math.min(Math.max(p.perPage ?? 24, 1), 60);
   const page = Math.max(p.page ?? 1, 1);
   const total = items.length;
@@ -305,11 +310,14 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
         if (tokens.length > 0 && score(l, tokens) <= 0) return false;
         return true;
       });
-    // Merge + deterministic rank (TOP/featured first, then relevance/newest).
-    const seen = new Set(base.items.map((l) => l.id));
-    const extra = mapped.filter((l) => !seen.has(l.id));
+    // Merge against ALL static matches, not just the current page — otherwise
+    // totals and faceted counts change with page size. Dedupe by id and slug
+    // so a seeded live twin never appears twice beside its catalogue copy.
+    const staticItems = staticMatches(p);
+    const seen = new Set(staticItems.flatMap((l) => [l.id, `slug:${l.slug}`]));
+    const extra = mapped.filter((l) => !seen.has(l.id) && !seen.has(`slug:${l.slug}`));
     const sort = p.sort ?? "relevance";
-    let items = [...base.items, ...extra];
+    let items = [...staticItems, ...extra];
     if (sort === "price_asc") items = [...items].sort((a, b) => a.price - b.price);
     else if (sort === "price_desc") items = [...items].sort((a, b) => b.price - a.price);
     else if (sort === "newest") items = [...items].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
