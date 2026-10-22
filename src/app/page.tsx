@@ -156,12 +156,12 @@ export default async function HomePage() {
       </section>
 
       {/* trust strip */}
-      <section className="border-y border-neutral-200 bg-white">
+      <section className="hidden border-y border-neutral-200 bg-white sm:block">
         <div className="container-bd grid grid-cols-2 gap-4 py-4 text-sm lg:grid-cols-4">
           <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-brand-600" /> Moderated listings & reporting</p>
           <p className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-brand-600" /> Verified sellers clearly labelled</p>
-          <p className="col-span-2 flex items-center gap-2 sm:col-span-1"><Truck className="h-4 w-4 text-brand-600" /> Delivery across all 47 counties</p>
-          <p className="hidden items-center gap-2 sm:flex"><MapPin className="h-4 w-4 text-brand-600" /> Browse by county & town</p>
+          <p className="flex items-center gap-2"><Truck className="h-4 w-4 text-brand-600" /> Delivery across all 47 counties</p>
+          <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-brand-600" /> Browse by county & town</p>
         </div>
       </section>
 
