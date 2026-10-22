@@ -7,8 +7,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Runtime queries use the pooled URL (Neon: hostname contains "-pooler").
+  url       = env("DATABASE_URL")
+  // Prisma CLI (migrate/introspect) needs a direct connection. Neon's Vercel
+  // integration sets DATABASE_URL_UNPOOLED; locally it can equal DATABASE_URL.
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 enum Role {

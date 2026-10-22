@@ -13,15 +13,20 @@ Demo mode uses the curated catalogue in `src/data/catalog.ts`. Auth uses an in-m
 
 **Demo accounts:** password `ChapDemo123!` (or `SEED_USER_PASSWORD`). Use `admin@chap.co.ke` (or `ADMIN_EMAILS`) to get the ADMIN role and open `/admin`. Full seller/shop/buyer table: `docs/DEMO_LOGINS.md`.
 
-## Production (PostgreSQL)
+## Production (PostgreSQL or Neon)
 
 ```bash
 docker compose up -d db redis
-cp .env.example .env   # fill DATABASE_URL + AUTH_SECRET
+cp .env.example .env   # fill DATABASE_URL + DATABASE_URL_UNPOOLED + AUTH_SECRET
 npx prisma migrate dev --name init
 npx prisma db seed
 npm run dev
 ```
+
+On Vercel, install the Neon integration and connect it to the project. It sets
+`DATABASE_URL` (pooled) and `DATABASE_URL_UNPOOLED` (direct); `vercel-build` then
+runs `prisma migrate deploy`, the seed and `next build` automatically. See
+`docs/DEPLOY.md`.
 
 ## Scripts
 

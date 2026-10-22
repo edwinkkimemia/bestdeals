@@ -6,6 +6,8 @@ Recommended: Vercel, or any Node host / Docker (do **not** use classic PHP-only 
 
 1. Provision PostgreSQL 15+ and Redis (optional, for queues/rate limits at scale).
 2. Set env from `.env.example`: `DATABASE_URL`, `AUTH_SECRET` (32+ random chars), `ADMIN_EMAILS`, `ADMIN_PASSWORD` (initial admin password, change after first login), `NEXT_PUBLIC_SITE_URL=https://chap.co.ke`.
+   - **Neon on Vercel:** install the Neon integration on the Vercel project. It injects `DATABASE_URL` (pooled, hostname contains `-pooler`) for the app and `DATABASE_URL_UNPOOLED` (direct) for Prisma migrations. `prisma/schema.prisma` reads both; do not point migrations at the pooled URL.
+   - **Local Postgres:** set both variables to the same local URL (see `.env.example`).
 3. Build & migrate (Vercel runs `npm run vercel-build`, which does all three):
    ```bash
    npm ci
