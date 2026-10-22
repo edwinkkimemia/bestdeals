@@ -5,16 +5,18 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ChevronDown, Heart, LogOut, MapPin, Menu, MessageCircle, Search, ShoppingCart, Store, User, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Heart, LogOut, MapPin, Menu, MessageCircle, Search, ShoppingCart, Store, User, X } from "lucide-react";
 import { useCart } from "../cart-provider";
 import { NotificationsBell } from "../notifications-bell";
+import { CategoryIcon } from "../category-icon";
 import { KENYA_COUNTIES } from "@/lib/kenya";
-import { POPULAR_SEARCHES } from "@/data/catalog";
+import { CATEGORIES, POPULAR_SEARCHES } from "@/data/catalog";
 
 export function Header({ user }: { user?: { name: string; role: string } | null }) {
   const router = useRouter();
   const { count } = useCart();
   const [open, setOpen] = useState(false);
+  const [openCat, setOpenCat] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [county, setCounty] = useState("all");
   const [sugs, setSugs] = useState<string[]>([]);
@@ -65,6 +67,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
   useEffect(() => {
     // Lock background scroll while the mobile drawer is open.
     document.body.style.overflow = open ? "hidden" : "";
+    if (!open) setOpenCat(null);
     return () => {
       document.body.style.overflow = "";
     };
@@ -430,12 +433,71 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
               {user && <Link href={user.role === "ADMIN" ? "/admin" : "/dashboard"} onClick={() => setOpen(false)} className="btn-secondary">My dashboard</Link>}
               {user && <Link href="/dashboard/notifications" onClick={() => setOpen(false)} className="btn-secondary">Notifications</Link>}
               <Link href="/cart" onClick={() => setOpen(false)} className="btn-secondary">Cart ({count})</Link>
-              {user && (
-                <button onClick={signOut} className="flex items-center justify-center gap-2 rounded-xl border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50">
+            </div>
+
+            <div className="mt-4 border-t border-neutral-200 pt-4">
+              <div className="mb-1 flex items-center justify-between px-1">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-ink-400">Shop by category</p>
+                <Link href="/shop" onClick={() => setOpen(false)} className="text-xs font-semibold text-brand-700 hover:underline">
+                  View all
+                </Link>
+              </div>
+              <nav aria-label="Shop by category">
+                <ul className="space-y-0.5">
+                  {CATEGORIES.map((c) => {
+                    const expanded = openCat === c.slug;
+                    return (
+                      <li key={c.slug}>
+                        <div className={`flex items-center rounded-xl ${expanded ? "bg-sand-100" : ""}`}>
+                          <Link
+                            href={`/shop/${c.slug}`}
+                            onClick={() => setOpen(false)}
+                            className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-ink-700 hover:bg-sand-100 hover:text-brand-700"
+                          >
+                            <CategoryIcon name={c.icon} className="h-4 w-4 shrink-0 text-brand-600" />
+                            <span className="truncate">{c.name}</span>
+                          </Link>
+                          {c.subcategories.length > 0 && (
+                            <button
+                              type="button"
+                              aria-label={expanded ? `Hide ${c.name} subcategories` : `Show ${c.name} subcategories`}
+                              aria-expanded={expanded}
+                              onClick={() => setOpenCat(expanded ? null : c.slug)}
+                              className="rounded-lg p-2 text-ink-400 hover:text-brand-700"
+                            >
+                              <ChevronRight className={`h-4 w-4 transition-transform ${expanded ? "rotate-90" : ""}`} />
+                            </button>
+                          )}
+                        </div>
+                        {expanded && (
+                          <ul className="mb-1 ml-9 border-l border-neutral-200 pl-3">
+                            {c.subcategories.map((s) => (
+                              <li key={s}>
+                                <Link
+                                  href={`/search?category=${c.slug}&subcategory=${encodeURIComponent(s)}`}
+                                  onClick={() => setOpen(false)}
+                                  className="block rounded-lg px-2 py-1.5 text-[13px] text-ink-500 hover:bg-sand-50 hover:text-brand-700"
+                                >
+                                  {s}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            </div>
+
+            {user && (
+              <div className="mt-4 border-t border-neutral-200 pt-4">
+                <button onClick={signOut} className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50">
                   <LogOut className="h-4 w-4" /> Sign out
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       )}
