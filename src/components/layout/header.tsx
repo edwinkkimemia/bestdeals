@@ -190,12 +190,12 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
     </div>
     <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white/95 backdrop-blur">
 
-      <div className="container-bd flex items-center gap-3 py-3">
-        <button className="rounded-lg p-2 hover:bg-sand-100 lg:hidden" aria-label="Open menu" onClick={() => setOpen(true)}>
+      <div className="container-bd flex items-center gap-2 py-3 sm:gap-3">
+        <button className="rounded-lg p-1.5 hover:bg-sand-100 sm:p-2 lg:hidden" aria-label="Open menu" onClick={() => setOpen(true)}>
           <Menu className="h-5 w-5" />
         </button>
         <Link href="/" className="flex shrink-0 items-center" aria-label="Chap home">
-          <Image src="/chaplogo.png" alt="chap.co.ke" width={1147} height={287} priority className="h-9 w-auto sm:h-10" />
+          <Image src="/chaplogo.png" alt="chap.co.ke" width={1147} height={287} priority className="h-8 w-auto sm:h-10" />
         </Link>
 
         {/* search (desktop) */}
@@ -240,9 +240,9 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
           )}
         </div>
 
-        <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        <div className="ml-auto flex items-center gap-0.5 sm:gap-2">
           <button
-            className="rounded-lg p-2 hover:bg-sand-100 md:hidden"
+            className="rounded-lg p-1.5 hover:bg-sand-100 sm:p-2 md:hidden"
             aria-label={showSearch ? "Close search" : "Open search"}
             aria-expanded={showSearch}
             onClick={() => setShowSearch((v) => !v)}
@@ -338,20 +338,22 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
               </div>
             )}
           </div>
-          <Link href="/wishlist" className="relative rounded-lg p-2 hover:bg-sand-100" aria-label={wishCount > 0 ? `Wishlist, ${wishCount} saved` : "Wishlist"}>
+          <Link href="/wishlist" className="relative hidden rounded-lg p-1.5 hover:bg-sand-100 sm:inline-flex sm:p-2" aria-label={wishCount > 0 ? `Wishlist, ${wishCount} saved` : "Wishlist"}>
             <Heart className="h-5 w-5" />
             {wishCount > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-bold text-white">{wishCount > 99 ? "99+" : wishCount}</span>}
           </Link>
           {user && (
-            <NotificationsBell />
+            <span className="hidden sm:block">
+              <NotificationsBell />
+            </span>
           )}
           {user && (
-            <Link href="/dashboard/messages" className="relative rounded-lg p-2 hover:bg-sand-100" aria-label={unread > 0 ? `Messages, ${unread} unread` : "Messages"}>
+            <Link href="/dashboard/messages" className="relative rounded-lg p-1.5 hover:bg-sand-100 sm:p-2" aria-label={unread > 0 ? `Messages, ${unread} unread` : "Messages"}>
               <MessageCircle className="h-5 w-5" />
               {unread > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-bold text-white">{unread > 99 ? "99+" : unread}</span>}
             </Link>
           )}
-          <Link href="/cart" className="relative rounded-lg p-2 hover:bg-sand-100" aria-label={`Cart, ${count} items`}>
+          <Link href="/cart" className="relative rounded-lg p-1.5 hover:bg-sand-100 sm:p-2" aria-label={`Cart, ${count} items`}>
             <ShoppingCart className="h-5 w-5" />
             {count > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-bold text-white">{count}</span>}
           </Link>
@@ -433,6 +435,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
               {user && <Link href={user.role === "ADMIN" ? "/admin" : "/dashboard"} onClick={() => setOpen(false)} className="btn-secondary">My dashboard</Link>}
               {user && <Link href="/dashboard/notifications" onClick={() => setOpen(false)} className="btn-secondary">Notifications</Link>}
               <Link href="/cart" onClick={() => setOpen(false)} className="btn-secondary">Cart ({count})</Link>
+              <Link href="/wishlist" onClick={() => setOpen(false)} className="btn-secondary">Wishlist ({wishCount})</Link>
             </div>
 
             <div className="mt-4 border-t border-neutral-200 pt-4">

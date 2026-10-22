@@ -15,7 +15,11 @@ export async function POST(req: NextRequest) {
   const isJson = (req.headers.get("content-type") || "").includes("application/json");
   const body = isJson ? await req.json().catch(() => ({})) : Object.fromEntries(await req.formData());
   // Bulk: {ids: [...], action, reason}
-  const ids = Array.isArray(body.ids) ? body.ids.map((x: unknown) => String(x)) : body.id ? [String(body.id)] : [];
+  const ids: string[] = Array.isArray(body.ids)
+    ? body.ids.map((x: unknown) => String(x))
+    : body.id
+      ? [String(body.id)]
+      : [];
   const action = String(body.action || "");
   const reason = String(body.reason || action).slice(0, 500);
   const reasonCode = String(body.reasonCode || "").slice(0, 40);
@@ -30,11 +34,17 @@ export async function POST(req: NextRequest) {
   }
   const store = getStore();
   let done = 0;
-  for (const id of ids.slice(0, 100)) {
+  // Bulk tools can send the same id twice; moderate each listing once and
+  // only notify on a real status change (repeat approvals were creating
+  // duplicate "Listing approved" bells).
+  const uniqueIds = [...new Set(ids)].slice(0, 100);
+  for (const id of uniqueIds) {
     const existing = await store.getListing(id);
     if (existing) {
+      const changed = existing.status !== status;
       await store.setListingStatus(id, status, user.id, reasonCode ? `${reasonCode}: ${reason}` : reason);
       done += 1;
+      if (!changed) continue;
       // Jiji-style seller feed: approval / fix-and-resubmit / hide.
       try {
         const { notifyUser } = await import("@/lib/notifications");
@@ -47,7 +57,7 @@ export async function POST(req: NextRequest) {
               type: "listing",
               title: "Listing approved 🎉",
               body: `“${short}” is now live. Share it or boost it to reach more buyers.`,
-              link: "/dashboard/listings",
+              link: `/dashboard/listings/${existing.id}`,
             });
           } else if (status === "rejected") {
             await notifyUser({
@@ -55,7 +65,7 @@ export async function POST(req: NextRequest) {
               type: "listing",
               title: "Listing needs fixes",
               body: `“${short}” was declined: ${reasonCode ? `${reasonCode} — ` : ""}${reason.slice(0, 200)}. Edit and resubmit.`,
-              link: "/dashboard/listings",
+              link: `/dashboard/listings/${existing.id}`,
             });
           } else if (status === "hidden") {
             await notifyUser({
@@ -63,7 +73,7 @@ export async function POST(req: NextRequest) {
               type: "listing",
               title: "Listing hidden",
               body: `“${short}” was hidden: ${reason.slice(0, 200)}. Contact support if this looks wrong.`,
-              link: "/dashboard/listings",
+              link: `/dashboard/listings/${existing.id}`,
             });
           }
         }
@@ -92,7 +102,7 @@ export async function POST(req: NextRequest) {
       await logAudit({ actorId: user.id, actorEmail: user.email, action: `moderate.${action}`, entity: "catalogue", entityId: id, reason }).catch(() => {});
     }
   }
-  await logAudit({ actorId: user.id, actorEmail: user.email, action: `moderate.${action}`, entity: "listing", entityId: ids.slice(0, 5).join(","), reason: `${done}/${ids.length} ${reasonCode || reason}`.slice(0, 300) }).catch(() => {});
+  await logAudit({ actorId: user.id, actorEmail: user.email, action: `moderate.${action}`, entity: "listing", entityId: uniqueIds.slice(0, 5).join(","), reason: `${done}/${uniqueIds.length} ${reasonCode || reason}`.slice(0, 300) }).catch(() => {});
   return isJson ? NextResponse.json({ ok: true, done }) : NextResponse.redirect(new URL("/admin", req.url), 303);
 }
 

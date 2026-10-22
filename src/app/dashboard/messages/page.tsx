@@ -44,7 +44,10 @@ function ChatList({ items, filter, setFilter }: {
                     {c.unread > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1.5 text-[11px] font-bold text-white">{c.unread > 99 ? "99+" : c.unread}</span>}
                   </span>
                   <span className="block truncate text-sm text-ink-500">{c.lastMessage ?? "—"}</span>
-                  <span className="text-xs text-ink-400">{c.sellerName} · {c.lastAt ? timeAgo(c.lastAt) : ""}</span>
+                  <span className="text-xs text-ink-400">
+                    {c.sellerName && c.sellerName.trim().toLowerCase() !== "seller" ? `${c.sellerName} · ` : null}
+                    {c.lastAt ? timeAgo(c.lastAt) : ""}
+                  </span>
                 </span>
               </Link>
             </li>

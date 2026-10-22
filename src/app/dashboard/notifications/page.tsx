@@ -14,6 +14,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { timeAgo } from "@/lib/format";
+import { dedupeNotifications } from "@/lib/notification-dedupe";
 import { cn } from "@/lib/utils";
 
 type Item = {
@@ -121,7 +122,7 @@ export default function NotificationsPage() {
     if (n.link) router.push(n.link);
   };
 
-  const shown = useMemo(() => items, [items]);
+  const shown = useMemo(() => dedupeNotifications(items), [items]);
 
   return (
     <div>

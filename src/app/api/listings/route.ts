@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
       type: "listing",
       title: "Listing under review",
       body: `“${d.title.slice(0, 80)}” was received and is queued for moderation. We’ll notify you once it’s live.`,
-      link: "/dashboard/listings",
+      link: `/dashboard/listings/${rec.id}`,
     });
   } catch {}
   return NextResponse.json({ ok: true, id: rec.id, status: "pending", message: "Saved and queued for moderation." });

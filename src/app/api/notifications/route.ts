@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { isNotificationType } from "@/lib/notifications";
+import { dedupeNotifications } from "@/lib/notification-dedupe";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 
 /**
@@ -17,10 +18,12 @@ export async function GET(req: NextRequest) {
   const typeFilter = url.searchParams.get("type") ?? "";
   const store = getStore();
   try {
-    let items = await store.listNotifications(user.id, { unreadOnly, limit: 100 });
+    // De-dupe before counting so a repeated approval doesn't inflate the bell.
+    const all = dedupeNotifications(await store.listNotifications(user.id, { limit: 100 }));
+    const unread = all.filter((n) => !n.readAt).length;
+    let items = unreadOnly ? all.filter((n) => !n.readAt) : all;
     if (typeFilter && isNotificationType(typeFilter)) items = items.filter((n) => n.type === typeFilter);
     items = items.slice(0, limit);
-    const unread = await store.countUnreadNotifications(user.id).catch(() => items.filter((n) => !n.readAt).length);
     return NextResponse.json({ items, unread });
   } catch {
     return NextResponse.json({ items: [], unread: 0 });

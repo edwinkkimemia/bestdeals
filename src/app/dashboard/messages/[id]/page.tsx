@@ -7,7 +7,6 @@ import { ChatComposer } from "@/components/chat-composer";
 
 type Msg = {
   id: string;
-  senderLabel: string;
   bodyHtml: string;
   mine: boolean;
   read?: boolean;
@@ -114,7 +113,8 @@ function ThreadInner({ id }: { id: string }) {
     );
   }
 
-  const otherName = peer?.name ?? convo?.sellerName ?? "Chat";
+  const peerName = peer?.name ?? convo?.sellerName ?? "Chat";
+  const otherName = peerName.trim().toLowerCase() === "seller" ? "Chat" : peerName;
   const otherPhone = peer?.phone;
   let lastDay = "";
 
@@ -129,7 +129,7 @@ function ThreadInner({ id }: { id: string }) {
           {otherName.charAt(0).toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[15px] font-bold leading-tight">{otherName} <span className="ml-1 rounded-full bg-sand-100 px-2 py-0.5 text-[11px] font-semibold text-ink-500">{peer?.role === "buyer" ? "Buyer" : "Seller"}</span></p>
+          <p className="truncate text-[15px] font-bold leading-tight">{otherName}</p>
           <p className="truncate text-xs text-ink-500">
             {otherPhone ? <a href={`tel:${otherPhone.replace(/\s/g, "")}`} className="link-bd">{otherPhone}</a> : null}
             {otherPhone ? " · " : ""}
@@ -171,7 +171,6 @@ function ThreadInner({ id }: { id: string }) {
                       m.mine ? "rounded-tr-none bg-brand-600 text-white" : "rounded-tl-none bg-white"
                     }`}
                   >
-                    {!m.mine && <p className="text-xs font-bold text-brand-700">{m.senderLabel}</p>}
                     <div
                       className="break-words leading-relaxed [&_a]:underline [&_code]:rounded [&_code]:bg-black/10 [&_code]:px-1 [&_ul]:list-disc [&_ul]:pl-5"
                       dangerouslySetInnerHTML={{ __html: m.bodyHtml }}

@@ -242,13 +242,13 @@ export default function VerifyPage() {
           </div>
           <div>
             <label className="label-bd" htmlFor="v-file">{isBusiness ? "Business permit photo" : "National ID photo"} (JPG/PNG/WebP, ≤5MB)</label>
-            <input id="v-file" type="file" accept="image/jpeg,image/png,image/webp" className="text-sm"
+            <input id="v-file" type="file" accept="image/jpeg,image/png,image/webp" className="block w-full max-w-full text-sm"
               onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </div>
           {isBusiness && (
             <div>
               <label className="label-bd" htmlFor="v-file2">Owner national ID photo (JPG/PNG/WebP, ≤5MB)</label>
-              <input id="v-file2" type="file" accept="image/jpeg,image/png,image/webp" className="text-sm"
+              <input id="v-file2" type="file" accept="image/jpeg,image/png,image/webp" className="block w-full max-w-full text-sm"
                 onChange={(e) => setFile2(e.target.files?.[0] ?? null)} />
             </div>
           )}
