@@ -214,7 +214,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
               value={q}
               onChange={(e) => setQ(e.target.value)}
               onFocus={() => setSearchFocus(true)}
-              placeholder="Search phones, cars, rentals, services…"
+              placeholder="Search products, sellers, shops…"
               className="w-full px-4 py-2.5 text-sm outline-none"
               aria-label="Search Chap"
               autoComplete="off"
@@ -409,7 +409,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
       {showSearch && (
         <div className="container-bd pb-3 md:hidden">
           <form action="/search" className="flex overflow-hidden rounded-xl border-2 border-brand-600">
-            <input name="q" autoFocus placeholder="Search Chap…" aria-label="Search Chap" className="w-full px-4 py-2 text-sm outline-none" />
+            <input name="q" autoFocus placeholder="Products, sellers, shops…" aria-label="Search Chap" className="w-full px-4 py-2 text-sm outline-none" />
             <input type="hidden" name="county" value={county} />
             <button className="bg-brand-600 px-4 text-white" aria-label="Search"><Search className="h-4 w-4" /></button>
           </form>

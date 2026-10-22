@@ -1,4 +1,4 @@
-import { LISTINGS, type Listing } from "@/data/catalog";
+import { LISTINGS, SHOPS, type Listing } from "@/data/catalog";
 import { countyMatches } from "@/lib/kenya";
 import { relatedTier } from "@/lib/related";
 
@@ -45,14 +45,26 @@ function expandQuery(q: string): string[] {
   return Array.from(out);
 }
 
-function score(l: Listing, tokens: string[]): number {
-  if (tokens.length === 0) return 1;
-  const hay = `${l.title} ${l.description} ${l.subcategory ?? ""} ${Object.values(l.attributes).join(" ")} ${l.town} ${l.county}`.toLowerCase();
+function textScore(l: Listing, tokens: string[]): number {
+  const shopWords = (l.shopSlug ?? "").replace(/-/g, " ");
+  // Seller/shop names are part of a listing's searchable identity — typing a
+  // shop name should find its products, not just its storefront profile.
+  const hay = `${l.title} ${l.description} ${l.subcategory ?? ""} ${Object.values(l.attributes).join(" ")} ${l.town} ${l.county} ${l.sellerName} ${shopWords}`.toLowerCase();
   let s = 0;
   for (const t of tokens) {
     if (l.title.toLowerCase().includes(t)) s += 5;
     else if (hay.includes(t)) s += 2;
   }
+  return s;
+}
+
+function score(l: Listing, tokens: string[]): number {
+  if (tokens.length === 0) return 1;
+  const text = textScore(l, tokens);
+  // Ranking bonuses (featured/verified) must never turn a non-match into a
+  // match — otherwise every verified listing answers every unrelated query.
+  if (text <= 0) return 0;
+  let s = text;
   if (l.featured) s += 1.5;
   if (l.verified) s += 1;
   if (l.stock <= 0) s -= 5;
@@ -226,7 +238,10 @@ export function suggestions(q: string, limit = 7): string[] {
   if (t.length < 1) return [];
   const titles = LISTINGS.map((l) => l.title);
   const cats = ["Phones & Tablets", "Automotive", "Property", "Fashion", "Laptops", "Services"];
-  const hits = [...titles, ...cats].filter((s) => s.toLowerCase().includes(t));
+  // Seller and shop names are searchable entities too — surface them in the
+  // header autocomplete so a name search lands on the right profile.
+  const people = [...LISTINGS.map((l) => l.sellerName), ...SHOPS.map((s) => s.name)];
+  const hits = [...new Set([...titles, ...cats, ...people])].filter((s) => s.toLowerCase().includes(t));
   // Prefix matches first so early keystrokes already feel relevant.
   hits.sort((a, b) => Number(!a.toLowerCase().startsWith(t)) - Number(!b.toLowerCase().startsWith(t)));
   return hits.slice(0, limit);
@@ -330,12 +345,21 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
 /** Suggest including live store titles (async, falls back to static). */
 export async function suggestionsAll(q: string, limit = 7): Promise<string[]> {
   const base = suggestions(q, limit);
+  const t = q.trim().toLowerCase();
+  if (!t) return base;
   try {
     const { getStore } = await import("./store");
-    const live = await getStore().listListingsByStatus("active").catch(() => []);
-    const t = q.trim().toLowerCase();
-    if (!t || live.length === 0) return base;
-    const extra = live.map((l) => l.title).filter((s) => s.toLowerCase().includes(t));
+    const store = getStore();
+    const [live, users, shops] = await Promise.all([
+      store.listListingsByStatus("active").catch(() => []),
+      store.listUsers().catch(() => []),
+      store.listShops().catch(() => []),
+    ]);
+    const extra = [
+      ...live.map((l) => l.title),
+      ...users.flatMap((u) => [u.name, u.businessName].filter(Boolean) as string[]),
+      ...shops.map((s) => s.name),
+    ].filter((s) => s.toLowerCase().includes(t));
     const hits = [...new Set([...base, ...extra])];
     hits.sort((a, b) => Number(!a.toLowerCase().startsWith(t)) - Number(!b.toLowerCase().startsWith(t)));
     return hits.slice(0, limit);

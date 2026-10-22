@@ -121,6 +121,22 @@ describe("instant-suggestions", () => {
   });
 });
 
+describe("search-by-seller-and-shop", () => {
+  it("finds listings by seller or shop name", () => {
+    const fonzone = searchListings({ q: "FonZone", perPage: 100 });
+    assert.ok(fonzone.total > 0, "FonZone has listings");
+    assert.ok(fonzone.items.every((l) => l.sellerName === "FonZone Nairobi"));
+
+    const daniel = searchListings({ q: "Daniel", perPage: 100 });
+    assert.ok(daniel.total > 0, "Daniel K. has a listing");
+    assert.ok(daniel.items.every((l) => l.sellerName === "Daniel K."));
+  });
+  it("does not let featured/verified bonuses create phantom matches", () => {
+    const r = searchListings({ q: "xx-no-such-listing-xx", perPage: 100 });
+    assert.equal(r.total, 0);
+  });
+});
+
 describe("seller-kind-signup", () => {
   it("defaults to individual, accepts business", () => {
     const base = { name: "Jane Doe", email: "j@x.co.ke", phone: "0712345678", password: "password1", acceptTerms: true as const };
