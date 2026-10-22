@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LISTINGS } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
+import { StaticInfo } from "@/components/static-info";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { shuffleFeaturedFirst } from "@/lib/search";
 
@@ -32,27 +33,23 @@ export default async function DealsPage() {
         price with the saving calculated from it — never fake countdowns or invented discounts.
       </p>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        {[
-          { t: "Genuine before-prices", d: "A 'was' price only appears if the item truly sold at it. Our moderators remove fabricated discounts." },
-          { t: "Verified sellers first", d: "Deal rails prioritise checked sellers with real stock — availability is re-validated at checkout." },
-          { t: "Compare before you buy", d: "Open any deal to see the same item from other sellers and classifieds side by side." },
-        ].map((c) => (
-          <div key={c.t} className="card p-4">
-            <p className="font-bold">{c.t}</p>
-            <p className="mt-1 text-sm text-ink-500">{c.d}</p>
-          </div>
-        ))}
-      </div>
+      <StaticInfo
+        className="mt-4"
+        items={[
+          { title: "Genuine before-prices", description: "A 'was' price only appears if the item truly sold at it." },
+          { title: "Verified sellers first", description: "Deal rails prioritise checked sellers with real stock." },
+          { title: "Compare before you buy", description: "See the same item from other sellers and classifieds side by side." },
+        ]}
+      />
 
       {deals.length === 0 ? (
-        <div className="card mt-6 p-8 text-center">
+        <div className="card mt-5 p-8 text-center">
           <p className="font-bold">No live deals right now</p>
           <p className="mt-1 text-sm text-ink-500">New price drops land daily — browse the marketplace or check back tomorrow.</p>
           <Link href="/shop" className="btn-primary mt-4">Browse Shop</Link>
         </div>
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {deals.map((l) => <ListingCard key={l.id} listing={l} />)}
         </div>
       )}

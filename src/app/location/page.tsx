@@ -3,6 +3,7 @@ import { MapPin } from "lucide-react";
 import { LISTINGS } from "@/data/catalog";
 import { KENYA_COUNTIES } from "@/lib/kenya";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
+import { StaticInfo } from "@/components/static-info";
 
 export const metadata = {
   title: "Shop by location",
@@ -34,20 +35,16 @@ export default async function LocationIndex() {
         All 47 counties with their major towns. Pick your county to see products, classifieds and services listed there — no precise location needed.
       </p>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        {[
-          { t: `${KENYA_COUNTIES.length} counties`, d: "Full national coverage, from Mombasa to Turkana." },
-          { t: `${totalTowns}+ towns`, d: "Major towns and subcounty headquarters in every county." },
-          { t: `${all.length} listings`, d: "Live catalogue spread across the country — growing daily." },
-        ].map((c) => (
-          <div key={c.t} className="card p-4">
-            <p className="font-bold">{c.t}</p>
-            <p className="mt-1 text-sm text-ink-500">{c.d}</p>
-          </div>
-        ))}
-      </div>
+      <StaticInfo
+        className="mt-4"
+        items={[
+          { title: `${KENYA_COUNTIES.length} counties`, description: "Full national coverage, from Mombasa to Turkana." },
+          { title: `${totalTowns}+ towns`, description: "Major towns and subcounty headquarters in every county." },
+          { title: `${all.length} listings`, description: "Live catalogue spread across the country — growing daily." },
+        ]}
+      />
 
-      <h2 className="mb-2 mt-8 font-bold">All counties ({counties.length})</h2>
+      <h2 className="mb-2 mt-6 font-bold">All counties ({counties.length})</h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {counties.map((c) => (
           <Link key={c.county} href={`/location/${encodeURIComponent(c.county)}`} className="card group overflow-hidden transition hover:shadow-lg">

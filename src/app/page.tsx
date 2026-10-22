@@ -2,10 +2,11 @@ import Link from "next/link";
 import { Fragment } from "react";
 import type { Metadata } from "next";
 import { ArrowRight, BadgeCheck, MapPin, Search, ShieldCheck, Store, Truck } from "lucide-react";
-import { CATEGORIES, LISTINGS, SHOPS, POPULAR_SEARCHES, shopListings } from "@/data/catalog";
+import { LISTINGS, SHOPS, POPULAR_SEARCHES, shopListings } from "@/data/catalog";
 import { storeRead } from "@/lib/store";
 import { ListingCard } from "@/components/ui/listing-card";
 import { HeroCategories } from "@/components/hero-categories";
+import { CategoryStrip } from "@/components/category-strip";
 import { COUNTY_NAMES, KENYA_COUNTIES } from "@/lib/kenya";
 import { shuffleFeaturedFirst } from "@/lib/search";
 import { ratingLabel } from "@/lib/ratings";
@@ -157,24 +158,9 @@ export default async function HomePage() {
             <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80" alt="Fashion on Chap" className="mt-5 h-44 rounded-2xl object-cover shadow-card" loading="lazy" />
           </div>
         </div>
-        {/* Mobile/tablet swipeable category strip with pics */}
-        <div className="pb-7 lg:hidden">
-          <div className="container-bd flex items-center justify-between">
-            <p className="text-sm font-bold">Shop by category</p>
-            <Link href="/shop" className="link-bd text-xs">View all →</Link>
-          </div>
-          <div className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1" role="list" aria-label="Categories">
-            {CATEGORIES.slice(0, 10).map((c) => (
-              <Link key={c.slug} href={`/shop/${c.slug}`} role="listitem" className="card w-32 shrink-0 snap-start overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={c.image} alt="" loading="lazy" className="h-20 w-full object-cover" />
-                <p className="truncate p-2 text-xs font-semibold">{c.name}</p>
-              </Link>
-            ))}
-            <Link href="/shop" role="listitem" className="flex w-32 shrink-0 snap-start flex-col items-center justify-center gap-1 rounded-card border border-dashed border-brand-600/50 bg-brand-50 p-2 text-center">
-              <span className="text-xs font-bold text-brand-700">View all categories →</span>
-            </Link>
-          </div>
+        {/* Mobile/tablet swipeable category strip — all categories, one compact row */}
+        <div className="container-bd pb-7 lg:hidden">
+          <CategoryStrip title="Shop by category" viewAllHref="/shop" />
         </div>
       </section>
 
@@ -204,30 +190,9 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* B: categories — desktop only; mobile/tablet use the hero slider above */}
-      <section className="container-bd hidden py-10 lg:block" aria-labelledby="cats">
-        <div className="mb-5 flex items-end justify-between">
-          <h2 id="cats" className="section-title">Browse categories</h2>
-          <Link href="/shop" className="link-bd">View all →</Link>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {CATEGORIES.slice(0, 12).map((c) => (
-            <div key={c.slug} className="card group overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <Link href={`/shop/${c.slug}`}><img src={c.image} alt={c.name} loading="lazy" className="h-24 w-full object-cover transition group-hover:scale-105" /></Link>
-              <div className="p-2.5">
-                <Link href={`/shop/${c.slug}`} className="text-sm font-semibold leading-tight hover:text-brand-700">{c.name}</Link>
-                {c.subcategories.length > 0 && (
-                  <p className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5">
-                    {c.subcategories.slice(0, 3).map((s) => (
-                      <Link key={s} href={`/search?category=${c.slug}&subcategory=${encodeURIComponent(s)}`} className="text-[11px] text-ink-500 hover:text-brand-700 hover:underline">{s}</Link>
-                    ))}
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+      {/* B: categories — compact desktop rail; mobile uses the hero slider */}
+      <section className="container-bd hidden py-8 lg:block">
+        <CategoryStrip title="Browse categories" viewAllHref="/shop" />
       </section>
 
       {/* C: Today's Best Deals — genuine savings only */}

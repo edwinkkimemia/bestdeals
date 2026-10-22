@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LISTINGS } from "@/data/catalog";
 import { ListingCard } from "@/components/ui/listing-card";
+import { StaticInfo } from "@/components/static-info";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { shuffleFeaturedFirst } from "@/lib/search";
 
@@ -29,25 +30,17 @@ export default async function ServicesIndex() {
       <h1 className="section-title mt-2">Professional & local services</h1>
       <p className="text-sm text-ink-500">Fundis, cleaners, tutors and pros — compare coverage areas, price ranges and reviews, then request a quote.</p>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        {[
-          { t: "1. Compare coverage", d: "Each service lists where it operates — filter by your county and check price ranges up front." },
-          { t: "2. Request a quote", d: "Describe the job once. Providers reply with written quotes before any work starts." },
-          { t: "3. Pay on results", d: "Agree scope and price in writing, pay on completion, then review the provider for the next buyer." },
-        ].map((c) => (
-          <div key={c.t} className="card p-4">
-            <p className="font-bold">{c.t}</p>
-            <p className="mt-1 text-sm text-ink-500">{c.d}</p>
-          </div>
-        ))}
-      </div>
+      <StaticInfo
+        className="mt-4"
+        numbered
+        items={[
+          { title: "Compare coverage", description: "Filter by county and check price ranges up front." },
+          { title: "Request a quote", description: "Describe the job once; providers reply with written quotes." },
+          { title: "Pay on results", description: "Agree scope and price, pay on completion, then review." },
+        ]}
+      />
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Link href="/sell?type=service" className="btn-primary">Offer a service</Link>
-        <Link href="/safety" className="btn-secondary">Hiring safely</Link>
-      </div>
-
-      <h2 className="mb-2 mt-8 font-bold">Available services ({items.length})</h2>
+      <h2 className="mb-2 mt-6 font-bold">Available services ({items.length})</h2>
       {items.length === 0 ? (
         <div className="card p-8 text-center">
           <p className="font-bold">No services listed yet in this view</p>
@@ -59,6 +52,11 @@ export default async function ServicesIndex() {
           {items.map((l) => <ListingCard key={l.id} listing={l} />)}
         </div>
       )}
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        <Link href="/sell?type=service" className="btn-primary">Offer a service</Link>
+        <Link href="/safety" className="btn-secondary">Hiring safely</Link>
+      </div>
     </div>
   );
 }

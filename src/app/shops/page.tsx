@@ -5,6 +5,7 @@ import { ratingLabel } from "@/lib/ratings";
 import { Badge, PlanCheckmark } from "@/components/ui/badge";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { SafeImage } from "@/components/ui/safe-image";
+import { StaticInfo } from "@/components/static-info";
 
 export const metadata = {
   title: "Business Shops",
@@ -40,20 +41,16 @@ export default async function ShopsIndex() {
       <h1 className="section-title mt-2">Business shops</h1>
       <p className="max-w-2xl text-sm text-ink-500">Branded storefronts with full catalogues, delivery info, bulk-buyer enquiries and moderated reviews — each shop lives at its own chap.co.ke address.</p>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        {[
-          { t: "✓ means checked", d: "Verified shops passed ID or business-permit review. A blue check is a Silver plan, gold is Gold — plan sellers support the marketplace. Unverified shops can still trade — inspect as usual." },
-          { t: "Catalogue + bulk", d: "Browse the full range, or send one bulk enquiry for wholesale quantities and institutional quotes." },
-          { t: "Reviews you can trust", d: "Only moderated reviews show — paid or delivered orders earn the Verified purchase badge." },
-        ].map((c) => (
-          <div key={c.t} className="card p-4">
-            <p className="font-bold">{c.t}</p>
-            <p className="mt-1 text-sm text-ink-500">{c.d}</p>
-          </div>
-        ))}
-      </div>
+      <StaticInfo
+        className="mt-4"
+        items={[
+          { title: "✓ means checked", description: "Verified shops passed ID or business-permit review; plan badges show Silver or Gold." },
+          { title: "Catalogue + bulk", description: "Browse the full range or send one bulk enquiry for wholesale quotes." },
+          { title: "Reviews you can trust", description: "Only moderated reviews show; paid or delivered orders earn verified badges." },
+        ]}
+      />
 
-      <h2 className="mb-2 mt-8 font-bold">Featured shops ({SHOPS.length})</h2>
+      <h2 className="mb-2 mt-6 font-bold">Featured shops ({SHOPS.length})</h2>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {withRatings.map(({ shop: s, rating }) => (
             <Link key={s.slug} href={`/shops/${s.slug}`} className="card overflow-hidden hover:shadow-lg">
