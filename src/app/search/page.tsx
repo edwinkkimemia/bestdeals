@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Fragment } from "react";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import { CATEGORIES, categoryBySlug } from "@/data/catalog";
 import { searchAll, type SearchParams } from "@/lib/search";
 import { searchEntities } from "@/lib/entity-search";
@@ -123,6 +124,20 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
   ];
   const entityTabResults = pageType === "sellers" ? entities.sellers : pageType === "shops" ? entities.shops : [];
   const showEntityPreviews = pageType === "all" && entityPreview && (sellerCount > 0 || shopCount > 0);
+  const activeFilterCount = [
+    Boolean(params.q?.trim()),
+    !isEntityTab && params.category !== "all",
+    !isEntityTab && params.subcategory !== "all",
+    params.county !== "all",
+    params.town !== "all",
+    !isEntityTab && Boolean(searchParams.min),
+    !isEntityTab && Boolean(searchParams.max),
+    !isEntityTab && params.condition !== "all",
+    !isEntityTab && params.type !== "all",
+    !isEntityTab && params.seller !== "all",
+    !isEntityTab && params.sort !== "relevance",
+    !isEntityTab && postedKey !== "any",
+  ].filter(Boolean).length;
   const heading = params.q
     ? `Results for “${params.q}”`
     : pageType === "sellers"
@@ -172,7 +187,29 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
       )}
 
       <div className="mt-5 grid gap-6 lg:grid-cols-[240px_1fr]">
-        <form action="/search" method="get" className="card h-fit space-y-3 p-4">
+        <div className="card h-fit overflow-hidden">
+          <input id="search-filters-toggle" type="checkbox" className="peer sr-only lg:hidden" />
+          <label
+            htmlFor="search-filters-toggle"
+            className="flex cursor-pointer select-none items-center justify-between gap-2 px-4 py-3 text-sm font-bold peer-focus-visible:ring-2 peer-focus-visible:ring-inset peer-focus-visible:ring-brand-600 lg:hidden peer-checked:[&>svg]:rotate-180"
+          >
+            <span className="flex items-center gap-2">
+              <SlidersHorizontal className="h-4 w-4 text-brand-600" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+                  {activeFilterCount} active
+                </span>
+              )}
+            </span>
+            <ChevronDown className="h-4 w-4 transition-transform" />
+          </label>
+          <form
+            id="search-filters"
+            action="/search"
+            method="get"
+            className="hidden space-y-3 border-t border-neutral-200 p-4 peer-checked:block lg:block lg:border-t-0"
+          >
           <div>
             <label className="label-bd" htmlFor="f-q">Keyword</label>
             <input
@@ -280,7 +317,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
           {!isEntityTab && cat?.attributes?.length ? (
             <p className="text-xs text-ink-400">Category attributes ({cat.attributes.map((a) => a.label).join(", ")}) apply on listing pages.</p>
           ) : null}
-        </form>
+          </form>
+        </div>
 
         <div>
           <div className="mb-3 flex flex-wrap gap-2" role="tablist" aria-label="Result types">
