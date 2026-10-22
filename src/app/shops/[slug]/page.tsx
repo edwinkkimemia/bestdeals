@@ -18,29 +18,6 @@ import { SafeImage } from "@/components/ui/safe-image";
 // prerender would freeze them at build time and hide new products.
 export const dynamic = "force-dynamic";
 
-const SOCIAL_LABELS: Record<string, string> = {
-  facebook: "Facebook",
-  instagram: "Instagram",
-  x: "X",
-  tiktok: "TikTok",
-  youtube: "YouTube",
-};
-
-/** Seller-managed social profile pills (website/email render alongside). */
-function SocialLinks({ socials }: { socials?: Record<string, string> | null }) {
-  const entries = Object.entries(socials ?? {}).filter(([, v]) => typeof v === "string" && v.trim());
-  if (entries.length === 0) return null;
-  return (
-    <div className="mt-2 flex flex-wrap gap-2">
-      {entries.map(([k, v]) => (
-        <a key={k} href={v} target="_blank" rel="noopener" className="rounded-full border border-neutral-300 px-3 py-1 text-xs font-semibold hover:bg-sand-50">
-          {SOCIAL_LABELS[k] ?? k}
-        </a>
-      ))}
-    </div>
-  );
-}
-
 export function generateStaticParams() {
   return SHOPS.map((s) => ({ slug: s.slug }));
 }
@@ -96,38 +73,26 @@ export default async function ShopPage({ params }: { params: { slug: string } })
           )}
         </div>
         <div className="container-bd py-6">
-          <div className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-            <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-600 text-2xl font-black text-white">
+          <div className="card grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 p-5 lg:flex lg:flex-row lg:gap-4">
+            <span className="col-start-1 row-start-1 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-600 text-2xl font-black text-white">
               {nonNull.logoUrl ? (
                 <SafeImage src={nonNull.logoUrl} alt={`${nonNull.name} logo`} className="h-full w-full object-cover" fallback={nonNull.name.charAt(0).toUpperCase()} />
               ) : (
                 nonNull.name.charAt(0).toUpperCase()
               )}
             </span>
-            <div className="min-w-0 flex-1">
-              <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{nonNull.name} <PlanCheckmark plan={nonNull.planId} /> {nonNull.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>} <TenureBadge since={nonNull.createdAt} /></h1>
-              <p className="text-sm text-ink-500">{nonNull.businessCategory} · {nonNull.town}, {nonNull.county} · {ratingLabel(storedReviews)}{nonNull.hours ? ` · 🕒 ${nonNull.hours}` : ""}</p>
-              <p className="mt-1 text-sm">{nonNull.description}</p>
+            <div className="contents lg:block lg:min-w-0 lg:flex-1">
+              <h1 className="col-start-2 row-start-1 flex min-w-0 flex-wrap items-center gap-2 text-2xl font-bold">{nonNull.name} <PlanCheckmark plan={nonNull.planId} /> {nonNull.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>} <TenureBadge since={nonNull.createdAt} /></h1>
+              <p className="col-span-2 text-sm text-ink-500">{nonNull.businessCategory} · {nonNull.town}, {nonNull.county} · {ratingLabel(storedReviews)}{nonNull.hours ? ` · 🕒 ${nonNull.hours}` : ""}</p>
+              <p className="col-span-2 mt-1 text-sm">{nonNull.description}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href={`/search?q=${encodeURIComponent(nonNull.name)}`} className="btn-secondary">All products</Link>
+            <div className="col-span-2 flex flex-wrap gap-2 lg:col-auto">
               <a href={`tel:${nonNull.phone.replace(/\s/g, "")}`} className="btn-secondary"><Phone className="h-4 w-4" /> Call</a>
               <a href={`https://wa.me/${nonNull.phone.replace(/\D/g, "").replace(/^0/, "254")}?text=${encodeURIComponent(`Hello ${nonNull.name}! I found your shop on Chap.`)}`} target="_blank" rel="noopener" className="btn-whatsapp"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
               <Link href={`/dashboard/messages/new?shop=${nonNull.slug}`} className="btn-primary"><MessageCircle className="h-4 w-4" /> Message shop</Link>
             </div>
           </div>
           <div className="mt-3"><ShareRow title={`${nonNull.name} on Chap`} text={`${nonNull.name} — ${nonNull.businessCategory} in ${nonNull.town}, ${nonNull.county}`} /></div>
-          <div className="mt-4 grid gap-3 lg:grid-cols-3">
-            <div className="card p-4 text-sm"><p className="font-bold">Delivery</p><p className="text-ink-500">{nonNull.deliveryInfo || "Delivery arranged with the shop — confirm fee and timeline before paying."}</p></div>
-            <div className="card p-4 text-sm">
-              <p className="font-bold">Contact</p>
-              <p className="text-ink-500">{nonNull.phone} · {nonNull.town}, {nonNull.county}</p>
-              {nonNull.website && <p className="mt-1"><a href={nonNull.website} target="_blank" rel="noopener" className="link-bd break-all">{nonNull.website.replace(/^https?:\/\//, "")}</a></p>}
-              {nonNull.email && <p className="mt-1"><a href={`mailto:${nonNull.email}`} className="link-bd break-all">{nonNull.email}</a></p>}
-              <SocialLinks socials={nonNull.socials} />
-            </div>
-            <div className="card p-4 text-sm"><p className="font-bold">Policies</p><p className="text-ink-500">Bulk quotes within 24h. Inspect before paying.</p></div>
-          </div>
           <h2 className="section-title mt-8">Catalogue ({catalogue.length})</h2>
           {catalogue.length === 0 ? (
             <div className="card mt-4 p-6 text-center">
@@ -181,38 +146,26 @@ export default async function ShopPage({ params }: { params: { slug: string } })
       </div>
       <div className="container-bd py-6">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-        <div className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
+        <div className="card grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 p-5 lg:flex lg:flex-row lg:gap-4">
           {v.logo ? (
-            <SafeImage src={v.logo} alt={`${v.name} logo`} className="h-16 w-16 rounded-xl object-cover" fallback={v.name.charAt(0).toUpperCase()} />
+            <SafeImage src={v.logo} alt={`${v.name} logo`} className="col-start-1 row-start-1 h-16 w-16 rounded-xl object-cover" fallback={v.name.charAt(0).toUpperCase()} />
           ) : (
-            <span aria-hidden className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-2xl font-black text-white">
+            <span aria-hidden className="col-start-1 row-start-1 flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-brand-600 text-2xl font-black text-white">
               {v.name.charAt(0).toUpperCase()}
             </span>
           )}
-          <div className="flex-1">
-            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">{v.name} <PlanCheckmark plan={v.planId} /> {v.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</h1>
-            <p className="text-sm text-ink-500">{v.businessCategory} · {v.town}, {v.county} · {ratingLabel(reviews)}{v.hours ? ` · 🕒 ${v.hours}` : ""}</p>
-            <p className="mt-1 text-sm">{v.description}</p>
+          <div className="contents lg:block lg:min-w-0 lg:flex-1">
+            <h1 className="col-start-2 row-start-1 flex min-w-0 flex-wrap items-center gap-2 text-2xl font-bold">{v.name} <PlanCheckmark plan={v.planId} /> {v.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</h1>
+            <p className="col-span-2 text-sm text-ink-500">{v.businessCategory} · {v.town}, {v.county} · {ratingLabel(reviews)}{v.hours ? ` · 🕒 ${v.hours}` : ""}</p>
+            <p className="col-span-2 mt-1 text-sm">{v.description}</p>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Link href={`/search?q=${encodeURIComponent(v.name)}`} className="btn-secondary">All products</Link>
+          <div className="col-span-2 flex flex-wrap gap-2 lg:col-auto">
             <a href={`tel:${v.phone.replace(/\s/g, "")}`} className="btn-secondary"><Phone className="h-4 w-4" /> Call</a>
             <a href={`https://wa.me/${v.phone.replace(/\D/g, "").replace(/^0/, "254")}?text=${encodeURIComponent(`Hello ${v.name}! I found your shop on Chap.`)}`} target="_blank" rel="noopener" className="btn-whatsapp"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
             <Link href={`/dashboard/messages/new?shop=${v.slug}`} className="btn-primary"><MessageCircle className="h-4 w-4" /> Message shop</Link>
           </div>
         </div>
         <div className="mt-3"><ShareRow title={`${v.name} on Chap`} text={`${v.name} — ${v.businessCategory} in ${v.town}, ${v.county}`} /></div>
-        <div className="mt-4 grid gap-3 lg:grid-cols-3">
-          <div className="card p-4 text-sm"><p className="font-bold">Delivery</p><p className="text-ink-500">{v.deliveryInfo}</p></div>
-          <div className="card p-4 text-sm">
-            <p className="font-bold">Contact</p>
-            <p className="text-ink-500">{v.phone} · {v.town}, {v.county}</p>
-            {contacts?.website && <p className="mt-1"><a href={contacts.website} target="_blank" rel="noopener" className="link-bd break-all">{contacts.website.replace(/^https?:\/\//, "")}</a></p>}
-            {contacts?.email && <p className="mt-1"><a href={`mailto:${contacts.email}`} className="link-bd break-all">{contacts.email}</a></p>}
-            <SocialLinks socials={contacts?.socials} />
-          </div>
-          <div className="card p-4 text-sm"><p className="font-bold">Policies</p><p className="text-ink-500">7-day returns on sealed electronics. Bulk quotes within 24h.</p></div>
-        </div>
         <h2 className="section-title mt-8">Catalogue ({items.length})</h2>
         <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {items.map((l) => <ListingCard key={l.id} listing={l} />)}

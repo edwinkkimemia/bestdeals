@@ -88,30 +88,29 @@ export default async function SellerPage({ params }: { params: { slug: string } 
         )}
       </div>
       <div className="container-bd py-6">
-      <div className="card flex flex-col gap-4 p-5 sm:flex-row sm:items-center">
-        <span aria-hidden className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-2xl font-black text-white">
+      <div className="card grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 p-5 lg:flex lg:flex-row lg:gap-4">
+        <span aria-hidden className="col-start-1 row-start-1 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-2xl font-black text-white">
           {profile.photoUrl ? (
             <SafeImage src={profile.photoUrl} alt="" className="h-full w-full object-cover" fallback={profile.name.charAt(0).toUpperCase()} />
           ) : (
             profile.name.charAt(0).toUpperCase()
           )}
         </span>
-        <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">
+        <div className="contents lg:block lg:min-w-0 lg:flex-1">
+          <h1 className="col-start-2 row-start-1 flex min-w-0 flex-wrap items-center gap-2 text-2xl font-bold">
             {profile.name}
             <PlanCheckmark plan={sellerPlan?.planId} />
             {profile.verified ? <Badge tone="green">✓ Verified seller</Badge> : <Badge>Unverified seller</Badge>}
             <TenureBadge since={profile.memberSince} />
           </h1>
-          <p className="text-sm text-ink-500">
+          <p className="col-span-2 text-sm text-ink-500">
             {profile.businessName ? `${profile.businessName} · ` : ""}
             {profile.sellerKind === "business" ? "Business seller" : "Individual seller"} · {memberSince(profile.memberSince)} ·{" "}
             {ratingLabel(reviews)}
           </p>
-          {profile.bio && <p className="mt-1 text-sm">{profile.bio}</p>}
+          {profile.bio && <p className="col-span-2 mt-1 text-sm">{profile.bio}</p>}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href={`/search?q=${encodeURIComponent(profile.name)}`} className="btn-secondary">All listings</Link>
+        <div className="col-span-2 flex flex-wrap gap-2 lg:col-auto">
           {contact && (
             <>
               <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="btn-secondary"><Phone className="h-4 w-4" /> Call</a>
