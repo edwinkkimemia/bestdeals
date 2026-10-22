@@ -26,6 +26,12 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
   const [msgTone, setMsgTone] = useState<"ok" | "err">("ok");
   const [notVerified, setNotVerified] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(listingId ?? null);
+  const [submitted, setSubmitted] = useState(false);
+  // Stable for this form instance: a retry or accidental second click returns
+  // the first listing instead of creating a duplicate.
+  const [idempotencyKey] = useState(
+    () => globalThis.crypto?.randomUUID?.() ?? `listing-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
   const [urls, setUrls] = useState<string[]>(initialValues?.images ?? []);
   const [picked, setPicked] = useState<{ file: File; url: string }[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -96,6 +102,7 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
     <form
       className="card mt-4 space-y-3 p-5"
       onSubmit={handleSubmit(async (data) => {
+        if (submitted) return;
         say("ok", "");
         setNotVerified(false);
         let images = [...urls];
@@ -121,16 +128,25 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
           }
         }
         const url = isEdit ? `/api/listings/${listingId}` : "/api/listings";
-        const r = await fetch(url, { method: isEdit ? "PUT" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...data, images }) });
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (!isEdit) headers["Idempotency-Key"] = idempotencyKey;
+        const r = await fetch(url, { method: isEdit ? "PUT" : "POST", headers, body: JSON.stringify({ ...data, images }) });
         const j = await r.json().catch(() => ({}));
         if (!r.ok) {
           if (j.code === "NOT_VERIFIED" || r.status === 403) setNotVerified(true);
           say("err", j.error || "Failed");
           return;
         }
+        if (!isEdit) {
+          const createdId = typeof j.id === "string" ? j.id : null;
+          setSavedId(createdId);
+          setSubmitted(true);
+          say("ok", j.duplicate ? "Already submitted ✓ — opening your listing…" : "Submitted ✓ — opening your listing…");
+          router.replace(createdId ? `/dashboard/listings/${createdId}?submitted=1` : "/dashboard/listings");
+          return;
+        }
         setSavedId(j.id ?? listingId ?? null);
-        say("ok", isEdit ? `Saved ✓ — status: ${j.status ?? "pending"}.` : `Submitted ✓ — status: ${j.status}. Track it in My listings.`);
-        if (!isEdit) router.refresh();
+        say("ok", `Saved ✓ — status: ${j.status ?? "pending"}.`);
       })}
     >
       <div className="grid gap-3 sm:grid-cols-2">
@@ -146,11 +162,13 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
       <div><label className="label-bd" htmlFor="l-title">Title</label><input id="l-title" className="input-bd" placeholder="e.g. Samsung Galaxy A15 128GB, sealed" {...register("title")} />{errors.title && <p className="text-xs text-red-600">{String(errors.title.message)}</p>}</div>
       <RichTextField
         id="l-desc"
-        label="Description (max 1000 characters)"
+        label="Description"
         value={description}
         onChange={(v) => setValue("description", v as never, { shouldValidate: true, shouldDirty: true })}
         error={errors.description ? String(errors.description.message) : undefined}
+        rows={7}
         maxLength={1000}
+        hint="Describe condition, what's included and delivery. Links must start with https://."
       />
       <div className="grid gap-3 sm:grid-cols-2">
         <div><label className="label-bd" htmlFor="l-cat">Category</label>
@@ -265,7 +283,9 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
         <p className="text-sm"><Link href="/dashboard/listings" className="link-bd">View in My listings →</Link></p>
       )}
       <div className="flex gap-2">
-        <button className="btn-primary flex-1" disabled={isSubmitting || uploading}>{uploading ? "Uploading photos…" : isSubmitting ? (isEdit ? "Saving…" : "Submitting…") : (submitLabel ?? (isEdit ? "Save changes" : "Submit for review"))}</button>
+        <button className="btn-primary flex-1" disabled={isSubmitting || uploading || submitted}>
+          {submitted ? "Submitted ✓" : uploading ? "Uploading photos…" : isSubmitting ? (isEdit ? "Saving…" : "Submitting…") : (submitLabel ?? (isEdit ? "Save changes" : "Submit for review"))}
+        </button>
         {!isEdit && (
           <button type="button" className="btn-secondary" onClick={() => {
             try {

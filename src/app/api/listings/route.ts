@@ -12,6 +12,27 @@ export async function POST(req: NextRequest) {
   const gate = await requireVerifiedSeller();
   if (!gate.ok) return gate.response;
   const user = gate.seller;
+  const store = getStore();
+  // Retries (double-click, dropped response) carry the same key from the form.
+  // Return the original listing instead of creating a second one.
+  const createKey = (req.headers.get("idempotency-key") ?? "").trim().slice(0, 100);
+  if (createKey) {
+    const prior = (await store.getSetting(`listing:create:${user.id}:${createKey}`).catch(() => null)) as
+      | { listingId?: string }
+      | null;
+    if (prior?.listingId) {
+      const existing = await store.getListing(prior.listingId).catch(() => null);
+      if (existing) {
+        return NextResponse.json({
+          ok: true,
+          id: existing.id,
+          status: existing.status,
+          duplicate: true,
+          message: "This listing was already submitted.",
+        });
+      }
+    }
+  }
   const rl = rateLimit(clientKey(req, `list:${user.id}`), { limit: 10, windowMs: 3600_000 });
   if (!rl.ok) return NextResponse.json({ error: "Listing limit reached for now. Try again later." }, { status: 429 });
 
@@ -37,7 +58,7 @@ export async function POST(req: NextRequest) {
   if (banned.some((w) => hay.includes(w))) {
     return NextResponse.json({ error: "This listing needs manual review due to a flagged term. Our team will check it." }, { status: 422 });
   }
-  const rec = await getStore().createListing({
+  const rec = await store.createListing({
     title: d.title,
     description: d.description,
     type: d.listingType,
@@ -59,6 +80,14 @@ export async function POST(req: NextRequest) {
     subcategory: (d.subcategory ?? "").trim() || undefined,
     shopSlug: plan.shopSlug,
   });
+  if (createKey) {
+    await store
+      .setSetting(`listing:create:${user.id}:${createKey}`, {
+        listingId: rec.id,
+        at: new Date().toISOString(),
+      })
+      .catch(() => null);
+  }
   // Jiji-style feed: confirm receipt so the bell explains the pending state.
   try {
     const { notifyUser } = await import("@/lib/notifications");

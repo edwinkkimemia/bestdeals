@@ -13,7 +13,13 @@ import { CopyListingLink } from "@/components/copy-listing-link";
 
 export const metadata = { title: "Manage listing" };
 
-export default async function ManageListing({ params }: { params: { id: string } }) {
+export default async function ManageListing({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: { submitted?: string };
+}) {
   const user = await currentUser();
   if (!user) redirect(`/auth/signin?next=${encodeURIComponent(`/dashboard/listings/${params.id}`)}`);
   const stored = await getStore().getListing(params.id);
@@ -44,6 +50,12 @@ export default async function ManageListing({ params }: { params: { id: string }
   return (
     <div>
       <h1 className="section-title">Manage listing</h1>
+      {searchParams?.submitted === "1" && stored!.status === "pending" && (
+        <div role="status" className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-900">
+          <p className="font-bold">Listing submitted for review</p>
+          <p className="mt-1">We&apos;ve received it and you&apos;ll be notified once it&apos;s approved. You can still edit the details below while it waits in the moderation queue.</p>
+        </div>
+      )}
       <div className="card mt-4 p-5">
         <div className="flex flex-wrap items-center gap-2">
           <p className="flex-1 font-bold">{title}</p>

@@ -38,24 +38,71 @@ function inline(src: string): string {
 export function toSafeHtml(input: string, maxLen = MAX): string {
   const lines = String(input ?? "").slice(0, maxLen).split("\n");
   const out: string[] = [];
-  let list: string[] = [];
-  const flush = () => {
-    if (list.length) {
-      out.push(`<ul>${list.map((li) => `<li>${li}</li>`).join("")}</ul>`);
-      list = [];
+  let listType: "ul" | "ol" | null = null;
+  let listItems: string[] = [];
+  let quote: string[] = [];
+
+  const flushList = () => {
+    if (listType && listItems.length) {
+      out.push(`<${listType}>${listItems.map((li) => `<li>${li}</li>`).join("")}</${listType}>`);
     }
+    listType = null;
+    listItems = [];
   };
+
+  const flushQuote = () => {
+    if (quote.length) {
+      out.push(`<blockquote>${quote.map((line) => `<p>${line}</p>`).join("")}</blockquote>`);
+    }
+    quote = [];
+  };
+
+  const flush = () => {
+    flushList();
+    flushQuote();
+  };
+
   for (const raw of lines) {
     const line = raw.trimEnd();
-    const m = line.match(/^\s*[-•]\s+(.+)$/);
-    if (m) {
-      list.push(inline(m[1]));
+
+    const heading = line.match(/^\s*(#{1,3})\s+(.+?)\s*$/);
+    if (heading) {
+      flush();
+      const level = heading[1].length;
+      out.push(`<h${level}>${inline(heading[2])}</h${level}>`);
       continue;
     }
+
+    const bullet = line.match(/^\s*[-*+•]\s+(.+)$/);
+    if (bullet) {
+      flushQuote();
+      if (listType !== "ul") flushList();
+      listType = "ul";
+      listItems.push(inline(bullet[1]));
+      continue;
+    }
+
+    const ordered = line.match(/^\s*\d{1,3}[.)]\s+(.+)$/);
+    if (ordered) {
+      flushQuote();
+      if (listType !== "ol") flushList();
+      listType = "ol";
+      listItems.push(inline(ordered[1]));
+      continue;
+    }
+
+    const quoted = line.match(/^\s*>\s?(.*)$/);
+    if (quoted) {
+      flushList();
+      quote.push(inline(quoted[1]));
+      continue;
+    }
+
     flush();
     if (line.trim() === "") continue;
     out.push(`<p>${inline(line)}</p>`);
   }
+
   flush();
   return out.join("");
 }
@@ -65,7 +112,9 @@ export function toExcerpt(input: string, len = 120): string {
   const plain = String(input ?? "")
     .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
     .replace(/[*`_]/g, "")
-    .replace(/^\s*[-•]\s+/gm, "")
+    .replace(/^\s*(?:[-•+*]|\d+[.)])\s+/gm, "")
+    .replace(/^\s*#{1,3}\s+/gm, "")
+    .replace(/^\s*>\s?/gm, "")
     .replace(/\s+/g, " ")
     .trim();
   return plain.length > len ? `${plain.slice(0, len - 1)}…` : plain;

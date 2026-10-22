@@ -289,7 +289,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
           <div className="card mt-4 p-5 lg:mt-0">
             <h2 className="font-bold">Description</h2>
             <div
-              className="mt-2 space-y-2 break-words text-sm leading-relaxed text-ink-700 [&_a]:text-brand-700 [&_a]:underline [&_code]:rounded [&_code]:bg-sand-100 [&_code]:px-1 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-5"
+              className="rich-text mt-2 break-words text-sm leading-relaxed text-ink-700"
               dangerouslySetInnerHTML={{ __html: toSafeHtml(listing.description, 6000) }}
             />
             {Object.keys(listing.attributes).length > 0 && (
