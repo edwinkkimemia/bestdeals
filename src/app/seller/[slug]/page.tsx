@@ -123,20 +123,6 @@ export default async function SellerPage({ params }: { params: { slug: string } 
       <div className="mt-3">
         <ShareRow title={`${profile.name} on Chap`} text={`${profile.name} — seller on Chap marketplace`} />
       </div>
-      {shops.length > 0 && (
-        <>
-          <h2 className="section-title mt-8">Shops ({shops.length})</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {shops.map((s) => (
-              <Link key={s.slug} href={`/shops/${s.slug}`} className="card p-4">
-                <p className="flex flex-wrap items-center gap-1.5 font-bold">{s.name} <PlanCheckmark plan={s.planId} size="sm" /></p>
-                <p className="truncate text-sm text-ink-500">{s.businessCategory} · {s.town}, {s.county}</p>
-                <p className="mt-1">{s.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}</p>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
       <h2 className="section-title mt-8">Listings ({liveItems.length})</h2>
       {liveItems.length === 0 ? (
         <div className="card mt-4 p-6 text-center">

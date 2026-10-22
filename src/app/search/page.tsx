@@ -65,11 +65,9 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
   const { items, total: listingTotal } = main;
   const sellerCount = entities.sellers.length;
   const shopCount = entities.shops.length;
-  const qActive = Boolean(params.q?.trim()) || params.county !== "all" || params.town !== "all";
-  // Seller/shop previews appear in the All tab for name searches, location
-  // searches and empty marketplaces — not in the default all-listings browse.
-  const entityPreview = qActive || listingTotal === 0;
-  const allCount = listingTotal + (entityPreview ? sellerCount + shopCount : 0);
+  // The All tab shows listings only; seller and shop profiles live in their
+  // own tabs instead of being mixed into product results.
+  const allCount = listingTotal;
   const counts = {
     all: allCount,
     product: productCount,
@@ -123,7 +121,6 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
     { key: "shops", label: "Shops", n: counts.shops },
   ];
   const entityTabResults = pageType === "sellers" ? entities.sellers : pageType === "shops" ? entities.shops : [];
-  const showEntityPreviews = pageType === "all" && entityPreview && (sellerCount > 0 || shopCount > 0);
   const activeFilterCount = [
     Boolean(params.q?.trim()),
     !isEntityTab && params.category !== "all",
@@ -336,36 +333,8 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
           </div>
           {pageType === "all" && allCount > 0 && (
             <p className="mb-3 text-xs text-ink-400">
-              Combined results: {productCount} shop · {classifiedCount} classifieds{serviceCount > 0 ? ` · ${serviceCount} services` : ""}
-              {entityPreview ? ` · ${sellerCount} sellers · ${shopCount} shops` : ""}. Cards are labelled by type.
+              Combined results: {productCount} shop · {classifiedCount} classifieds{serviceCount > 0 ? ` · ${serviceCount} services` : ""}. Cards are labelled by type.
             </p>
-          )}
-
-          {showEntityPreviews && (
-            <div className="mb-5 grid gap-4 lg:grid-cols-2">
-              {sellerCount > 0 && (
-                <section aria-labelledby="matching-sellers">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <h2 id="matching-sellers" className="font-bold">Matching sellers ({sellerCount})</h2>
-                    <Link href={tabHref("sellers")} className="link-bd text-sm">View all →</Link>
-                  </div>
-                  <div className="grid gap-2.5">
-                    {entities.sellers.slice(0, 4).map((s) => <SellerResultCard key={s.key} seller={s} />)}
-                  </div>
-                </section>
-              )}
-              {shopCount > 0 && (
-                <section aria-labelledby="matching-shops">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <h2 id="matching-shops" className="font-bold">Matching shops ({shopCount})</h2>
-                    <Link href={tabHref("shops")} className="link-bd text-sm">View all →</Link>
-                  </div>
-                  <div className="grid gap-2.5">
-                    {entities.shops.slice(0, 4).map((s) => <ShopResultCard key={s.slug} shop={s} />)}
-                  </div>
-                </section>
-              )}
-            </div>
           )}
 
           {isEntityTab ? (
@@ -389,11 +358,9 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
             )
           ) : items.length === 0 ? (
             <div className="card p-8 text-center">
-              <p className="text-lg font-bold">{showEntityPreviews ? "No product listings matched" : "No results found"}</p>
+              <p className="text-lg font-bold">No results found</p>
               <p className="mt-1 text-sm text-ink-500">
-                {showEntityPreviews
-                  ? "Matching sellers and shops are shown above. Try a different keyword, widen the price range, or clear the search."
-                  : "Try a different keyword, widen the price range, or browse categories — or save this search and we’ll ring the bell when a matching ad lands."}
+                Try a different keyword, widen the price range, or browse categories — or save this search and we’ll ring the bell when a matching ad lands.
               </p>
               <div className="mt-4 flex flex-wrap justify-center gap-2">
                 {pageType !== "all" && (
