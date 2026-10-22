@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { MapPin } from "lucide-react";
 import { LISTINGS } from "@/data/catalog";
 import { KENYA_COUNTIES, countyMatches } from "@/lib/kenya";
+import { ListingCard } from "@/components/ui/listing-card";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { CountyStrip } from "@/components/county-strip";
 
@@ -37,16 +38,36 @@ export default async function CountyPage({ params }: { params: { county: string 
   if (!entry) notFound();
 
   const county = entry as NonNullable<typeof entry>;
-  const { getLiveStoreListings, mergeStaticAndLive } = await import("@/lib/live-listings");
+  const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
   const live = await getLiveStoreListings();
-  const all = mergeStaticAndLive(LISTINGS, live);
+  // Stamp the merged set so static rows carry live plan/verified flags for card checkmarks.
+  const all = await withLiveVerification(mergeStaticAndLive(LISTINGS, live));
   const items = all.filter((l) => countyMatches(l.county, county.county));
+  const featured = items.filter((l) => l.featured);
+  const products = items.filter((l) => l.listingType === "product");
+  const classifieds = items.filter((l) => l.listingType === "classified");
   const countyName = county.county;
   const others = [...KENYA_COUNTIES]
     .filter((c) => c.county !== countyName)
     .map((c) => ({ ...c, count: all.filter((l) => countyMatches(l.county, c.county)).length }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
+
+  const rail = (id: string, title: string, sub: string, list: typeof items, moreHref: string) =>
+    list.length > 0 ? (
+      <section className="mt-8" aria-labelledby={id}>
+        <div className="mb-4 flex items-end justify-between">
+          <div>
+            <h2 id={id} className="section-title">{title} ({list.length})</h2>
+            <p className="text-sm text-ink-500">{sub}</p>
+          </div>
+          <Link href={moreHref} className="link-bd">View all →</Link>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+          {list.slice(0, 12).map((l) => <ListingCard key={l.id} listing={l} />)}
+        </div>
+      </section>
+    ) : null;
 
   return (
     <div className="container-bd py-8">
@@ -81,11 +102,18 @@ export default async function CountyPage({ params }: { params: { county: string 
           </div>
         </div>
       ) : (
-        <div className="mt-4">
-          <Link href={`/search?county=${encodeURIComponent(county.county)}`} className="btn-primary">
-            Browse all {items.length} listings in {county.county} →
-          </Link>
-        </div>
+        <>
+          {rail("c-featured", "Featured listings", `Featured picks from sellers in ${county.county}.`, featured, `/search?county=${encodeURIComponent(county.county)}`)}
+          {rail("c-products", "Shop listings", `Buy online from sellers in ${county.county}.`, products, `/search?county=${encodeURIComponent(county.county)}&type=product`)}
+          {rail("c-classifieds", "Classifieds", `New & pre-owned from individual sellers in ${county.county}.`, classifieds, `/search?county=${encodeURIComponent(county.county)}&type=classified`)}
+          {featured.length + products.length + classifieds.length === 0 && (
+            <div className="mt-4">
+              <Link href={`/search?county=${encodeURIComponent(county.county)}`} className="btn-primary">
+                Browse all {items.length} listings in {county.county} →
+              </Link>
+            </div>
+          )}
+        </>
       )}
 
       {/* towns */}
