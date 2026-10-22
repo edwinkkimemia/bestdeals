@@ -98,12 +98,6 @@ export default async function HomePage() {
       })),
   ];
   const shopRail = shuffleFeaturedFirst(shopCards).slice(0, 4);
-  // Live trust stats (real counts, fresh every visit).
-  const verifiedSellers = await storeRead(
-    async (s) => (await s.listUsers().catch(() => [])).filter((u) => u.verified).length,
-    0
-  );
-  const shopCount = SHOPS.length + communityShops.filter((s) => !SHOPS.some((d) => d.slug === s.slug)).length;
   // Real ratings only: average of approved reviews per shown shop (no static stars).
   const shopRailLive = await Promise.all(
     shopRail.map(async (c) => ({
@@ -142,9 +136,6 @@ export default async function HomePage() {
                 <Link key={s} href={`/search?q=${encodeURIComponent(s)}`} className="chip hover:border-brand-600">{s}</Link>
               ))}
             </div>
-            <p className="mt-3 text-xs text-ink-400" aria-live="polite">
-              {all.length.toLocaleString()} live listings · {verifiedSellers.toLocaleString()} verified sellers · {shopCount} shops across all 47 counties
-            </p>
           </div>
           {/* Desktop collage */}
           <div className="hidden grid-cols-2 gap-3 lg:grid" aria-hidden={false}>
@@ -169,8 +160,8 @@ export default async function HomePage() {
         <div className="container-bd grid grid-cols-2 gap-4 py-4 text-sm lg:grid-cols-4">
           <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-brand-600" /> Moderated listings & reporting</p>
           <p className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-brand-600" /> Verified sellers clearly labelled</p>
-          <p className="flex items-center gap-2"><Truck className="h-4 w-4 text-brand-600" /> Delivery across all 47 counties</p>
-          <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-brand-600" /> Browse by county & town</p>
+          <p className="col-span-2 flex items-center gap-2 sm:col-span-1"><Truck className="h-4 w-4 text-brand-600" /> Delivery across all 47 counties</p>
+          <p className="hidden items-center gap-2 sm:flex"><MapPin className="h-4 w-4 text-brand-600" /> Browse by county & town</p>
         </div>
       </section>
 
