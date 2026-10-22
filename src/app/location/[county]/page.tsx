@@ -4,9 +4,9 @@ import type { Metadata } from "next";
 import { MapPin } from "lucide-react";
 import { LISTINGS } from "@/data/catalog";
 import { KENYA_COUNTIES, countyMatches } from "@/lib/kenya";
-import { ListingCard } from "@/components/ui/listing-card";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { CountyStrip } from "@/components/county-strip";
+import { ListingRail } from "@/components/listing-rail";
 
 // Live seller listings must appear instantly — a static prerender would freeze
 // this page at build time and hide every product posted afterwards.
@@ -53,22 +53,6 @@ export default async function CountyPage({ params }: { params: { county: string 
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
 
-  const rail = (id: string, title: string, sub: string, list: typeof items, moreHref: string) =>
-    list.length > 0 ? (
-      <section className="mt-8" aria-labelledby={id}>
-        <div className="mb-4 flex items-end justify-between">
-          <div>
-            <h2 id={id} className="section-title">{title} ({list.length})</h2>
-            <p className="text-sm text-ink-500">{sub}</p>
-          </div>
-          <Link href={moreHref} className="link-bd">View all →</Link>
-        </div>
-        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-          {list.slice(0, 12).map((l) => <ListingCard key={l.id} listing={l} />)}
-        </div>
-      </section>
-    ) : null;
-
   return (
     <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { href: "/location", label: "Locations" }, { label: county.county }]} />
@@ -103,9 +87,27 @@ export default async function CountyPage({ params }: { params: { county: string 
         </div>
       ) : (
         <>
-          {rail("c-featured", "Featured listings", `Featured picks from sellers in ${county.county}.`, featured, `/search?county=${encodeURIComponent(county.county)}`)}
-          {rail("c-products", "Shop listings", `Buy online from sellers in ${county.county}.`, products, `/search?county=${encodeURIComponent(county.county)}&type=product`)}
-          {rail("c-classifieds", "Classifieds", `New & pre-owned from individual sellers in ${county.county}.`, classifieds, `/search?county=${encodeURIComponent(county.county)}&type=classified`)}
+          <ListingRail
+            id="c-featured"
+            title="Featured listings"
+            subtitle={`Featured picks from sellers in ${county.county}.`}
+            items={featured}
+            moreHref={`/search?county=${encodeURIComponent(county.county)}`}
+          />
+          <ListingRail
+            id="c-products"
+            title="Shop listings"
+            subtitle={`Buy online from sellers in ${county.county}.`}
+            items={products}
+            moreHref={`/search?county=${encodeURIComponent(county.county)}&type=product`}
+          />
+          <ListingRail
+            id="c-classifieds"
+            title="Classifieds"
+            subtitle={`New & pre-owned from individual sellers in ${county.county}.`}
+            items={classifieds}
+            moreHref={`/search?county=${encodeURIComponent(county.county)}&type=classified`}
+          />
           {featured.length + products.length + classifieds.length === 0 && (
             <div className="mt-4">
               <Link href={`/search?county=${encodeURIComponent(county.county)}`} className="btn-primary">

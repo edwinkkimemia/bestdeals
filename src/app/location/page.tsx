@@ -2,6 +2,7 @@ import { LISTINGS } from "@/data/catalog";
 import { KENYA_COUNTIES } from "@/lib/kenya";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { CountyStrip } from "@/components/county-strip";
+import { ListingRail } from "@/components/listing-rail";
 
 export const metadata = {
   title: "Shop by location",
@@ -13,16 +14,19 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function LocationIndex() {
-  const { getLiveStoreListings, mergeStaticAndLive } = await import("@/lib/live-listings");
+  const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
   const { countyMatches } = await import("@/lib/kenya");
   const live = await getLiveStoreListings();
-  const all = mergeStaticAndLive(LISTINGS, live);
+  const all = await withLiveVerification(mergeStaticAndLive(LISTINGS, live));
   const counties = [...KENYA_COUNTIES]
     .map((c) => ({
       ...c,
       count: all.filter((l) => countyMatches(l.county, c.county)).length,
     }))
     .sort((a, b) => a.county.localeCompare(b.county));
+  const featured = all.filter((l) => l.featured);
+  const products = all.filter((l) => l.listingType === "product");
+  const classifieds = all.filter((l) => l.listingType === "classified");
 
   return (
     <div className="container-bd py-8">
@@ -34,6 +38,28 @@ export default async function LocationIndex() {
         counties={counties}
         title={`All counties (${counties.length})`}
         viewAllHref={null}
+      />
+
+      <ListingRail
+        id="loc-featured"
+        title="Featured listings"
+        subtitle="Promoted picks from sellers across Kenya."
+        items={featured}
+        moreHref="/search"
+      />
+      <ListingRail
+        id="loc-products"
+        title="Shop listings"
+        subtitle="Buy online from sellers across Kenya."
+        items={products}
+        moreHref="/search?type=product"
+      />
+      <ListingRail
+        id="loc-classifieds"
+        title="Classifieds"
+        subtitle="New & pre-owned from individual sellers across Kenya."
+        items={classifieds}
+        moreHref="/search?type=classified"
       />
     </div>
   );
