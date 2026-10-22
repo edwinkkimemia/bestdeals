@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { freshDemoStore } from "../src/lib/store.ts";
-import { rankDeterministic } from "../src/lib/search.ts";
+import { pinTopResults, rankDeterministic } from "../src/lib/search.ts";
 
 const listing = (ownerId: string, sellerName: string, title: string) => ({
   title,
@@ -52,5 +52,14 @@ describe("TOP pins", () => {
       { id: "c", featured: false, topPinned: true, createdAt: new Date().toISOString() },
     ]);
     assert.deepEqual(items.map((i) => i.id), ["c", "b", "a"]);
+  });
+
+  it("keyword search pins TOP only, preserving relevance over featured", () => {
+    const items = [
+      { id: "exact", topPinned: false },
+      { id: "featured", topPinned: false },
+      { id: "top", topPinned: true },
+    ];
+    assert.deepEqual(pinTopResults(items).map((i) => i.id), ["top", "exact", "featured"]);
   });
 });

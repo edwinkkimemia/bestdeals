@@ -45,16 +45,39 @@ function expandQuery(q: string): string[] {
   return Array.from(out);
 }
 
+/**
+ * Short numeric terms like "2" are useful in "2 bedroom" but disastrous as
+ * raw substrings: they match "128GB" and "2016". Require standalone numbers,
+ * while keeping partial-word matching for ordinary terms ("sams" → Samsung).
+ */
+function tokenHit(text: string, token: string): boolean {
+  if (/^\d+$/.test(token)) {
+    return new RegExp(`(^|[^a-z0-9])${token}(?![a-z0-9])`).test(text);
+  }
+  // Match from the start of a word so "sams" still finds Samsung, but
+  // "house" no longer matches "greenhouse" or "phone" matches "microphone".
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^a-z0-9])${escaped}`).test(text);
+}
+
 function textScore(l: Listing, tokens: string[]): number {
   const shopWords = (l.shopSlug ?? "").replace(/-/g, " ");
   // Seller/shop names are part of a listing's searchable identity — typing a
   // shop name should find its products, not just its storefront profile.
+  const title = l.title.toLowerCase();
   const hay = `${l.title} ${l.description} ${l.subcategory ?? ""} ${Object.values(l.attributes).join(" ")} ${l.town} ${l.county} ${l.sellerName} ${shopWords}`.toLowerCase();
   let s = 0;
+  let matchedWord = false;
   for (const t of tokens) {
-    if (l.title.toLowerCase().includes(t)) s += 5;
-    else if (hay.includes(t)) s += 2;
+    const inTitle = tokenHit(title, t);
+    if (inTitle) s += 5;
+    else if (tokenHit(hay, t)) s += 2;
+    else continue;
+    if (!/^\d+$/.test(t)) matchedWord = true;
   }
+  // A numeric-only hit is not a real answer to a word query: "2 bedroom
+  // Mtwapa" must not surface a phone because its warranty says "2 years".
+  if (tokens.some((t) => !/^\d+$/.test(t)) && !matchedWord) return 0;
   return s;
 }
 
@@ -132,7 +155,11 @@ const normText = (s: string) => s.toLowerCase().replace(/[-_]+/g, " ");
 /** Genuine query hit (title), ignoring featured/verified score bonuses. */
 function titleHit(l: Pick<Listing, "title">, tokens: string[]): boolean {
   const t = normText(l.title);
-  return tokens.some((tok) => tok.length >= 2 && t.includes(normText(tok)));
+  return tokens.some((tok) => {
+    const term = normText(tok);
+    if (!/^\d+$/.test(term) && term.length < 2) return false;
+    return tokenHit(t, term);
+  });
 }
 
 export function dominantIntent(
@@ -199,7 +226,7 @@ export function shuffleFeaturedFirst<T extends { featured?: boolean }>(items: T[
   return [...feat, ...rest];
 }
 
-/** Deterministic ranking for search pages: TOP pins → Featured → relevance → newest.
+/** Deterministic browse ranking: TOP pins → Featured → newest.
  * Stable across refreshes (no Math.random) so pagination doesn't reshuffle.
  */
 export function rankDeterministic<T extends { featured?: boolean; topPinned?: boolean; createdAt?: string }>(items: T[]): T[] {
@@ -214,6 +241,16 @@ export function rankDeterministic<T extends { featured?: boolean; topPinned?: bo
     const db = b.createdAt ? +new Date(b.createdAt) : 0;
     return db - da;
   });
+}
+
+/** Paid TOP pins lead, but free "featured" badges must not override textual
+ * relevance. Used for keyword searches, where the exact match belongs first.
+ */
+export function pinTopResults<T extends { topPinned?: boolean }>(items: T[]): T[] {
+  const top: T[] = [];
+  const rest: T[] = [];
+  for (const item of items) (item.topPinned ? top : rest).push(item);
+  return [...top, ...rest];
 }
 
 /** Seed-stable shuffle for rails that must not jump between paginations. */
@@ -333,10 +370,13 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
       );
       items = scored.map((x) => x.l);
     }
-    // TOP pins lead deterministically — kinds come from live promos (a
-    // listing object never carries one, so reading it off was a no-op).
+    // TOP pins lead deterministically. For a keyword search only the paid TOP
+    // pin may jump the queue: promoting every "featured" listing re-buried
+    // exact matches beneath unrelated boosted products. Browse-style searches
+    // (no query) still lead with featured inventory.
     const kinds = await store.livePromoKinds(items.map((l) => l.id)).catch(() => new Map<string, string>());
-    items = rankDeterministic(items.map((l) => ({ ...l, topPinned: kinds.get(l.id) === "top" }))) as typeof items;
+    const pinned = items.map((l) => ({ ...l, topPinned: kinds.get(l.id) === "top" }));
+    items = (p.q?.trim() ? pinTopResults(pinned) : rankDeterministic(pinned)) as typeof items;
     // Badges follow the live user record, not the catalogue flag.
     try {
       const { withLiveVerification } = await import("./live-listings");

@@ -1,8 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { resolveCounty, countyMatches, townsFor } from "../src/lib/kenya.ts";
-import { searchListings, suggestions, shuffleFeaturedFirst, dominantIntent } from "../src/lib/search.ts";
+import { searchListings, searchAll, suggestions, shuffleFeaturedFirst, dominantIntent } from "../src/lib/search.ts";
 import { CATEGORIES } from "../src/data/catalog.ts";
+import { getStore } from "../src/lib/store.ts";
 import { signupSchema } from "../src/lib/validators.ts";
 import { listingSchema } from "../src/lib/validators.ts";
 
@@ -108,6 +109,89 @@ describe("dominant-cluster tiering", () => {
   it("leaves price/newest sorts untouched", () => {
     const a = searchListings({ q: "cement", sort: "price_asc", perPage: 60 }).items;
     for (let i = 1; i < a.length; i++) assert.ok(a[i].price >= a[i - 1].price);
+  });
+
+  it("finds 2-bedroom Mtwapa rentals without digit/substring noise", () => {
+    const { items } = searchListings({ q: "2 bedroom Mtwapa", perPage: 60 });
+    assert.ok(items.length > 0);
+    assert.match(items[0].title, /Mtwapa/i);
+    assert.ok(items.every((l) => l.categorySlug !== "phones-tablets"), "a '2' in 128GB is not a match");
+  });
+
+  it("includes the Mtwapa rental in the Mtwapa town filter", () => {
+    const { items } = searchListings({ county: "Kilifi", town: "Mtwapa", perPage: 60 });
+    assert.ok(items.some((l) => l.slug === "2-bedroom-kilifi-rent"));
+  });
+});
+
+describe("live keyword ranking", () => {
+  it("keeps an exact listing above unrelated featured inventory", async () => {
+    const store = getStore();
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const user = await store.createUser({
+      name: "Search Regression",
+      email: `search-regression-${stamp}@x.co.ke`,
+      phone: "0712345678",
+      role: "SELLER",
+      verified: true,
+      passwordHash: "h",
+    });
+    const base = {
+      type: "classified" as const,
+      price: 28000,
+      compareAt: null,
+      condition: "new" as const,
+      txMethod: "enquiry" as const,
+      negotiable: false,
+      stock: 1,
+      county: "Kilifi",
+      town: "Mtwapa",
+      images: ["https://x.co/i.jpg"],
+      attributes: { propertyType: "2 Bedroom", bedrooms: "2", bathrooms: "1" } as Record<string, string>,
+      ownerId: user.id,
+      sellerName: user.name,
+      categorySlug: "property",
+      subcategory: "Rentals",
+    };
+    const exact = await store.createListing({
+      ...base,
+      title: `2 Bedroom Apartment in Mtwapa ${stamp}`,
+      description: "Spacious two bedroom near the beach",
+    });
+    const featured = await store.createListing({
+      ...base,
+      title: `Zeta Phone 128GB Sealed ${stamp}`,
+      description: "Brand new with 2 year warranty",
+      categorySlug: "phones-tablets",
+      subcategory: "Smartphones",
+      county: "Nairobi",
+      town: "CBD",
+      attributes: {},
+    });
+    try {
+      await store.setListingStatus(exact.id, "active");
+      await store.setListingStatus(featured.id, "active");
+      const promo = await store.createPromotion({
+        listingId: featured.id,
+        ownerId: user.id,
+        kind: "featured",
+        days: 7,
+        amount: 199,
+      });
+      await store.setPromotionStatus(promo.id, "active");
+
+      const { items } = await searchAll({ q: "2 bedroom Mtwapa", perPage: 60 });
+      const exactIndex = items.findIndex((l) => l.id === exact.id);
+      const featuredIndex = items.findIndex((l) => l.id === featured.id);
+      assert.ok(exactIndex >= 0, "exact live listing must be found");
+      assert.ok(
+        featuredIndex === -1 || exactIndex < featuredIndex,
+        "a featured listing matching only '2' must not lead an exact Mtwapa result"
+      );
+    } finally {
+      await store.deleteListing(exact.id);
+      await store.deleteListing(featured.id);
+    }
   });
 });
 
