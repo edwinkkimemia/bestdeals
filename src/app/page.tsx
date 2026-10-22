@@ -204,8 +204,8 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* B: categories */}
-      <section className="container-bd py-10" aria-labelledby="cats">
+      {/* B: categories — desktop only; mobile/tablet use the hero slider above */}
+      <section className="container-bd hidden py-10 lg:block" aria-labelledby="cats">
         <div className="mb-5 flex items-end justify-between">
           <h2 id="cats" className="section-title">Browse categories</h2>
           <Link href="/shop" className="link-bd">View all →</Link>
