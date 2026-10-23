@@ -16,7 +16,11 @@
 5. Set `MPESA_CALLBACK_SECRET` (32+ random hex) — it is appended as `?key=` and verified on every callback. Without it, forged callbacks can mark orders paid.
 6. Use `https://www.chap.co.ke/api/payments/mpesa-callback` as
    `MPESA_CALLBACK_URL` in production (the apex domain redirects to `www`, and
-   Daraja needs the final HTTPS URL).
+   Daraja needs the final HTTPS URL). If a callback is lost after a successful
+   STK push, set `MPESA_RECONCILE_SECRET` and call
+   `POST /api/admin/mpesa-reconcile` with header
+   `x-mpesa-reconcile-secret: <secret>`; it queries Daraja and activates only
+   purchases M-Pesa confirms. Admins can call it without the header.
 7. Flow: `POST /api/orders` reserves the order → `POST /api/payments/initiate` sends STK push →
    Daraja calls `POST /api/payments/mpesa-callback` → server validates amount/reference/result code,
    writes the ledger idempotently (unique `providerRef`), then transitions `pending → paid`.

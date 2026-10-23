@@ -202,6 +202,60 @@ export async function initiateSTKPush(init: PaymentInit): Promise<PaymentResult>
   }
 }
 
+export type StkQueryResult = {
+  ok: boolean;
+  resultCode?: string;
+  message: string;
+};
+
+/**
+ * Query a previously initiated STK push. Used by the ops reconciliation path
+ * when a callback was lost/failed: a ResultCode of "0" means M-Pesa completed
+ * the payment, so linked plan/boost fulfilment can be applied safely.
+ */
+export async function querySTKPush(checkoutRequestId: string): Promise<StkQueryResult> {
+  if (!isPaymentsLive()) return { ok: false, message: "M-Pesa is not configured." };
+  try {
+    const { businessShortCode } = resolveMpesaTransaction();
+    const passkey = process.env.MPESA_PASSKEY!;
+    const ts = timestamp();
+    const password = Buffer.from(`${businessShortCode}${passkey}${ts}`).toString("base64");
+    const token = await darajaToken();
+    const r = await fetch(`${darajaBase()}/mpesa/stkpushquery/v1/query`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        BusinessShortCode: businessShortCode,
+        Password: password,
+        Timestamp: ts,
+        CheckoutRequestID: checkoutRequestId,
+      }),
+      cache: "no-store",
+    });
+    const j = (await r.json().catch(() => ({}))) as {
+      ResultCode?: string | number;
+      ResultDesc?: string;
+      ResponseDescription?: string;
+      errorMessage?: string;
+    };
+    const resultCode = j.ResultCode !== undefined ? String(j.ResultCode) : undefined;
+    if (!r.ok) {
+      return {
+        ok: false,
+        resultCode,
+        message: j.errorMessage || j.ResponseDescription || `STK query failed (${r.status})`,
+      };
+    }
+    return {
+      ok: resultCode === "0",
+      resultCode,
+      message: j.ResultDesc || j.ResponseDescription || "STK query completed.",
+    };
+  } catch (e) {
+    return { ok: false, message: (e as Error)?.message?.slice(0, 160) || "STK query failed." };
+  }
+}
+
 export type ReversalInput = { receipt: string; amount: number; occasion?: string };
 export type ReversalResult = { ok: boolean; message: string; conversationId?: string };
 

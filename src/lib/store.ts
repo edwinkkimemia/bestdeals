@@ -409,6 +409,8 @@ export interface Store {
   // site settings (Admin → Settings, key/value JSON)
   getSetting(key: string): Promise<unknown | null>;
   setSetting(key: string, value: unknown): Promise<void>;
+  /** Read key/value rows by key prefix (ops/reconciliation scans). */
+  listSettings(prefix: string): Promise<{ key: string; value: unknown }[]>;
   /** Remove a setting row entirely (staged image bytes — never tombstones). */
   deleteSetting(key: string): Promise<void>;
   // conversations (in-app messaging)
@@ -1011,6 +1013,11 @@ class DemoStore implements Store {
   }
   async setSetting(key: string, value: unknown) {
     this.settings.set(key, value);
+  }
+  async listSettings(prefix: string) {
+    return [...this.settings.entries()]
+      .filter(([key]) => key.startsWith(prefix))
+      .map(([key, value]) => ({ key, value }));
   }
   async deleteSetting(key: string) {
     this.settings.delete(key);
@@ -2240,6 +2247,14 @@ class PrismaStore implements Store {
       update: { value: value as never },
       create: { key, value: value as never },
     }).catch(() => null);
+  }
+  async listSettings(prefix: string) {
+    const recs = await this.p.setting.findMany({
+      where: { key: { startsWith: prefix } },
+      orderBy: { key: "asc" },
+      take: 500,
+    });
+    return recs.map((r: { key: string; value: unknown }) => ({ key: r.key, value: r.value }));
   }
   async deleteSetting(key: string) {
     await this.p.setting.delete({ where: { key } }).catch(() => null);
