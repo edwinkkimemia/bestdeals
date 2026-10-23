@@ -33,7 +33,7 @@ describe("ads route policy", () => {
     ]) {
       assert.equal(isPathAllowed(p), false, `expected no ads on ${p}`);
     }
-    for (const p of ["/", "/shop", "/shop/phones-tablets", "/search?q=x", "/product/a", "/blog", "/blog/a", "/shops", "/shops/a", "/location/nairobi", "/deals"]) {
+    for (const p of ["/", "/browse", "/browse/phones-tablets", "/search?q=x", "/product/a", "/blog", "/blog/a", "/shops", "/shops/a", "/location/nairobi", "/deals"]) {
       assert.equal(isPathAllowed(p), true, `expected ads on ${p}`);
     }
   });

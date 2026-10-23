@@ -49,7 +49,7 @@ const COLS: { title: string; links: { href: string; label: string }[] }[] = [
   {
     title: "Marketplace",
     links: [
-      { href: "/shop", label: "Shop Products" },
+      { href: "/browse", label: "Browse Products" },
       { href: "/classifieds", label: "Classifieds" },
       { href: "/shops", label: "Business Shops" },
       { href: "/services", label: "Services" },

@@ -190,8 +190,8 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
         <div className="container-bd flex flex-wrap items-center gap-1.5 py-2.5 text-xs text-ink-400">
           <Link href="/" className="font-medium hover:text-brand-700 hover:underline">Home</Link>
           <span aria-hidden className="text-ink-300">/</span>
-          <Link href={listing.listingType === "classified" ? "/classifieds" : listing.listingType === "service" ? "/services" : "/shop"} className="font-medium hover:text-brand-700 hover:underline">
-            {listing.listingType === "classified" ? "Classifieds" : listing.listingType === "service" ? "Services" : "Shop"}
+          <Link href={listing.listingType === "classified" ? "/classifieds" : listing.listingType === "service" ? "/services" : "/browse"} className="font-medium hover:text-brand-700 hover:underline">
+            {listing.listingType === "classified" ? "Classifieds" : listing.listingType === "service" ? "Services" : "Browse"}
           </Link>
           <span aria-hidden className="shrink-0 text-ink-300">/</span>
           <span className="min-w-0 break-words font-semibold text-ink-700">{listing.title.slice(0, 60)}…</span>

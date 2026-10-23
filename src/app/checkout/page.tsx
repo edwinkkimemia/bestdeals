@@ -75,7 +75,7 @@ function CheckoutInner() {
   });
 
   if (detailed.length === 0) {
-    return <div className="container-bd py-12"><div className="card p-8 text-center"><p className="font-bold">Nothing to check out</p><a href="/shop" className="link-bd">Back to shop →</a></div></div>;
+    return <div className="container-bd py-12"><div className="card p-8 text-center"><p className="font-bold">Nothing to check out</p><a href="/browse" className="link-bd">Back to shop →</a></div></div>;
   }
 
   return (

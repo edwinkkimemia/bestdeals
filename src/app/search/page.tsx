@@ -367,7 +367,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
                   <Link href={tabHref("all")} className="btn-primary">Show all types ({counts.all})</Link>
                 )}
                 <Link href="/search" className="btn-secondary">Clear search</Link>
-                <Link href="/shop" className="btn-secondary">Browse Shop</Link>
+                <Link href="/browse" className="btn-secondary">Browse products</Link>
                 <Link href="/classifieds" className="btn-secondary">Browse Classifieds</Link>
               </div>
             </div>

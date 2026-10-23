@@ -4,7 +4,7 @@
  * Static `LISTINGS` in `src/data/catalog.ts` power the demo rails, but
  * seller listings live in the store (DemoStore in-memory or Prisma/Postgres)
  * with status `pending → active → ...`. Before this module, browse pages
- * (`/shop`, `/search`, `/product/[slug]`, `/shops/[slug]`, …) only read the
+ * (`/browse`, `/search`, `/product/[slug]`, `/shops/[slug]`, …) only read the
  * static catalogue, so an admin-approved product never appeared anywhere
  * public — the exact "added product does not show live" report.
  *

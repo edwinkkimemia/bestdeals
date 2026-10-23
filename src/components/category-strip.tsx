@@ -20,10 +20,10 @@ type CategoryStripProps = {
  */
 export function CategoryStrip({
   categories = CATEGORIES,
-  title = "Shop by category",
-  viewAllHref = "/shop",
+  title = "Browse by category",
+  viewAllHref = "/browse",
   viewAllLabel = "View all →",
-  hrefFor = (c) => `/shop/${c.slug}`,
+  hrefFor = (c) => `/browse/${c.slug}`,
   counts,
   className = "",
 }: CategoryStripProps) {

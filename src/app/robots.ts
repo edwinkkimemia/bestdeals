@@ -3,7 +3,7 @@ export default function robots() {
     rules: [
       {
         userAgent: "*",
-        allow: ["/", "/shop", "/product/", "/classifieds", "/shops", "/services", "/deals"],
+        allow: ["/", "/browse", "/product/", "/classifieds", "/shops", "/services", "/deals"],
         disallow: ["/dashboard", "/admin", "/api/", "/cart", "/checkout", "/orders", "/wishlist", "/auth/"],
       },
     ],

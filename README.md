@@ -41,7 +41,7 @@ runs `prisma migrate deploy`, the seed and `next build` automatically. See
 
 ## Key routes
 
-`/`, `/shop`, `/shop/[category]`, `/product/[slug]`, `/classifieds`, `/classifieds/[slug]`, `/shops`, `/shops/[slug]`, `/services`, `/services/[slug]`, `/deals`, `/sell`, `/pricing`, `/search`, `/cart`, `/checkout`, `/orders`, `/wishlist`, `/messages/new`, `/dashboard`, `/admin`, `/help`… (plus SEO `sitemap.xml`, `robots.txt`)
+`/`, `/browse`, `/browse/[category]`, `/product/[slug]`, `/classifieds`, `/classifieds/[slug]`, `/shops`, `/shops/[slug]`, `/services`, `/services/[slug]`, `/deals`, `/sell`, `/pricing`, `/search`, `/cart`, `/checkout`, `/orders`, `/wishlist`, `/messages/new`, `/dashboard`, `/admin`, `/help`… (plus SEO `sitemap.xml`, `robots.txt`)
 
 ## Docs
 

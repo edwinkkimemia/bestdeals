@@ -50,7 +50,7 @@ export default function CartPage() {
           <p className="font-bold">Your cart is empty</p>
           <p className="text-sm text-ink-500">Shoppable products live here. Classifieds use enquiries instead.</p>
           <div className="mt-4 flex justify-center gap-2">
-            <Link href="/shop" className="btn-primary">Shop products</Link>
+            <Link href="/browse" className="btn-primary">Browse products</Link>
             <button onClick={clear} className="btn-secondary">Clear cart</button>
           </div>
         </div>

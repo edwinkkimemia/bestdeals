@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: { params: { category: string 
   return {
     title: `${c.name} for sale in Kenya`,
     description: `${c.blurb}. Compare prices from trusted sellers across Kenya.`,
-    alternates: { canonical: `https://chap.co.ke/shop/${c.slug}` },
+    alternates: { canonical: `https://chap.co.ke/browse/${c.slug}` },
     ...(count === 0 ? { robots: { index: false, follow: true } } : {}),
   };
 }
@@ -43,7 +43,7 @@ export default async function CategoryPage({ params }: { params: { category: str
   const items = shuffleFeaturedFirst(found);
   return (
     <div className="container-bd py-8">
-      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { href: "/shop", label: "Shop" }, { label: cat.name }]} />
+      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { href: "/browse", label: "Browse" }, { label: cat.name }]} />
       <h1 className="section-title mt-2">{cat.name} ({total})</h1>
       <p className="text-sm text-ink-500">{cat.blurb}</p>
       {cat.subcategories.length > 0 && (

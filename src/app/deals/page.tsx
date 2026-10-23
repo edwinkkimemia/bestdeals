@@ -46,7 +46,7 @@ export default async function DealsPage() {
         <div className="card mt-5 p-8 text-center">
           <p className="font-bold">No live deals right now</p>
           <p className="mt-1 text-sm text-ink-500">New price drops land daily — browse the marketplace or check back tomorrow.</p>
-          <Link href="/shop" className="btn-primary mt-4">Browse Shop</Link>
+          <Link href="/browse" className="btn-primary mt-4">Browse products</Link>
         </div>
       ) : (
         <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">

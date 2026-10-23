@@ -10,7 +10,7 @@ export default async function sitemap(): Promise<Entry[]> {
   const now = new Date();
   const urls: Entry[] = [
     { url: `${base}/`, lastModified: now, changeFrequency: "daily", priority: 1 },
-    ...["/shop", "/classifieds", "/shops", "/services", "/deals"].map((p) => ({
+    ...["/browse", "/classifieds", "/shops", "/services", "/deals"].map((p) => ({
       url: `${base}${p}`, lastModified: now, changeFrequency: "daily", priority: 0.9,
     })),
     ...["/start-selling", "/pricing", "/help", "/sell"].map((p) => ({
@@ -21,7 +21,7 @@ export default async function sitemap(): Promise<Entry[]> {
     })),
   ];
   for (const c of CATEGORIES) {
-    urls.push({ url: `${base}/shop/${c.slug}`, lastModified: now, changeFrequency: "daily", priority: 0.8 });
+    urls.push({ url: `${base}/browse/${c.slug}`, lastModified: now, changeFrequency: "daily", priority: 0.8 });
   }
   for (const county of COUNTY_NAMES) {
     urls.push({

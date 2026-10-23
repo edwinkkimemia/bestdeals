@@ -51,7 +51,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
         productJsonLd({ name: l.title, description: l.description, image: l.images, price: l.price, url: `https://chap.co.ke/product/${l.slug}` }),
         breadcrumbJsonLd([
           { name: "Home", url: "https://chap.co.ke/" },
-          { name: "Shop", url: "https://chap.co.ke/shop" },
+          { name: "Browse", url: "https://chap.co.ke/browse" },
           { name: l.title, url: `https://chap.co.ke/product/${l.slug}` },
         ]),
       ],
@@ -77,7 +77,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
       productJsonLd({ name: listing.title, description: listing.description, image: listing.images, price: listing.price, url: `https://chap.co.ke/product/${listing.slug}` }),
       breadcrumbJsonLd([
         { name: "Home", url: "https://chap.co.ke/" },
-        { name: "Shop", url: "https://chap.co.ke/shop" },
+        { name: "Browse", url: "https://chap.co.ke/browse" },
         { name: listing.title, url: `https://chap.co.ke/product/${listing.slug}` },
       ]),
     ],

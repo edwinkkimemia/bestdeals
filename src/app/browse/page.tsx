@@ -9,14 +9,14 @@ import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { shuffleFeaturedFirst } from "@/lib/search";
 
 export const metadata = {
-  title: "Shop Products",
-  description: "New products from verified retailers, wholesalers and independents across Kenya — cart, cash on delivery, countrywide delivery.",
+  title: "Browse Products",
+  description: "Browse new products from verified retailers, wholesalers and independents across Kenya — cart, cash on delivery, countrywide delivery.",
 };
 
 // Fresh order every visit: featured/promoted lead, the rest shuffle.
 export const dynamic = "force-dynamic";
 
-export default async function ShopIndex() {
+export default async function BrowseIndex() {
   const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
   const live = (await getLiveStoreListings()).filter((l) => l.listingType === "product");
   const products = shuffleFeaturedFirst(
@@ -29,10 +29,10 @@ export default async function ShopIndex() {
   );
   return (
     <div className="container-bd py-8">
-      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Shop" }]} />
-      <h1 className="sr-only">Shop Products</h1>
+      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Browse" }]} />
+      <h1 className="sr-only">Browse Products</h1>
 
-      <CategoryStrip className="mt-2" title="Shop by category" viewAllHref={null} />
+      <CategoryStrip className="mt-2" title="Browse by category" viewAllHref={null} />
 
       <div className="mb-2 mt-6 flex items-end justify-between">
         <h2 className="font-bold">All shoppable products ({products.length})</h2>

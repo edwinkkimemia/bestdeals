@@ -30,7 +30,7 @@ export function BlogSidebar({ latestPosts }: { latestPosts?: { slug: string; tit
             </li>
           ))}
         </ul>
-        <Link href="/shop" className="link-bd mt-3 inline-block text-xs">Shop all products →</Link>
+        <Link href="/browse" className="link-bd mt-3 inline-block text-xs">Browse all products →</Link>
       </div>
 
       <div className="card bg-brand-700 p-5 text-white">

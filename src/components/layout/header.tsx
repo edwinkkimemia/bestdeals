@@ -440,12 +440,12 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
 
             <div className="mt-4 border-t border-neutral-200 pt-4">
               <div className="mb-1 flex items-center justify-between px-1">
-                <p className="text-[11px] font-bold uppercase tracking-wide text-ink-400">Shop by category</p>
-                <Link href="/shop" onClick={() => setOpen(false)} className="text-xs font-semibold text-brand-700 hover:underline">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-ink-400">Browse by category</p>
+                <Link href="/browse" onClick={() => setOpen(false)} className="text-xs font-semibold text-brand-700 hover:underline">
                   View all
                 </Link>
               </div>
-              <nav aria-label="Shop by category">
+              <nav aria-label="Browse by category">
                 <ul className="space-y-0.5">
                   {CATEGORIES.map((c) => {
                     const expanded = openCat === c.slug;
@@ -453,7 +453,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
                       <li key={c.slug}>
                         <div className={`flex items-center rounded-xl ${expanded ? "bg-sand-100" : ""}`}>
                           <Link
-                            href={`/shop/${c.slug}`}
+                            href={`/browse/${c.slug}`}
                             onClick={() => setOpen(false)}
                             className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-ink-700 hover:bg-sand-100 hover:text-brand-700"
                           >

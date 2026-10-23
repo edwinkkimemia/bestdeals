@@ -127,7 +127,7 @@ export default async function HomePage() {
               </button>
             </form>
             <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
-              <Link href="/shop" className="btn-primary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base">Explore <ArrowRight className="h-4 w-4" /></Link>
+              <Link href="/browse" className="btn-primary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base">Explore <ArrowRight className="h-4 w-4" /></Link>
               <Link href="/start-selling" className="btn-secondary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base"><Store className="h-4 w-4" /> Sell on Chap</Link>
             </div>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -151,7 +151,7 @@ export default async function HomePage() {
         </div>
         {/* Mobile/tablet swipeable category strip — all categories, one compact row */}
         <div className="container-bd pb-7 lg:hidden">
-          <CategoryStrip title="Shop by category" viewAllHref="/shop" />
+          <CategoryStrip title="Browse by category" viewAllHref="/browse" />
         </div>
       </section>
 
@@ -183,7 +183,7 @@ export default async function HomePage() {
 
       {/* B: categories — compact desktop rail; mobile uses the hero slider */}
       <section className="container-bd hidden py-8 lg:block">
-        <CategoryStrip title="Browse categories" viewAllHref="/shop" />
+        <CategoryStrip title="Browse categories" viewAllHref="/browse" />
       </section>
 
       {/* C: Today's Best Deals — genuine savings only */}

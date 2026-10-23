@@ -14,7 +14,7 @@ export function BottomNav() {
 
   const tabs = [
     { href: "/", label: "Home", Icon: Home },
-    { href: "/shop", label: "Shop", Icon: LayoutGrid },
+    { href: "/browse", label: "Browse", Icon: LayoutGrid },
     { href: "/sell", label: "Sell", Icon: Plus, fab: true },
     { href: "/cart", label: "Cart", Icon: ShoppingCart, badge: count },
     { href: "/dashboard", label: "Account", Icon: User },

@@ -94,7 +94,7 @@ export default function OrdersPage() {
         <div className="card mt-4 p-8 text-center">
           <p className="font-bold">No orders yet</p>
           <p className="text-sm text-ink-500">Orders you place appear here with live status. Signed in? Your linked orders show automatically.</p>
-          <Link href="/shop" className="btn-primary mt-4">Start shopping</Link>
+          <Link href="/browse" className="btn-primary mt-4">Start shopping</Link>
         </div>
       ) : (
         <DataTable columns={["Order", "Items", "Total", "Status", "Payment", "Date", "Track"]} empty="No orders yet">
