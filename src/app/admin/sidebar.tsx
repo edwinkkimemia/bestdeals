@@ -54,17 +54,17 @@ export function AdminSidebar() {
   };
 
   return (
-    <aside aria-label="Admin" className="w-12 shrink-0 lg:w-60">
-      {/* Desktop: full-height panel anchored under the sticky admin header */}
-      <div className="sticky top-[72px] hidden w-60 shrink-0 flex-col self-start border-r border-neutral-200 bg-white py-5 pr-4 lg:flex">
-        <nav aria-label="Admin sections" className="space-y-1">
+    <aside aria-label="Admin" className="w-12 shrink-0 lg:w-44">
+      {/* Desktop: compact full-height panel anchored under the sticky admin header */}
+      <div className="sticky top-[72px] hidden w-44 shrink-0 flex-col self-start border-r border-neutral-200 bg-white py-4 pr-3 lg:flex">
+        <nav aria-label="Admin sections" className="space-y-0.5">
           {NAV.map(({ href, label, Icon, exact }) => (
             <Link
               key={href}
               href={href}
               aria-current={isActive(href, exact) ? "page" : undefined}
               className={cn(
-                "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium",
+                "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-medium",
                 isActive(href, exact) ? "bg-ink-900 font-bold text-white" : "text-ink-700 hover:bg-sand-100"
               )}
             >
@@ -73,11 +73,11 @@ export function AdminSidebar() {
             </Link>
           ))}
         </nav>
-        <div className="mt-auto space-y-1.5 pt-3">
-          <Link href="/" className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-ink-700 hover:bg-sand-100">
+        <div className="mt-auto space-y-1 pt-3">
+          <Link href="/" className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-ink-700 hover:bg-sand-100">
             <ExternalLink className="h-4 w-4" /> View site
           </Link>
-          <button onClick={signOut} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-red-700 hover:bg-red-50">
+          <button onClick={signOut} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] font-semibold text-red-700 hover:bg-red-50">
             <LogOut className="h-4 w-4" /> Sign out
           </button>
         </div>

@@ -63,6 +63,30 @@ describe("listing delete permissions", () => {
   });
 });
 
+describe("admin shop delete", () => {
+  it("deleteShop removes the storefront, listings, promotions and staff memberships", async () => {
+    const store = freshDemoStore();
+    const owner = await store.createUser(user("Shop Owner", "shop-owner-del@x.co.ke"));
+    const staff = await store.createUser(user("Shop Staff", "shop-staff-del@x.co.ke"));
+    const shop = await store.createShop({
+      slug: "doomed-shop-only", name: "Doomed Shop Only", description: "shop", businessCategory: "Retail",
+      county: "Nairobi", town: "CBD", phone: "0712345678", ownerId: owner.id,
+    });
+    await store.addShopMember(shop.slug, staff.id, "staff");
+    const l = await store.createListing(listing(owner.id, owner.name, { shopSlug: shop.slug }));
+    const promo = await store.createPromotion({
+      listingId: l.id, ownerId: owner.id, kind: "featured", days: 7, amount: 199,
+    });
+
+    await store.deleteShop(shop.slug);
+
+    assert.equal(await store.getShopBySlug(shop.slug), null);
+    assert.equal(await store.getListing(l.id), null);
+    assert.deepEqual(await store.listShopMembers(shop.slug), []);
+    assert.equal(await store.getPromotion(promo.id), null);
+  });
+});
+
 describe("admin user delete", () => {
   it("deleteUserAccount removes the account, listings and owned shops", async () => {
     const store = freshDemoStore();

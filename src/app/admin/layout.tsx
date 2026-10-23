@@ -20,7 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             : `⛔ ${health.note} Queues below are empty fallbacks, not real zeros.`}
         </p>
       )}
-      <div className="flex flex-row gap-3 lg:gap-8">
+      <div className="flex flex-row gap-3 lg:gap-5">
         <AdminSidebar />
         <div className="min-w-0 flex-1 py-4 lg:py-8">{children}</div>
       </div>

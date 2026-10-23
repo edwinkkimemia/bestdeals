@@ -56,12 +56,20 @@ export function AdminButtons({ kind, id, extra }: { kind: "verify" | "review" | 
   if (kind === "user" || kind === "shop") {
     const verified = Boolean(extra?.verified);
     const del = async () => {
-      if (kind !== "user") return;
-      if (!confirm("Delete this account permanently? Their listings are removed; orders stay anonymised. This can't be undone.")) return;
+      const isUser = kind === "user";
+      const prompt = isUser
+        ? "Delete this account and their shop(s) permanently? Their listings are removed; orders stay anonymised. This can't be undone."
+        : `Delete the shop "${id}" permanently? Its storefront, listings and boosts are removed. This can't be undone.`;
+      if (!confirm(prompt)) return;
       setBusy(true);
       setMsg("");
       try {
-        const r = await fetch(`/api/admin/users?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+        const r = await fetch(
+          isUser
+            ? `/api/admin/users?id=${encodeURIComponent(id)}`
+            : `/api/admin/shops?slug=${encodeURIComponent(id)}`,
+          { method: "DELETE" }
+        );
         const j = await r.json().catch(() => ({}));
         setMsg(r.ok ? "ok" : j.error || "Delete failed.");
         router.refresh();
@@ -74,11 +82,9 @@ export function AdminButtons({ kind, id, extra }: { kind: "verify" | "review" | 
         <button disabled={busy} className={verified ? btn : primary} onClick={() => run(kind === "shop" ? { slug: id, verified: !verified } : { verified: !verified })}>
           {verified ? "Revoke ✓" : "Verify"}
         </button>
-        {kind === "user" && (
-          <button disabled={busy} className="rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50" onClick={del}>
-            Delete
-          </button>
-        )}
+        <button disabled={busy} className="rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50" onClick={del}>
+          Delete
+        </button>
         {msg && msg !== "ok" && <span className="text-xs text-red-600">{msg}</span>}
       </span>
     );

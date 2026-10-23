@@ -354,6 +354,8 @@ export interface Store {
   listShops(): Promise<ShopRecord[]>;
   setShopVerified(slug: string, verified: boolean): Promise<void>;
   setShopPlan(slug: string, planId: string): Promise<void>;
+  /** Admin delete: removes the storefront, its catalogue and pending plan state. Orders keep snapshots. */
+  deleteShop(slug: string): Promise<void>;
   updateShop(slug: string, patch: ShopHeaderPatch): Promise<ShopRecord | null>;
   listShopsByOwner(ownerId: string): Promise<ShopRecord[]>;
   // staff (Gold): extra hands on a shop, managed by the owner
@@ -746,6 +748,22 @@ class DemoStore implements Store {
   async setShopPlan(slug: string, planId: string) {
     const s = this.shops.get(slug);
     if (s) s.planId = planId;
+  }
+  async deleteShop(slug: string) {
+    const shop = this.shops.get(slug);
+    if (!shop) return;
+    const listingIds = new Set(
+      [...this.listings.values()].filter((l) => l.shopSlug === slug).map((l) => l.id)
+    );
+    for (const id of listingIds) {
+      this.listings.delete(id);
+      for (const [promoId, promo] of this.promotions) {
+        if (promo.listingId === id) this.promotions.delete(promoId);
+      }
+    }
+    this.shops.delete(slug);
+    this.shopMembers = this.shopMembers.filter((m) => m.shopSlug !== slug);
+    this.settings.delete(`plan_pending:${slug}`);
   }
   async updateShop(slug: string, patch: ShopHeaderPatch) {
     const s = this.shops.get(slug);
@@ -1871,6 +1889,29 @@ class PrismaStore implements Store {
       }).catch(() => null);
     }
     await this.p.shop.update({ where: { slug }, data: { planId } });
+  }
+  async deleteShop(slug: string) {
+    const shop = await this.p.shop.findUnique({ where: { slug }, select: { id: true } });
+    if (!shop) return;
+    const listings = await this.p.listing.findMany({
+      where: { shopId: shop.id },
+      select: { id: true },
+    });
+    const listingIds = listings.map((l) => l.id);
+    await this.p.$transaction([
+      ...(listingIds.length > 0
+        ? [this.p.orderItem.updateMany({ where: { listingId: { in: listingIds } }, data: { listingId: null } })]
+        : []),
+      ...(listingIds.length > 0
+        ? [this.p.promotion.deleteMany({ where: { listingId: { in: listingIds } } })]
+        : []),
+      ...(listingIds.length > 0
+        ? [this.p.listing.deleteMany({ where: { id: { in: listingIds } } })]
+        : []),
+      this.p.setting.deleteMany({ where: { key: `plan_pending:${slug}` } }),
+      // ShopMember and SellerSubscription clean up via their cascade rules.
+      this.p.shop.deleteMany({ where: { id: shop.id } }),
+    ]);
   }
   async updateShop(slug: string, patch: ShopHeaderPatch) {
     const data: Record<string, unknown> = {};
