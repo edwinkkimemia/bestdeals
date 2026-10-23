@@ -29,7 +29,7 @@ export type UserRecord = {
   coverUrl?: string | null;
   /** Seller bio — the seller page description + metadata. */
   bio?: string | null;
-  /** Personal seller plan (free | silver | gold). Shops keep their own plan. */
+  /** Personal plan (free | silver | gold) for sellers without a shop; shop owners use Shop.planId. */
   planId?: string | null;
   createdAt: string;
 };
@@ -308,7 +308,7 @@ export interface Store {
   setEmailVerified(id: string, verified: boolean): Promise<void>;
   setUserPassword(id: string, passwordHash: string): Promise<void>;
   updateUser(id: string, patch: { name?: string; phone?: string; photoUrl?: string | null; coverUrl?: string | null; bio?: string | null }): Promise<UserRecord | null>;
-  /** Personal seller plan (free | silver | gold). Validated by the caller. */
+  /** Personal plan (free | silver | gold) for a seller without a shop. Validated by the caller. */
   setUserPlan(id: string, planId: string): Promise<void>;
   deleteUserAccount(id: string): Promise<void>;
   exportUserData(id: string): Promise<Record<string, unknown>>;
@@ -500,8 +500,22 @@ class DemoStore implements Store {
     const u = this.users.get(id);
     if (!u) return;
     // Remove profile + seller footprint; transactional records keep anonymised snapshots.
-    for (const [lid, l] of this.listings) if (l.ownerId === id) this.listings.delete(lid);
-    for (const [slug, s] of this.shops) if (s.ownerId === id) this.shops.delete(slug);
+    // A shop belongs to its owner: deleting the account takes the storefront and its catalogue with it.
+    const ownedSlugs = new Set([
+      ...[...this.shops.values()].filter((s) => s.ownerId === id).map((s) => s.slug),
+      ...this.shopMembers
+        .filter((m) => m.userId === id && m.role === "owner")
+        .map((m) => m.shopSlug),
+    ]);
+    for (const [lid, l] of this.listings) {
+      if (l.ownerId === id || (l.shopSlug && ownedSlugs.has(l.shopSlug))) this.listings.delete(lid);
+    }
+    for (const [slug, s] of this.shops) {
+      if (s.ownerId === id || ownedSlugs.has(slug)) this.shops.delete(slug);
+    }
+    this.shopMembers = this.shopMembers.filter(
+      (m) => m.userId !== id && !ownedSlugs.has(m.shopSlug)
+    );
     for (const [vid, v] of this.verifications) if (v.userId === id) this.verifications.delete(vid);
     for (const o of this.orders.values()) {
       if (o.buyerId === id) {
@@ -692,10 +706,30 @@ class DemoStore implements Store {
   }
 
   async createShop(s: Omit<ShopRecord, "createdAt" | "verified">) {
-    const rec: ShopRecord = { ...s, planId: s.planId ?? "free", verified: false, createdAt: now() };
+    const owner = s.ownerId ? this.users.get(s.ownerId) : undefined;
+    // One plan per seller: a paid personal plan moves to the storefront when
+    // the shop is created, so opening a shop never silently downgrades them.
+    const inherited =
+      !s.planId && (owner?.planId === "silver" || owner?.planId === "gold")
+        ? owner.planId
+        : null;
+    const shopPlan = s.planId ?? inherited ?? "free";
+    const rec: ShopRecord = {
+      ...s,
+      planId: shopPlan,
+      verified: false,
+      createdAt: now(),
+    };
     this.shops.set(rec.slug, rec);
     if (s.ownerId) {
+      if ((shopPlan === "silver" || shopPlan === "gold") && owner && owner.planId !== "free") {
+        owner.planId = "free";
+      }
       this.shopMembers.push({ shopSlug: rec.slug, userId: s.ownerId, role: "owner", createdAt: now() });
+      // Listings posted before the storefront existed now belong to it.
+      for (const l of this.listings.values()) {
+        if (l.ownerId === s.ownerId && !l.shopSlug) l.shopSlug = rec.slug;
+      }
     }
     return rec;
   }
@@ -1271,8 +1305,29 @@ class PrismaStore implements Store {
     const u = await this.p.user.findUnique({ where: { id } });
     if (!u) return;
     const profile = await this.p.sellerProfile.findUnique({ where: { userId: id } });
+    // Owner shops are part of the account: delete their catalogue and the
+    // storefront itself, not just this user's membership row.
+    const owners = await this.p.shopMember.findMany({
+      where: { userId: id, role: "owner" },
+      select: { shopId: true },
+    });
+    const shopIds = owners.map((m) => m.shopId);
+    const listingWhere = {
+      OR: [
+        ...(profile ? [{ sellerProfileId: profile.id }] : []),
+        ...(shopIds.length > 0 ? [{ shopId: { in: shopIds } }] : []),
+      ],
+    };
+    const listingIds = listingWhere.OR.length
+      ? (await this.p.listing.findMany({ where: listingWhere, select: { id: true } })).map((l) => l.id)
+      : [];
     await this.p.$transaction([
-      this.p.listing.deleteMany({ where: { sellerProfileId: profile?.id ?? "__none__" } }),
+      // Order history survives account deletion with the listing snapshot.
+      ...(listingIds.length > 0
+        ? [this.p.orderItem.updateMany({ where: { listingId: { in: listingIds } }, data: { listingId: null } })]
+        : []),
+      ...(listingWhere.OR.length > 0 ? [this.p.listing.deleteMany({ where: listingWhere })] : []),
+      ...(shopIds.length > 0 ? [this.p.shop.deleteMany({ where: { id: { in: shopIds } } })] : []),
       this.p.shopMember.deleteMany({ where: { userId: id } }),
       this.p.verification.deleteMany({ where: { userId: id } }),
       this.p.review.updateMany({ where: { authorId: id }, data: { authorId: null, authorName: "Deleted user" } }),
@@ -1713,10 +1768,20 @@ class PrismaStore implements Store {
   }
 
   async createShop(s: Omit<ShopRecord, "createdAt" | "verified">) {
+    const owner = s.ownerId
+      ? await this.p.user.findUnique({ where: { id: s.ownerId }, select: { planId: true } }).catch(() => null)
+      : null;
+    // One plan per seller: carry a paid personal plan onto the storefront.
+    const inherited =
+      !s.planId && (owner?.planId === "silver" || owner?.planId === "gold")
+        ? owner.planId
+        : null;
+    const shopPlan = s.planId ?? inherited ?? null;
     const rec = await this.p.shop.create({
       data: {
         slug: s.slug, name: s.name, description: s.description,
         businessCategory: s.businessCategory, county: s.county, town: s.town, phone: s.phone,
+        planId: shopPlan,
         logoUrl: s.logoUrl ?? null, coverUrl: s.coverUrl ?? null,
         deliveryInfo: s.deliveryInfo ?? null, hours: s.hours ?? null,
         website: (s as { website?: string | null }).website ?? null,
@@ -1730,11 +1795,22 @@ class PrismaStore implements Store {
         update: { role: "owner" },
         create: { shopId: rec.id, userId: s.ownerId, role: "owner" },
       }).catch(() => null);
+      if (shopPlan === "silver" || shopPlan === "gold") {
+        await this.p.user.update({ where: { id: s.ownerId }, data: { planId: "free" } }).catch(() => null);
+      }
+      // Listings posted before the storefront existed now belong to it.
+      const profile = await this.p.sellerProfile.findUnique({ where: { userId: s.ownerId } }).catch(() => null);
+      if (profile) {
+        await this.p.listing.updateMany({
+          where: { sellerProfileId: profile.id, shopId: null },
+          data: { shopId: rec.id },
+        }).catch(() => null);
+      }
     }
     return {
       slug: rec.slug, name: rec.name, description: rec.description,
       businessCategory: rec.businessCategory, county: rec.county, town: rec.town,
-      phone: rec.phone, ownerId: s.ownerId, planId: "free", verified: rec.verified,
+      phone: rec.phone, ownerId: s.ownerId, planId: rec.planId ?? "free", verified: rec.verified,
       logoUrl: rec.logoUrl ?? null, coverUrl: rec.coverUrl ?? null,
       deliveryInfo: rec.deliveryInfo ?? null, hours: rec.hours ?? null,
       website: (rec as { website?: string | null }).website ?? null,

@@ -11,7 +11,13 @@ export async function POST(req: NextRequest) {
   const gate = await requireVerifiedSeller();
   if (!gate.ok) return gate.response;
   const user = gate.seller;
-  const form = await req.formData().catch(() => null);
+  // Parse by content type: reading formData() first consumes a JSON body, so
+  // JSON clients used to arrive here with every field empty.
+  const contentType = req.headers.get("content-type") ?? "";
+  const isForm =
+    contentType.startsWith("multipart/form-data") ||
+    contentType.startsWith("application/x-www-form-urlencoded");
+  const form = isForm ? await req.formData().catch(() => null) : null;
   const json = form ? ({} as Record<string, unknown>) : await req.json().catch(() => ({} as Record<string, unknown>));
   const get = (k: string) => String(form?.get(k) ?? json[k] ?? "").trim();
   const name = get("name");

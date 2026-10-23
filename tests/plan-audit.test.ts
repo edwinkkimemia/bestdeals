@@ -41,6 +41,16 @@ describe("auditPlanRows", () => {
     assert.deepEqual(owner.target, { kind: "shop", slug: "big-shop", name: "Big Shop" });
   });
 
+  it("uses the shop plan, not a dormant personal plan, for shop owners", () => {
+    const [row] = auditPlanRows(
+      [{ id: "u4", name: "Shop Gold Personal", email: "gp@x.ke", planId: "gold" }],
+      [{ slug: "silver-shop", name: "Silver Shop", ownerId: "u4", planId: "silver" }],
+      [{ ownerId: "u4", count: 10 }]
+    );
+    assert.equal(row.effectivePlan, "silver");
+    assert.equal(row.needsUpgrade, false);
+  });
+
   it("never recommends downgrades", () => {
     const [row] = auditPlanRows(
       [{ id: "u9", name: "Quiet Gold", email: "q@x.ke", planId: "gold" }],

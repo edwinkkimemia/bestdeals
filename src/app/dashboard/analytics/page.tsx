@@ -69,11 +69,11 @@ export default async function SellerAnalyticsPage({ searchParams }: { searchPara
             {report.perListing.map((p) => (
               <li key={p.listingId} className="card space-y-2 p-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
-                  <p className="min-w-0 flex-1 truncate text-sm font-semibold" title={p.title}>
+                  <p className="min-w-0 flex-1 text-sm font-semibold" title={p.title}>
                     {ownedIds.has(p.listingId) ? (
-                      <Link href={`/dashboard/listings/${p.listingId}`} className="link-bd">{p.title}</Link>
+                      <Link href={`/dashboard/listings/${p.listingId}`} className="link-bd block truncate">{p.title}</Link>
                     ) : (
-                      p.title
+                      <span className="block truncate">{p.title}</span>
                     )}
                   </p>
                   <p className="text-sm">

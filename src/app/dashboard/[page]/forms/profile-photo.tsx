@@ -49,7 +49,7 @@ export function ProfilePhotoForm({ initialUrl, name }: { initialUrl: string | nu
   };
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
       <span className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-2xl font-black text-white">
         {url ? (
           <SafeImage src={url} alt={`${name} profile photo`} className="h-full w-full object-cover" fallback={name.charAt(0).toUpperCase()} />

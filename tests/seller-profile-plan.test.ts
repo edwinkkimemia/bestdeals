@@ -42,7 +42,7 @@ describe("seller bio + cover", () => {
 });
 
 describe("personal seller plans", () => {
-  it("effective plan is the best of personal plan and owned shops", async () => {
+  it("uses the shop plan as the seller's one plan when a shop exists", async () => {
     const store = getStore();
     const u = await store.createUser({
       name: "Plan Seller Unique", email: "plan-seller-u@x.co.ke", phone: "0712345678",
@@ -55,7 +55,7 @@ describe("personal seller plans", () => {
     await store.setUserPlan(u.id, "silver");
     assert.equal((await getSellerPlan(u.id)).planId, "silver");
 
-    // Owned gold shop beats personal silver.
+    // Opening a shop moves the paid personal plan to the storefront.
     if (!(await store.getShopBySlug("plan-test-shop-u"))) {
       await store.createShop({
         slug: "plan-test-shop-u", name: "Plan Test Shop", description: "d",
@@ -63,15 +63,18 @@ describe("personal seller plans", () => {
         phone: "0712345678", ownerId: u.id,
       });
     }
-    await store.setShopPlan("plan-test-shop-u", "gold");
-    assert.equal((await getSellerPlan(u.id)).planId, "gold");
+    assert.equal((await store.getShopBySlug("plan-test-shop-u"))?.planId, "silver");
+    assert.equal((await store.findUserById(u.id))?.planId, "free");
+    assert.equal((await getSellerPlan(u.id)).planId, "silver");
 
-    // Personal gold beats shop silver.
+    // Legacy dual plans are consolidated onto the shop, never kept as two.
     await store.setShopPlan("plan-test-shop-u", "silver");
     await store.setUserPlan(u.id, "gold");
-    const best = await getSellerPlan(u.id);
-    assert.equal(best.planId, "gold");
+    const effective = await getSellerPlan(u.id);
+    assert.equal(effective.planId, "gold");
+    assert.equal((await store.getShopBySlug("plan-test-shop-u"))?.planId, "gold");
+    assert.equal((await store.findUserById(u.id))?.planId, "free");
     // New listings still attach to the owned shop when one exists.
-    assert.equal(best.shopSlug, "plan-test-shop-u");
+    assert.equal(effective.shopSlug, "plan-test-shop-u");
   });
 });

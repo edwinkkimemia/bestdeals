@@ -45,7 +45,7 @@ export function BulkPanel({ shopName, isGold }: { shopName: string; isGold: bool
       <p className="font-semibold">Bulk upload · {shopName} (Gold ✓)</p>
       <p className="text-ink-500">Download the <a className="link-bd" href="/api/shops">CSV template</a>, fill rows, then upload here. Tenant-isolated: rows land in your catalogue only, queued for moderation.</p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <input type="file" accept=".csv,text/csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-sm" aria-label="Upload catalogue CSV" />
+        <input type="file" accept=".csv,text/csv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="min-w-0 max-w-full text-sm" aria-label="Upload catalogue CSV" />
         <button onClick={upload} disabled={busy} className="btn-primary !px-4 !py-1.5 text-xs">{busy ? "Uploading…" : "Upload CSV"}</button>
       </div>
       {err && <p role="alert" className="mt-2 text-red-700">{err}</p>}

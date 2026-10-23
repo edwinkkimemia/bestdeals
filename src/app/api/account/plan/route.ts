@@ -41,10 +41,10 @@ async function sweepOverLimit(ownerId: string, cap: number): Promise<number> {
 
 /**
  * Personal seller plan (Free / Silver / Gold) — same prices and limits as
- * shop plans, for individual sellers without a storefront. Effective plan is
- * the best of this and owned shops (`getSellerPlan`). Same checkout rules as
- * shops: downgrades immediate, upgrades need payment first (wallet instant,
- * M-Pesa STK pending, or admin confirm).
+ * shop plans, for individual sellers without a storefront. A seller with a
+ * shop has exactly one plan and manages it through /api/shops/plan. Same
+ * checkout rules as shops: downgrades immediate, upgrades need payment first
+ * (wallet instant, M-Pesa STK pending, or admin confirm).
  */
 export async function POST(req: NextRequest) {
   const user = await currentUser();
@@ -71,6 +71,8 @@ export async function POST(req: NextRequest) {
   if (targetId !== user.id && user.role !== "ADMIN") {
     return NextResponse.json({ error: "Not your account." }, { status: 403 });
   }
+  const shops = await store.listShopsByOwner(targetId).catch(() => []);
+  const shop = shops[0] ?? null;
   const key = pendingSellerPlanKey(targetId);
   const current = normalizePlan(target.planId);
 
@@ -79,7 +81,14 @@ export async function POST(req: NextRequest) {
     if (user.role !== "ADMIN") return NextResponse.json({ error: "Admin only." }, { status: 403 });
     const pending = (await store.getSetting(key).catch(() => null)) as PendingPlan | null;
     if (!pending) return NextResponse.json({ error: "No pending plan payment for this seller." }, { status: 404 });
-    await store.setUserPlan(targetId, pending.planId);
+    // If the seller opened a shop while the personal checkout was pending,
+    // land the paid plan on that shop so they still have exactly one plan.
+    if (shop) {
+      await store.setShopPlan(shop.slug, pending.planId);
+      await store.setUserPlan(targetId, "free");
+    } else {
+      await store.setUserPlan(targetId, pending.planId);
+    }
     await store.setSetting(key, null).catch(() => {});
     await markInvoice(pending.invoiceId, "paid");
     const { logAudit } = await import("@/lib/audit");
@@ -90,6 +99,17 @@ export async function POST(req: NextRequest) {
   if (clearPending) {
     await store.setSetting(key, null).catch(() => {});
     return NextResponse.json({ ok: true, planId: current, cleared: true });
+  }
+
+  if (shop) {
+    return NextResponse.json(
+      {
+        error: "You have a shop, so your shop plan is your only plan. Manage it on Plan & billing.",
+        code: "SHOP_PLAN",
+        shopSlug: shop.slug,
+      },
+      { status: 409 }
+    );
   }
 
   if (cancel) {

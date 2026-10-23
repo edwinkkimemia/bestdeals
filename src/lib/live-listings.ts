@@ -408,9 +408,9 @@ export function mergeStaticAndLive(
  * win over hardcoded catalogue flags. Demo listings ship with `verified:
  * false` in `catalog.ts`, but once the seller verifies (admin approval),
  * every badge — detail pages, cards, rails — must flip without editing the
- * catalogue. Same for plans: the effective plan (best of personal seller
- * plan and owned shops, plus the listing's own shop) stamps `planId` so grid
- * cards can render the blue/gold check without per-row queries.
+ * catalogue. Same for plans: the seller's one effective plan (shop plan for
+ * storefront owners, personal plan otherwise) stamps `planId` so grid cards
+ * can render the blue/gold check without per-row queries.
  * One `listUsers` + one `listShops` call per invocation; safe fallback keeps
  * the static flags with a null plan.
  */
@@ -435,15 +435,16 @@ export async function withLiveVerification<T extends Pick<Listing, "ownerId" | "
     byName.set(u.name.trim().toLowerCase(), u);
     if (u.businessName) byName.set(u.businessName.trim().toLowerCase(), u);
   }
-  // Best shop plan per owner + plan per shop slug (staff-posted edge included).
-  const shopBestByOwner = new Map<string, string>();
+  // One plan per seller: the first owned shop wins; personal plans only apply
+  // when the seller has no storefront.
+  const shopPlanByOwner = new Map<string, string>();
   const planByShopSlug = new Map<string, string>();
   for (const s of shops) {
     const pid = normalizePlan((s as { planId?: unknown }).planId);
     planByShopSlug.set(s.slug, pid);
     const owner = (s as { ownerId?: string }).ownerId;
-    if (owner && rank(pid) > rank(shopBestByOwner.get(owner) ?? null)) {
-      shopBestByOwner.set(owner, pid);
+    if (owner && !shopPlanByOwner.has(owner)) {
+      shopPlanByOwner.set(owner, pid);
     }
   }
   const effective = (user: (typeof users)[number] | undefined, ownerId?: string, shopSlug?: string): { verified: boolean | undefined; plan: string | null; since: string | null } => {
@@ -453,17 +454,11 @@ export async function withLiveVerification<T extends Pick<Listing, "ownerId" | "
     if (user) {
       verified = user.verified;
       since = (user as { createdAt?: string }).createdAt ?? null;
-      const personal = normalizePlan(user.planId);
-      if (rank(personal) > rank(plan)) plan = personal;
     }
-    if (ownerId) {
-      const owned = shopBestByOwner.get(ownerId);
-      if (owned && rank(owned) > rank(plan)) plan = owned;
-    }
-    if (shopSlug) {
-      const sp = planByShopSlug.get(shopSlug);
-      if (sp && rank(sp) > rank(plan)) plan = sp;
-    }
+    const ownedShopPlan = ownerId ? shopPlanByOwner.get(ownerId) : undefined;
+    if (shopSlug) plan = planByShopSlug.get(shopSlug) ?? null;
+    if (!plan && ownedShopPlan) plan = ownedShopPlan;
+    if (!plan && !ownedShopPlan && user) plan = normalizePlan(user.planId);
     return { verified, plan: rank(plan) > 0 ? plan : null, since };
   };
   return items.map((l) => {

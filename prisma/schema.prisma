@@ -89,7 +89,7 @@ model User {
   verified     Boolean        @default(false)
   emailVerified Boolean       @default(false)
   sellerKind   String         @default("individual") // individual | business
-  planId       String? // personal seller plan (free | silver | gold); shops keep their own Shop.planId
+  planId       String? // personal plan (free | silver | gold) for sellers without a shop; shop owners use Shop.planId only
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
   seller       SellerProfile?

@@ -70,7 +70,7 @@ describe("plan change kinds", () => {
 });
 
 describe("seller plan resolution", () => {
-  it("defaults to free without a shop, follows the best shop plan", async () => {
+  it("defaults to free without a shop, then follows the shop plan", async () => {
     const u = await makeSeller();
     assert.deepEqual(await getSellerPlan(u.id), { planId: "free" });
     const shop = await getStore().createShop({

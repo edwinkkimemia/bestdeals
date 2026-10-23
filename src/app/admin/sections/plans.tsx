@@ -35,7 +35,7 @@ export async function PlansSection({ status }: { status: string }) {
       <SectionHeading icon={CreditCard}>Plan audit ({items.length}{tab === "all" ? ` accounts · ${needCount} need upgrade` : " to fix"})</SectionHeading>
       <p className="mt-1 text-sm text-ink-500">
         Live listings per account (rejected/sold/expired don&apos;t count): ≤5 fits Free, 6–30 needs Silver, 31+ needs Gold.
-        Assign upgrades only — accounts are never auto-downgraded. The plan lands on the first owned shop when there is one (storefront earns its checkmark), else the personal seller plan.
+        Assign upgrades only — accounts are never auto-downgraded. A seller has one plan: it lands on the first owned shop when there is one (storefront earns its checkmark), else the personal seller plan.
       </p>
       <SectionTabs base="/admin/plans" tabs={TABS} current={tab} />
       <AdminTable

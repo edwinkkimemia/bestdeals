@@ -78,4 +78,21 @@ describe("admin user delete", () => {
     assert.equal(await store.getListing(l.id), null);
     assert.equal(await store.getShopBySlug("doomed-shop"), null);
   });
+
+  it("moves pre-shop listings into a new shop and deletes them with it", async () => {
+    const store = freshDemoStore();
+    const owner = await store.createUser(user("Shop Later", "shop-later@x.co.ke"));
+    const beforeShop = await store.createListing(listing(owner.id, owner.name));
+    assert.equal(beforeShop.shopSlug, undefined);
+    const shop = await store.createShop({
+      slug: "opened-later-shop", name: "Opened Later", description: "shop", businessCategory: "Retail",
+      county: "Nairobi", town: "CBD", phone: "0712345678", ownerId: owner.id,
+    });
+    // A listing posted before the storefront belongs to it once created.
+    assert.equal((await store.getListing(beforeShop.id))?.shopSlug, shop.slug);
+    assert.ok((await store.listListingsByShop(shop.slug)).some((l) => l.id === beforeShop.id));
+    await store.deleteUserAccount(owner.id);
+    assert.equal(await store.getShopBySlug(shop.slug), null);
+    assert.equal(await store.getListing(beforeShop.id), null);
+  });
 });

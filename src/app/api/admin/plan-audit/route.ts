@@ -32,8 +32,8 @@ export async function GET() {
 
 /**
  * Admin-only: assign the matching plan to one account (upgrades only — never
- * auto-downgrades). Lands on the first owned shop when there is one (so the
- * storefront earns its checkmark), else the personal seller plan.
+ * auto-downgrades). A seller has one plan: it lands on the first owned shop
+ * when there is one, else on the personal seller plan.
  */
 export async function POST(req: NextRequest) {
   const user = await requireAdmin();
@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
   }
   if (row.target.kind === "shop") {
     await store.setShopPlan(row.target.slug, row.expectedPlan);
+    await store.setUserPlan(userId, "free").catch(() => {});
   } else {
     await store.setUserPlan(userId, row.expectedPlan);
   }

@@ -1,7 +1,7 @@
 /**
- * Shop plan rules (Free / Silver / Gold). Single source of truth for
- * listing limits, analytics ranges and Gold-only feature gates.
- * Plans are stored per shop (Shop.planId); sellers without a shop get Free.
+ * Plan rules (Free / Silver / Gold). Single source of truth for listing
+ * limits, analytics ranges and Gold-only feature gates. Shop owners use the
+ * shop plan; personal plans apply only to sellers without a shop.
  */
 import { getStore } from "./store";
 
@@ -54,32 +54,48 @@ export const PLAN_ANALYTICS_DAYS: Record<PlanId, number> = {
   gold: 90,
 };
 
-export type SellerPlan = { planId: PlanId; shopSlug?: string; shopName?: string; personal?: boolean };
+export type SellerPlan = { planId: PlanId; shopSlug?: string; shopName?: string };
 
 /**
- * Resolve a seller's effective plan: best of their personal seller plan and
- * the plans of shops they own, else Free. Personal plans give individual
- * sellers (no shop) the same Silver/Gold limits and features as shops.
+ * Resolve a seller's single effective plan. Once a seller owns a shop, that
+ * shop's plan is the only plan; personal plans apply only to sellers without
+ * a storefront. New listings attach to the newest owned shop. Legacy accounts
+ * still carrying both are consolidated on read: a paid personal plan moves
+ * onto the first owned shop, then the personal slot is cleared — no lost
+ * entitlement and no double plan.
  */
 export async function getSellerPlan(userId: string): Promise<SellerPlan> {
   try {
     const store = getStore();
-    const me = await store.findUserById(userId).catch(() => null);
-    const personal = normalizePlan(me?.planId);
-    const shops = await store.listShopsByOwner(userId);
-    let best: SellerPlan = { planId: personal, ...(personal !== "free" ? { personal: true } : {}) };
-    for (const s of shops) {
-      const pid = normalizePlan((s as { planId?: unknown }).planId);
-      const rank = PLAN_IDS.indexOf(pid);
-      if (rank > PLAN_IDS.indexOf(best.planId)) {
-        best = { planId: pid, shopSlug: s.slug, shopName: s.name };
+    const [me, shops] = await Promise.all([
+      store.findUserById(userId).catch(() => null),
+      store.listShopsByOwner(userId).catch(() => []),
+    ]);
+    if (shops.length > 0) {
+      const shop = shops[0];
+      let shopPlan = normalizePlan((shop as { planId?: unknown }).planId);
+      const personal = normalizePlan(me?.planId);
+      if (personal !== "free") {
+        if (PLAN_IDS.indexOf(personal) > PLAN_IDS.indexOf(shopPlan)) {
+          const moved = await store
+            .setShopPlan(shop.slug, personal)
+            .then(() => true)
+            .catch(() => false);
+          if (moved) {
+            shopPlan = personal;
+            await store.setUserPlan(userId, "free").catch(() => {});
+          }
+        } else {
+          await store.setUserPlan(userId, "free").catch(() => {});
+        }
       }
+      return {
+        planId: shopPlan,
+        shopSlug: shop.slug,
+        shopName: shop.name,
+      };
     }
-    // New listings still attach to the first owned shop when there is one.
-    if (shops.length > 0 && !best.shopSlug) {
-      best = { ...best, shopSlug: shops[0].slug, shopName: shops[0].name };
-    }
-    return best;
+    return { planId: normalizePlan(me?.planId) };
   } catch {
     return { planId: "free" };
   }
@@ -132,12 +148,12 @@ export function auditPlanRows(
   return users.map((u) => {
     const liveCount = countOf.get(u.id) ?? 0;
     const expectedPlan = expectedPlanForCount(liveCount);
-    let effectivePlan = normalizePlan(u.planId);
-    for (const s of shopsByOwner.get(u.id) ?? []) {
-      const pid = normalizePlan(s.planId);
-      if (PLAN_IDS.indexOf(pid) > PLAN_IDS.indexOf(effectivePlan)) effectivePlan = pid;
-    }
     const owned = shopsByOwner.get(u.id) ?? [];
+    // Shop owners have one plan: the storefront's. Personal plans only apply
+    // to sellers with no shop, so a dormant upgrade can't mask a shop limit.
+    const effectivePlan = owned.length > 0
+      ? normalizePlan(owned[0].planId)
+      : normalizePlan(u.planId);
     return {
       userId: u.id,
       name: u.name,

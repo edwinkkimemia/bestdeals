@@ -33,10 +33,18 @@ async function markInvoice(invoiceId: string, status: "paid" | "pending", provid
   );
 }
 
+/** Keep one plan per seller: the shop plan supersedes any personal plan. */
+async function clearPersonalPlan(shopSlug: string): Promise<void> {
+  const store = getStore();
+  const shop = await store.getShopBySlug(shopSlug).catch(() => null);
+  if (shop?.ownerId) await store.setUserPlan(shop.ownerId, "free").catch(() => {});
+}
+
 /** Activate a paid plan: set plan, clear pending, mark invoice paid. */
 async function activatePaidPlan(shopSlug: string, planId: string, invoiceId: string, providerRef?: string): Promise<void> {
   const store = getStore();
   await store.setShopPlan(shopSlug, planId);
+  await clearPersonalPlan(shopSlug);
   await store.setSetting(pendingPlanKey(shopSlug), null).catch(() => {});
   await markInvoice(invoiceId, "paid", providerRef);
 }
@@ -121,6 +129,7 @@ export async function POST(req: NextRequest) {
   if (cancel) {
     await store.setSetting(pendingPlanKey(slug), null).catch(() => {});
     await store.setShopPlan(slug, "free").catch(() => {});
+    await clearPersonalPlan(slug);
     await sweepOverLimit(shop.ownerId || user.id, PLAN_LISTING_LIMITS.free).catch(() => {});
     const { logAudit } = await import("@/lib/audit");
     await logAudit({ actorId: user.id, actorEmail: user.email, action: "plan.cancel", entity: "shop", entityId: slug }).catch(() => {});
@@ -135,6 +144,7 @@ export async function POST(req: NextRequest) {
   if (kind === "downgrade") {
     await store.setSetting(pendingPlanKey(slug), null).catch(() => {});
     await store.setShopPlan(slug, plan);
+    await clearPersonalPlan(slug);
     const hidden = await sweepOverLimit(shop.ownerId || user.id, PLAN_LISTING_LIMITS[plan]).catch(() => 0);
     const { logAudit } = await import("@/lib/audit");
     await logAudit({ actorId: user.id, actorEmail: user.email, action: "plan.downgrade", entity: "shop", entityId: slug, reason: `${current}->${plan}` }).catch(() => {});
@@ -166,6 +176,7 @@ export async function POST(req: NextRequest) {
     if (spent.ok) {
       await store.setSetting(pendingPlanKey(slug), null).catch(() => {});
       await store.setShopPlan(slug, plan);
+      await clearPersonalPlan(slug);
       await writeInvoices([{ ...invoice, method: "wallet" }, ...(await readInvoices())]);
       return NextResponse.json({
         ok: true,

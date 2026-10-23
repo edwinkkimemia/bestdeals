@@ -42,7 +42,7 @@ export default async function DashPage({ params, searchParams }: { params: { pag
             <ProfileForm name={fresh?.name ?? user.name} phone={fresh?.phone ?? user.phone} bio={fresh?.bio ?? null} />
           </div>
           <div className="flex flex-wrap items-center gap-2 border-t border-neutral-200 pt-4 text-sm">
-            <span>Email: <strong>{user.email}</strong></span>
+            <span className="min-w-0 break-all">Email: <strong>{user.email}</strong></span>
             <span>·</span>
             {fresh?.verified ?? user.verified ? (
               <Badge tone="green">✓ Verified seller</Badge>
@@ -66,7 +66,7 @@ export default async function DashPage({ params, searchParams }: { params: { pag
           <ul className="mt-2 list-disc space-y-1 pl-5 text-ink-700">
             <li>Only <strong>active</strong> (moderation-approved) listings with at least one photo qualify.</li>
             <li>Verified sellers rank higher in featured rails; unverified shops can still boost.</li>
-            <li>Pay per boost from wallet balance or M-Pesa — no plan needed. Shop plans are separate — see plans.</li>
+            <li>Pay per boost from wallet balance or M-Pesa — no plan needed. Your one shop plan still covers the storefront and catalogue.</li>
           </ul>
           <div className="mt-3 flex flex-wrap gap-2">
             <Link href="/pricing" className="btn-primary">See plans</Link>

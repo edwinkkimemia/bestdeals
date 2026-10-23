@@ -33,19 +33,12 @@ export default async function ShopDash({ searchParams }: { searchParams: { new?:
     active?.ownerId === user.id ||
     members.some((m) => m.userId === user.id && m.role === "owner");
   const { isDbConfigured } = await import("@/lib/db");
-  const { isS3Configured, isServerlessUploads } = await import("@/lib/storage");
-  const ephemeralUploads = !isS3Configured() && isServerlessUploads();
   return (
     <div>
       <h1 className="section-title flex items-center gap-2"><Store className="h-6 w-6 text-brand-600" /> My shop</h1>
       {!isDbConfigured() && (
         <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
           Demo storage is active (no DATABASE_URL) — shops, logos and covers reset on restart/redeploy. Set DATABASE_URL + run migrations to keep them.
-        </p>
-      )}
-      {isDbConfigured() && ephemeralUploads && (
-        <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
-          File storage is DB-backed fallback (no S3) — logos/covers survive redeploys, but large batches need S3 (docs/providers.md).
         </p>
       )}
       {searchParams.new === "business" && (
@@ -69,10 +62,10 @@ export default async function ShopDash({ searchParams }: { searchParams: { new?:
         </div>
       )}
       <div className="mt-4 grid items-start gap-3 lg:grid-cols-2">
-        <div>
-          <div className="card p-5">
+        <div className="min-w-0">
+          <div className="card min-w-0 p-5">
             <p className="font-bold">Storefront{active ? ` · ${active.name}` : ""}</p>
-            <p className="text-sm text-ink-500">Your public URL will be <code>chap.co.ke/shops/your-name</code> with availability check & safe slugs.</p>
+            <p className="text-sm text-ink-500">Your public URL will be <code className="break-all">chap.co.ke/shops/your-name</code> with availability check &amp; safe slugs.</p>
             {active ? (
               <p className="mt-2 text-sm"><Link href={`/shops/${active.slug}`} className="link-bd">View your storefront →</Link></p>
             ) : (
@@ -93,22 +86,26 @@ export default async function ShopDash({ searchParams }: { searchParams: { new?:
               ) : (
                 <ul className="mt-3 space-y-2">
                   {catalogue.slice(0, 20).map((l) => (
-                    <li key={l.id} className="flex items-center gap-2.5 rounded-xl border border-neutral-200 p-2">
-                      {l.images[0] ? (
-                        <WmImage src={l.images[0]} alt="" className="h-11 w-14 shrink-0 rounded-lg bg-sand-100 object-cover" />
-                      ) : (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img src="/chaplogo.png" alt="" className="h-11 w-14 shrink-0 rounded-lg bg-sand-100 object-cover" />
-                      )}
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold">{l.title}</span>
-                        <span className="block text-xs text-ink-400">{formatKES(l.price)}</span>
-                      </span>
-                      <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
-                      <Link href={publicPath(l)} className="btn-secondary shrink-0 !px-2.5 !py-1 text-xs">
-                        {l.status === "active" ? "View" : "Preview"}
-                      </Link>
-                      <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-2.5 !py-1 text-xs">Manage</Link>
+                    <li key={l.id} className="min-w-0 rounded-xl border border-neutral-200 p-2">
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        {l.images[0] ? (
+                          <WmImage src={l.images[0]} alt="" className="h-11 w-14 shrink-0 rounded-lg bg-sand-100 object-cover" />
+                        ) : (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src="/chaplogo.png" alt="" className="h-11 w-14 shrink-0 rounded-lg bg-sand-100 object-cover" />
+                        )}
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-semibold">{l.title}</span>
+                          <span className="block text-xs text-ink-400">{formatKES(l.price)}</span>
+                        </span>
+                        <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Link href={publicPath(l)} className="btn-secondary shrink-0 !px-2.5 !py-1 text-xs">
+                          {l.status === "active" ? "View" : "Preview"}
+                        </Link>
+                        <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-2.5 !py-1 text-xs">Manage</Link>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -119,8 +116,8 @@ export default async function ShopDash({ searchParams }: { searchParams: { new?:
             </div>
           )}
         </div>
-        <div>
-          <div className="card p-5">
+        <div className="min-w-0">
+          <div className="card min-w-0 p-5">
             <p className="font-bold">Settings</p>
             <p className="mt-0.5 text-xs text-ink-500">Shop details buyers see. Plans & billing live on the <Link href="/dashboard/plan" className="link-bd">Plan page →</Link></p>
           </div>

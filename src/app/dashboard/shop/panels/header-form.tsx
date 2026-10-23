@@ -110,7 +110,7 @@ export function ShopHeaderForm({ shop }: { shop: ShopHeader }) {
   return (
     <form onSubmit={save} className="card mt-3 space-y-3 p-5">
       <p className="font-bold">Shop header</p>
-      <p className="text-sm text-ink-500">Your public cover, logo and shop info — live at <Link href={`/shops/${shop.slug}`} className="link-bd">/shops/{shop.slug}</Link>.</p>
+      <p className="text-sm text-ink-500">Your public cover, logo and shop info — live at <Link href={`/shops/${shop.slug}`} className="link-bd break-all">/shops/{shop.slug}</Link>.</p>
       <div>
         <span className="label-bd">Cover photo</span>
         {/* Fixed height lives on the container: a 404 cover collapses to the
@@ -142,7 +142,7 @@ export function ShopHeaderForm({ shop }: { shop: ShopHeader }) {
             name.charAt(0).toUpperCase()
           )}
         </span>
-        <div>
+        <div className="min-w-0">
           <span className="label-bd">Logo</span>
           <div className="flex flex-wrap gap-2">
             <input ref={logoRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" aria-label="Choose shop logo" onChange={(e) => uploadImage(e.target.files?.[0], "logo")} />

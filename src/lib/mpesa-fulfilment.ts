@@ -106,9 +106,10 @@ export async function fulfilLinkedPurchase(
       return false;
     }
     await store.setShopPlan(link.planShop, link.planId).catch(() => {});
+    const shop = await store.getShopBySlug(link.planShop).catch(() => null);
+    if (shop?.ownerId) await store.setUserPlan(shop.ownerId, "free").catch(() => {});
     await store.setSetting(pendingPlanKey(link.planShop), null).catch(() => {});
     await settleInvoice(pending?.invoiceId);
-    const shop = await store.getShopBySlug(link.planShop).catch(() => null);
     if (shop?.ownerId) {
       const { notifyUser } = await import("./notifications");
       await notifyUser({
@@ -143,15 +144,26 @@ export async function fulfilLinkedPurchase(
       }).catch(() => {});
       return false;
     }
-    await store.setUserPlan(link.planUser, link.planId).catch(() => {});
+    // A seller has one plan: if they opened a shop while this personal
+    // checkout was pending, activate the storefront plan instead.
+    const shops = await store.listShopsByOwner(link.planUser).catch(() => []);
+    const shop = shops[0] ?? null;
+    if (shop) {
+      await store.setShopPlan(shop.slug, link.planId).catch(() => {});
+      await store.setUserPlan(link.planUser, "free").catch(() => {});
+    } else {
+      await store.setUserPlan(link.planUser, link.planId).catch(() => {});
+    }
     await store.setSetting(pendingSellerPlanKey(link.planUser), null).catch(() => {});
     await settleInvoice(pending?.invoiceId);
     const { notifyUser } = await import("./notifications");
     await notifyUser({
       userId: link.planUser,
       type: "system",
-      title: "Seller plan activated ✓",
-      body: `Your ${link.planId} seller plan is active. Your paid month starts now.`,
+      title: shop ? "Shop plan activated ✓" : "Seller plan activated ✓",
+      body: shop
+        ? `${shop.name} is now on the ${link.planId} plan. Your paid month starts now.`
+        : `Your ${link.planId} seller plan is active. Your paid month starts now.`,
       link: "/dashboard/plan",
     }).catch(() => null);
     await logAudit({

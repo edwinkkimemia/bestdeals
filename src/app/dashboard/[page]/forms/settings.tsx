@@ -52,9 +52,9 @@ export function SettingsPanel({ email }: { email: string }) {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 break-words">
       <div>
-        <p className="font-bold">Notifications ({email})</p>
+        <p className="break-all font-bold">Notifications ({email})</p>
         <label className="mt-2 flex items-center gap-2 text-sm">
           <input type="checkbox" checked={prefs.sms} onChange={(e) => save({ ...prefs, sms: e.target.checked })} />
           SMS alerts (order updates, enquiry replies)

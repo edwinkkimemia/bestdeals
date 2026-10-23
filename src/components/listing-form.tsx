@@ -214,11 +214,11 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
         <div><label className="label-bd" htmlFor="l-town">Town</label>
           <select id="l-town" className="input-bd" {...register("town")}><option value="">Select…</option>{(county ? townsFor(county) : []).map((t) => <option key={t}>{t}</option>)}</select>{errors.town && <p className="text-xs text-red-600">Required</p>}</div>
       </div>
-      <div>
+      <div className="min-w-0">
         <label className="label-bd" htmlFor="l-img">Image links (optional, comma-separated https links)</label>
         <input id="l-img" className="input-bd" placeholder="https://…" value={linkText} onChange={(e) => onLinksChange(e.target.value)} />
         <label className="label-bd mt-2" htmlFor="l-files">Or upload photos (JPG/PNG/WebP, ≤5MB each, max 8)</label>
-        <input id="l-files" type="file" accept="image/jpeg,image/png,image/webp" multiple className="text-sm"
+        <input id="l-files" type="file" accept="image/jpeg,image/png,image/webp" multiple className="block w-full max-w-full text-sm"
           onChange={(e) => {
             const files = Array.from(e.target.files ?? []).slice(0, 8);
             const bad = files.find((f) => f.size > 5 * 1024 * 1024);

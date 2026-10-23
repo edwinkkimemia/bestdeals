@@ -26,19 +26,22 @@ export default async function PlanDash({ searchParams }: { searchParams: { plan?
       <h1 className="section-title flex items-center gap-2"><CreditCard className="h-6 w-6 text-brand-600" /> Plan & billing</h1>
       <p className="mt-1 text-sm text-ink-500">
         {active ? (
-          <>Plan for <strong>{active.name}</strong> · <Link href={`/shops/${active.slug}`} className="link-bd">view storefront →</Link></>
+          <>One plan for <strong>{active.name}</strong> covers your storefront and all its listings · <Link href={`/shops/${active.slug}`} className="link-bd">view storefront →</Link></>
         ) : (
-          <>No shop yet — your personal seller plan below covers your listings, or <Link href="/dashboard/shop" className="link-bd">create a storefront →</Link></>
+          <>No shop yet — your personal seller plan covers your listings, or <Link href="/dashboard/shop" className="link-bd">create a storefront →</Link></>
         )}
         {" · "}<Link href="/pricing" className="link-bd">Compare plans →</Link>
       </p>
-      <div className="mt-4 grid max-w-4xl items-start gap-3 lg:grid-cols-2">
-        <SellerPlanPanel planId={personalPlan} highlightPlan={highlightPlan} />
-        <PlanPanel
-          shops={owned.map((s) => ({ slug: s.slug, name: s.name, planId: normalizePlan((s as { planId?: unknown }).planId) }))}
-          activeSlug={active?.slug ?? ""}
-          highlightPlan={highlightPlan}
-        />
+      <div className="mt-4 grid max-w-2xl items-start gap-3">
+        {active ? (
+          <PlanPanel
+            shops={owned.map((s) => ({ slug: s.slug, name: s.name, planId: normalizePlan((s as { planId?: unknown }).planId) }))}
+            activeSlug={active.slug}
+            highlightPlan={highlightPlan}
+          />
+        ) : (
+          <SellerPlanPanel planId={personalPlan} highlightPlan={highlightPlan} />
+        )}
       </div>
     </div>
   );

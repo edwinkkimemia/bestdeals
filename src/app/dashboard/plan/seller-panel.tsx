@@ -17,9 +17,10 @@ const planName = (id?: string) =>
 
 /**
  * Personal seller plan checkout — same prices/limits as shop plans, for
- * sellers without a storefront. Effective plan is the best of this and owned
- * shops. Upgrades stay pending until payment confirms (wallet = instant,
- * M-Pesa STK = on callback, or admin confirm). Downgrades apply immediately.
+ * sellers without a storefront. Once a shop exists this panel is replaced by
+ * the shop plan panel, so each seller only ever manages one plan. Upgrades
+ * stay pending until payment confirms (wallet = instant, M-Pesa STK = on
+ * callback, or admin confirm). Downgrades apply immediately.
  */
 export function SellerPlanPanel({ planId, highlightPlan }: { planId: string; highlightPlan?: string }) {
   const router = useRouter();
@@ -28,6 +29,7 @@ export function SellerPlanPanel({ planId, highlightPlan }: { planId: string; hig
   const [busy, setBusy] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingPlan | null>(null);
   const [balance, setBalance] = useState<number | null>(null);
+  const [awaiting, setAwaiting] = useState(false);
 
   const load = async () => {
     try {
@@ -42,6 +44,34 @@ export function SellerPlanPanel({ planId, highlightPlan }: { planId: string; hig
   useEffect(() => {
     load();
   }, []);
+
+  // After an STK prompt, the callback activates the plan server-side. Poll the
+  // pending row so this panel flips to the new plan without a manual refresh.
+  useEffect(() => {
+    if (!awaiting) return;
+    let tries = 0;
+    const t = setInterval(async () => {
+      tries += 1;
+      try {
+        const r = await fetch("/api/account/plan");
+        if (r.ok) {
+          const j = (await r.json()) as { pending?: PendingPlan | null };
+          if (!j.pending) {
+            setAwaiting(false);
+            setMsg("Payment confirmed — your new plan is active ✓");
+            await load();
+            router.refresh();
+            return;
+          }
+        }
+      } catch {}
+      if (tries >= 45) {
+        setAwaiting(false);
+        setMsg("Still waiting for M-Pesa. Refresh once you receive the confirmation SMS.");
+      }
+    }, 4000);
+    return () => clearInterval(t);
+  }, [awaiting, router]);
 
   const pendName = pending ? planName(pending.planId) : "";
   const highlight = highlightPlan && highlightPlan !== planId
@@ -60,8 +90,9 @@ export function SellerPlanPanel({ planId, highlightPlan }: { planId: string; hig
       const j = await r.json();
       if (!r.ok) return setMsg(j.error || "Plan change failed.");
       setMsg(j.summary || `${id} plan updated ✓`);
+      setAwaiting(!!j.pending);
       await load();
-      router.refresh();
+      if (!j.pending) router.refresh();
     } catch {
       setMsg("Network error — try again.");
     } finally {
@@ -81,6 +112,7 @@ export function SellerPlanPanel({ planId, highlightPlan }: { planId: string; hig
       const j = await r.json();
       if (!r.ok) return setMsg(j.error || "Cancel failed.");
       setMsg("Pending upgrade cancelled — you stay on your current plan.");
+      setAwaiting(false);
       await load();
       router.refresh();
     } catch {
@@ -94,7 +126,7 @@ export function SellerPlanPanel({ planId, highlightPlan }: { planId: string; hig
     <div className="card border-brand-600 p-5">
       <p className="font-bold">Personal seller plan: {planName(planId)}</p>
       <p className="mt-1 text-xs text-ink-500">
-        Same Silver/Gold limits as shops — no storefront needed. Your effective plan is the best of this and your shops.
+        Same Silver/Gold limits as shops — no storefront needed. Creating a shop later moves this plan to the storefront.
       </p>
       {highlight && (
         <p className="mt-2 rounded-xl bg-brand-50 p-3 text-sm text-brand-700">
@@ -105,7 +137,7 @@ export function SellerPlanPanel({ planId, highlightPlan }: { planId: string; hig
         <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm" role="status">
           <p className="font-bold text-amber-900">Awaiting payment: {pendName} · {formatKES(pending.amount)}</p>
           <p className="mt-0.5 text-xs text-amber-800">
-            Still on {planName(planId)} until payment confirms. M-Pesa prompt sent to {pending.phone}. An admin confirms manual payments.
+            Still on {planName(planId)} until payment confirms. M-Pesa prompt sent to {pending.phone}. This page updates automatically after you pay; an admin confirms manual payments.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <button onClick={() => choose(pending.planId)} disabled={busy !== null} className="btn-primary shrink-0 !px-3 !py-1.5 text-xs">
@@ -149,7 +181,7 @@ export function SellerPlanPanel({ planId, highlightPlan }: { planId: string; hig
       </div>
       {msg && <p role="status" className="mt-2 text-sm text-ink-700">{msg}</p>}
       <p className="mt-2 text-xs text-ink-400">
-        Shop plans are separate — manage each storefront below. <Link href="/pricing" className="link-bd">Compare plans →</Link>
+        One plan per seller. <Link href="/pricing" className="link-bd">Compare plans →</Link>
       </p>
     </div>
   );

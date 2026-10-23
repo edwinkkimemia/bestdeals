@@ -21,6 +21,7 @@ import { getStore } from "@/lib/store";
 import { PlanCheckmark } from "@/components/ui/badge";
 import { ReferralPanel } from "@/components/referral-panel";
 import { getSellerAnalyticsReport } from "@/lib/analytics";
+import { getSellerPlan } from "@/lib/plans";
 import { listingHref } from "@/lib/related";
 import { timeAgo } from "@/lib/format";
 import { dedupeNotifications } from "@/lib/notification-dedupe";
@@ -46,6 +47,7 @@ export default async function DashboardPage() {
   const perf = await getSellerAnalyticsReport({ id: user.id, name: user.name }, 30).catch(() => null);
   // Name/role/verified can change after sign-in (profile edits, admin approval) — read fresh.
   const fresh = await store.findUserById(user.id).catch(() => null);
+  const sellerPlan = await getSellerPlan(user.id).catch(() => ({ planId: "free" as const }));
   const name = fresh?.name ?? user.name;
   const role = fresh?.role ?? user.role;
   const verified = fresh?.verified ?? user.verified;
@@ -186,7 +188,7 @@ export default async function DashboardPage() {
             ) : (
               <Link href={verifyHref} className="chip !border-amber-500 !text-amber-700 hover:underline">Verification pending →</Link>
             )}
-            <PlanCheckmark plan={fresh?.planId} />
+            <PlanCheckmark plan={sellerPlan.planId} />
             {!emailVerified && (
               <Link href="/dashboard/profile" className="chip hover:border-brand-600 hover:text-brand-700">
                 <Mail className="h-3 w-3" /> Confirm email

@@ -16,9 +16,11 @@ const PLAN_META = [
 ];
 
 /**
- * Plan checkout: pick a plan, then pay. Upgrades stay pending until payment
- * confirms (wallet balance = instant, M-Pesa STK = on callback, or admin
- * confirm). Downgrades apply immediately. Nothing activates unpaid.
+ * Shop plan checkout — this is the seller's single plan once they own a
+ * storefront (personal plan panels are hidden). Pick a plan, then pay.
+ * Upgrades stay pending until payment confirms (wallet balance = instant,
+ * M-Pesa STK = on callback, or admin confirm). Downgrades apply immediately.
+ * Nothing activates unpaid.
  */
 export function PlanPanel({ shops, activeSlug, highlightPlan }: { shops: ShopOpt[]; activeSlug: string; highlightPlan?: string }) {
   const router = useRouter();
@@ -29,6 +31,7 @@ export function PlanPanel({ shops, activeSlug, highlightPlan }: { shops: ShopOpt
   const [pending, setPending] = useState<Record<string, PendingPlan | null>>({});
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
+  const [awaiting, setAwaiting] = useState(false);
   const [topAmt, setTopAmt] = useState("");
   const [topPhone, setTopPhone] = useState("");
 
@@ -54,6 +57,33 @@ export function PlanPanel({ shops, activeSlug, highlightPlan }: { shops: ShopOpt
     load();
   }, []);
 
+  // Auto-refresh the pending upgrade while the Daraja callback confirms it.
+  useEffect(() => {
+    if (!awaiting) return;
+    let tries = 0;
+    const t = setInterval(async () => {
+      tries += 1;
+      try {
+        const r = await fetch("/api/shops/plan");
+        if (r.ok) {
+          const j = (await r.json()) as { pending?: Record<string, PendingPlan | null> };
+          if (!(j.pending?.[slug] ?? null)) {
+            setAwaiting(false);
+            setMsg("Payment confirmed — your shop plan is active ✓");
+            await load();
+            router.refresh();
+            return;
+          }
+        }
+      } catch {}
+      if (tries >= 45) {
+        setAwaiting(false);
+        setMsg("Still waiting for M-Pesa. Refresh once you receive the confirmation SMS.");
+      }
+    }, 4000);
+    return () => clearInterval(t);
+  }, [awaiting, slug, router]);
+
   const current = shops.find((s) => s.slug === slug);
   const currentPlan = current?.planId === "silver" ? "Silver" : current?.planId === "gold" ? "Gold" : "Free";
   const pend = slug ? pending[slug] ?? null : null;
@@ -72,8 +102,9 @@ export function PlanPanel({ shops, activeSlug, highlightPlan }: { shops: ShopOpt
       const j = await r.json();
       if (!r.ok) return setMsg(j.error || "Plan change failed.");
       setMsg(j.summary || `${planId} plan updated ✓`);
+      setAwaiting(!!j.pending);
       await load();
-      router.refresh();
+      if (!j.pending) router.refresh();
     } catch {
       setMsg("Network error — try again.");
     } finally {
@@ -93,6 +124,7 @@ export function PlanPanel({ shops, activeSlug, highlightPlan }: { shops: ShopOpt
       const j = await r.json();
       if (!r.ok) return setMsg(j.error || "Cancel failed.");
       setMsg("Pending upgrade cancelled — you stay on your current plan.");
+      setAwaiting(false);
       await load();
       router.refresh();
     } catch {
@@ -136,7 +168,7 @@ export function PlanPanel({ shops, activeSlug, highlightPlan }: { shops: ShopOpt
   return (
     <div className="card border-brand-600 p-5">
       <p className="font-bold">Current plan: {currentPlan}</p>
-      <p className="mt-1 text-xs text-ink-500">Upgrades need payment first — wallet balance pays instantly, otherwise M-Pesa STK. Downgrades apply immediately.</p>
+      <p className="mt-1 text-xs text-ink-500">One plan covers this shop and all its listings. Upgrades need payment first — wallet balance pays instantly, otherwise M-Pesa STK. Downgrades apply immediately.</p>
       {highlight && (
         <p className="mt-2 rounded-xl bg-brand-50 p-3 text-sm text-brand-700">
           You picked <strong>{highlight.name}</strong> on Pricing — confirm it below{highlight.id !== "free" ? " and complete payment to activate" : ""}.
@@ -146,7 +178,7 @@ export function PlanPanel({ shops, activeSlug, highlightPlan }: { shops: ShopOpt
         <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm" role="status">
           <p className="font-bold text-amber-900">Awaiting payment: {pendName} · {formatKES(pend.amount)}</p>
           <p className="mt-0.5 text-xs text-amber-800">
-            Still on {currentPlan} until payment confirms. M-Pesa prompt sent to {pend.phone}. An admin confirms manual payments.
+            Still on {currentPlan} until payment confirms. M-Pesa prompt sent to {pend.phone}. This page updates automatically after you pay; an admin confirms manual payments.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             <button onClick={() => choose(pend.planId)} disabled={busy !== null} className="btn-primary shrink-0 !px-3 !py-1.5 text-xs">

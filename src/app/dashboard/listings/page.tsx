@@ -67,46 +67,52 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
       ) : (
         <ul className="mt-4 space-y-2">
           {items.map((l) => (
-            <li key={l.id} className="card flex items-center gap-3 p-3 transition hover:border-brand-600">
-              {l.images[0] ? (
-                <WmImage src={l.images[0]} alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
-              ) : (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src="/chaplogo.png" alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
-              )}
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{l.title}</p>
-                <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-ink-400">
-                  <span>{l.type} · {formatKES(l.price)} · {l.town}, {l.county}</span>
-                  <span className="inline-flex items-center gap-0.5"><Eye className="h-3 w-3" />{(viewMap.get(l.id) ?? 0).toLocaleString()}</span>
-                  <span>{formatDay(l.createdAt)}</span>
-                </p>
+            <li key={l.id} className="card min-w-0 p-3 transition hover:border-brand-600">
+              <div className="flex min-w-0 flex-wrap items-center gap-3">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  {l.images[0] ? (
+                    <WmImage src={l.images[0]} alt="" className="h-14 w-16 shrink-0 rounded-lg bg-sand-100 object-cover" />
+                  ) : (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src="/chaplogo.png" alt="" className="h-14 w-16 shrink-0 rounded-lg bg-sand-100 object-cover" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold">{l.title}</p>
+                    <p className="flex flex-wrap items-center gap-x-1.5 text-xs text-ink-400">
+                      <span>{l.type} · {formatKES(l.price)} · {l.town}, {l.county}</span>
+                      <span className="inline-flex items-center gap-0.5"><Eye className="h-3 w-3" />{(viewMap.get(l.id) ?? 0).toLocaleString()}</span>
+                      <span>{formatDay(l.createdAt)}</span>
+                    </p>
+                  </div>
+                  <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
+                </div>
+                <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                  {l.status === "active" ? (
+                    <Link
+                      href={publicPath(l)}
+                      className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs"
+                    >
+                      View live
+                    </Link>
+                  ) : (
+                    <Link
+                      href={publicPath(l)}
+                      title="Only you, your shop staff and admins can see this until moderation approves it."
+                      className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs"
+                    >
+                      Preview
+                    </Link>
+                  )}
+                  <CopyListingLink path={publicPath(l)} />
+                  {l.status === "active" && l.images.length > 0 && (
+                    <Link href={`/dashboard/promotion?listing=${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">
+                      Promote
+                    </Link>
+                  )}
+                  <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">Manage</Link>
+                  <DeleteListingButton id={l.id} title={l.title} />
+                </div>
               </div>
-              <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
-              {l.status === "active" ? (
-                <Link
-                  href={publicPath(l)}
-                  className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs"
-                >
-                  View live
-                </Link>
-              ) : (
-                <Link
-                  href={publicPath(l)}
-                  title="Only you, your shop staff and admins can see this until moderation approves it."
-                  className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs"
-                >
-                  Preview
-                </Link>
-              )}
-              <CopyListingLink path={publicPath(l)} />
-              {l.status === "active" && l.images.length > 0 && (
-                <Link href={`/dashboard/promotion?listing=${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">
-                  Promote
-                </Link>
-              )}
-              <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">Manage</Link>
-              <DeleteListingButton id={l.id} title={l.title} />
             </li>
           ))}
         </ul>
@@ -117,28 +123,34 @@ export default async function MyListings({ searchParams }: { searchParams: { tab
           <p className="mt-1 text-sm text-ink-500">Listings from shops where you&apos;re a staff member — you can manage these too.</p>
           <ul className="mt-3 space-y-2">
             {staffItems.map(({ shopName, listing: l }) => (
-              <li key={l.id} className="card flex items-center gap-3 p-3">
-                {l.images[0] ? (
-                  <WmImage src={l.images[0]} alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
-                ) : (
-                  /* eslint-disable-next-line @next/next/no-img-element */
-                  <img src="/chaplogo.png" alt="" className="h-14 w-16 rounded-lg bg-sand-100 object-cover" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold">{l.title}</p>
-                  <p className="text-xs text-ink-400">{l.type} · {formatKES(l.price)} · {shopName} · staff</p>
+              <li key={l.id} className="card min-w-0 p-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    {l.images[0] ? (
+                      <WmImage src={l.images[0]} alt="" className="h-14 w-16 shrink-0 rounded-lg bg-sand-100 object-cover" />
+                    ) : (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src="/chaplogo.png" alt="" className="h-14 w-16 shrink-0 rounded-lg bg-sand-100 object-cover" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold">{l.title}</p>
+                      <p className="break-words text-xs text-ink-400">{l.type} · {formatKES(l.price)} · {shopName} · staff</p>
+                    </div>
+                    <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
+                  </div>
+                  <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+                    <Link
+                      href={publicPath(l)}
+                      title={l.status === "active" ? "Open the live product page" : "Staff preview — public only after approval"}
+                      className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs"
+                    >
+                      {l.status === "active" ? "View live" : "Preview"}
+                    </Link>
+                    <CopyListingLink path={publicPath(l)} />
+                    <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">Manage</Link>
+                    <DeleteListingButton id={l.id} title={l.title} />
+                  </div>
                 </div>
-                <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : l.status === "rejected" ? "red" : "neutral"}>{l.status}</Badge>
-                <Link
-                  href={publicPath(l)}
-                  title={l.status === "active" ? "Open the live product page" : "Staff preview — public only after approval"}
-                  className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs"
-                >
-                  {l.status === "active" ? "View live" : "Preview"}
-                </Link>
-                <CopyListingLink path={publicPath(l)} />
-                <Link href={`/dashboard/listings/${l.id}`} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">Manage</Link>
-                <DeleteListingButton id={l.id} title={l.title} />
               </li>
             ))}
           </ul>

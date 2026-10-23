@@ -70,7 +70,7 @@ export function StaffPanel({ shopSlug, shopName, isGold, isOwner, initial }: { s
       <ul className="mt-3 space-y-2">
         {members.map((m) => (
           <li key={m.userId} className="flex flex-wrap items-center gap-2 rounded-xl border border-neutral-200 p-2.5 text-sm">
-            <span className="min-w-0 flex-1">
+            <span className="min-w-0 flex-1 break-words">
               <strong>{m.name ?? m.email ?? m.userId}</strong>{" "}
               <span className="text-ink-400">· {m.email} · {m.role}</span>
             </span>
