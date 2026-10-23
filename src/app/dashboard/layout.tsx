@@ -2,6 +2,7 @@ import { currentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getStore } from "@/lib/store";
 import { DashboardSidebar } from "./sidebar";
+import { PaymentStatusRefresh } from "@/components/payment-status-refresh";
 
 export const metadata = { title: "Seller Dashboard", robots: { index: false, follow: false } };
 
@@ -28,6 +29,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="w-full px-4 sm:px-6 lg:px-8">
+      <PaymentStatusRefresh />
       <div className="flex flex-row gap-3 lg:gap-8">
         <DashboardSidebar unread={unread} notifUnread={notifUnread} />
         <div className="min-w-0 flex-1 py-4 lg:py-8">{children}</div>
