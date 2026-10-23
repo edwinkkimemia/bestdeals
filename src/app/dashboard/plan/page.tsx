@@ -31,6 +31,7 @@ export default async function PlanDash({ searchParams }: { searchParams: { plan?
           <>No shop yet — your personal seller plan covers your listings, or <Link href="/dashboard/shop" className="link-bd">create a storefront →</Link></>
         )}
         {" · "}<Link href="/pricing" className="link-bd">Compare plans →</Link>
+        {" · "}<Link href="/dashboard/invoices" className="link-bd">Invoices &amp; receipts →</Link>
       </p>
       <div className="mt-4 grid max-w-2xl items-start gap-3">
         {active ? (

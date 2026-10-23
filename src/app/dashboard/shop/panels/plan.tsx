@@ -3,11 +3,25 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Download } from "lucide-react";
 import { formatKES } from "@/lib/format";
 import type { PendingPlan } from "@/lib/plans";
 
 type ShopOpt = { slug: string; name: string; planId: string };
-type Invoice = { id: string; shopSlug: string; planId: string; amount: number; at: string; method: string; status?: string };
+type Invoice = {
+  id: string;
+  number?: string;
+  kind?: "plan" | "promotion";
+  description?: string;
+  shopSlug?: string;
+  planId?: string;
+  amount: number;
+  at: string;
+  method: string;
+  methodLabel?: string;
+  status?: string;
+  downloadUrl?: string;
+};
 
 const PLAN_META = [
   { id: "free", name: "Free", price: "Free forever", blurb: "5 live listings · 7-day analytics" },
@@ -242,14 +256,23 @@ export function PlanPanel({ shops, activeSlug, highlightPlan }: { shops: ShopOpt
       </div>
       {invoices.length > 0 && (
         <div className="mt-4 border-t border-neutral-200 pt-3">
-          <p className="text-sm font-bold">Invoices ({invoices.length})</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-bold">Invoices ({invoices.length})</p>
+            <Link href="/dashboard/invoices" className="link-bd ml-auto text-xs">View all invoices →</Link>
+          </div>
           <ul className="mt-2 max-h-44 space-y-1.5 overflow-y-auto text-xs text-ink-700">
             {invoices.slice(0, 8).map((i) => (
-              <li key={i.id} className="flex flex-wrap items-center gap-x-2 rounded-lg bg-sand-50 px-2.5 py-1.5">
-                <strong>{i.planId}</strong>
+              <li key={i.id} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-sand-50 px-2.5 py-1.5">
+                <span className="chip !px-1.5 !py-0 text-[10px]">{i.kind === "promotion" ? "Boost" : "Plan"}</span>
+                <strong className="min-w-0 break-words">{i.description || i.planId || i.number || i.id}</strong>
                 <span>{formatKES(i.amount)}</span>
                 <span className={`chip ${i.status === "paid" || !i.status ? "!border-green-600 !text-green-700" : "!border-amber-500 !text-amber-700"}`}>{i.status ?? "paid"}</span>
-                <span className="text-ink-400">{i.at.slice(0, 10)} · {i.method}</span>
+                <span className="text-ink-400">{i.at.slice(0, 10)} · {i.methodLabel || i.method}</span>
+                {i.downloadUrl && (
+                  <a href={i.downloadUrl} className="link-bd inline-flex items-center gap-0.5" aria-label={`Download invoice ${i.number ?? i.id}`}>
+                    <Download className="h-3 w-3" /> PDF
+                  </a>
+                )}
               </li>
             ))}
           </ul>

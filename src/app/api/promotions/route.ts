@@ -6,6 +6,8 @@ import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { boostProductById } from "@/data/catalog";
 import { initiateSTKPush } from "@/lib/payments";
 import { formatKES } from "@/lib/format";
+import { invoicePromoId, recordPromotionInvoice } from "@/lib/invoices";
+import { sendInvoiceEmailById } from "@/lib/invoice-email";
 
 const buySchema = z.object({
   listingId: z.string().min(1),
@@ -72,6 +74,16 @@ export async function POST(req: NextRequest) {
     if (spent.ok) {
       await store.activatePromotion(promo.id).catch(() => {});
       await store.setListingFeatured(listing.id, true).catch(() => {});
+      await recordPromotionInvoice({
+        promo: (await store.getPromotion(promo.id).catch(() => promo)) ?? promo,
+        ownerId: user.id,
+        ownerName: fresh?.businessName || fresh?.name || user.name,
+        ownerEmail: fresh?.email || user.email,
+        listingTitle: listing.title,
+        method: "wallet",
+        status: "paid",
+      }).catch(() => null);
+      await sendInvoiceEmailById(invoicePromoId(promo.id), { reason: "paid", origin: req.nextUrl.origin }).catch(() => null);
       try {
         const { notifyUser } = await import("@/lib/notifications");
         await notifyUser({
@@ -110,6 +122,21 @@ export async function POST(req: NextRequest) {
       });
     } catch {}
   }
+  const free = product.price === 0;
+  await recordPromotionInvoice({
+    promo: free ? (await store.getPromotion(promo.id).catch(() => promo)) ?? promo : promo,
+    ownerId: user.id,
+    ownerName: fresh?.businessName || fresh?.name || user.name,
+    ownerEmail: fresh?.email || user.email,
+    listingTitle: listing.title,
+    method: free ? "referral" : "mpesa",
+    status: free ? "paid" : "pending",
+    providerRef: payment.providerRef,
+  }).catch(() => null);
+  await sendInvoiceEmailById(invoicePromoId(promo.id), {
+    reason: free ? "paid" : "created",
+    origin: req.nextUrl.origin,
+  }).catch(() => null);
   return NextResponse.json({
     ok: true,
     promotion: promo,

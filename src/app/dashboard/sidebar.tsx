@@ -14,6 +14,7 @@ import {
   MessageCircle,
   Package,
   Plus,
+  ReceiptText,
   Settings,
   Store,
   User,
@@ -31,6 +32,7 @@ const NAV = [
   { href: "/dashboard/verify", label: "Verification", Icon: BadgeCheck },
   { href: "/dashboard/shop", label: "My shop", Icon: Store },
   { href: "/dashboard/plan", label: "Plan & billing", Icon: CreditCard },
+  { href: "/dashboard/invoices", label: "Invoices", Icon: ReceiptText },
   { href: "/dashboard/profile", label: "Profile", Icon: User },
   { href: "/dashboard/settings", label: "Settings", Icon: Settings },
 ];

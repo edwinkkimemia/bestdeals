@@ -166,6 +166,13 @@ export function PromotePanel({ listings, phone: defaultPhone, isAdmin, focusList
                   {ps.map((p) => (
                     <li key={p.id} className="flex flex-wrap items-center gap-2">
                       <span>{p.kind} · {p.days}d · {formatKES(p.amount)} · <strong>{p.status}</strong></span>
+                      <a
+                        href={`/api/invoices/${encodeURIComponent(`promo:${p.id}`)}/pdf`}
+                        className="link-bd"
+                        aria-label={`Download invoice for this ${p.kind} boost`}
+                      >
+                        Invoice PDF
+                      </a>
                       {(p.status === "pending_payment" || p.status === "active") && (
                         <button className="link-bd" disabled={busy === p.id} onClick={() => act(p.id, "cancel")}>Cancel</button>
                       )}
@@ -185,7 +192,11 @@ export function PromotePanel({ listings, phone: defaultPhone, isAdmin, focusList
         Boosts are labelled Featured and never override moderation. Pay per boost from wallet balance or M-Pesa STK — no plan needed.
         Cancel anytime; refunds follow the Returns policy.
       </p>
-      <p className="mt-2 text-sm"><Link href="/pricing" className="link-bd">See shop plans →</Link></p>
+      <p className="mt-2 text-sm">
+        <Link href="/pricing" className="link-bd">See shop plans →</Link>
+        {" · "}
+        <Link href="/dashboard/invoices" className="link-bd">Invoices &amp; receipts →</Link>
+      </p>
     </div>
   );
 }

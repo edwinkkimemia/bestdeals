@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
+import { invoicePromoId, recordPromotionInvoice, updateInvoiceRecord } from "@/lib/invoices";
+import { sendInvoiceEmailById } from "@/lib/invoice-email";
 
 const schema = z.object({ action: z.enum(["cancel", "activate", "expire"]) });
 
@@ -31,6 +33,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       return NextResponse.json({ error: `Already ${promo.status} — nothing to cancel.` }, { status: 422 });
     }
     await store.setPromotionStatus(promo.id, "cancelled");
+    if (promo.status === "pending_payment") {
+      await updateInvoiceRecord(invoicePromoId(promo.id), { status: "cancelled" }).catch(() => null);
+    }
     const rest = await store.listPromotionsByListing(promo.listingId);
     if (!rest.some((p) => p.id !== promo.id && p.status === "active")) {
       await store.setListingFeatured(promo.listingId, false).catch(() => null);
@@ -40,6 +45,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (action === "activate") {
       await store.activatePromotion(promo.id);
       await store.setListingFeatured(promo.listingId, true).catch(() => null);
+      const active = (await store.getPromotion(promo.id)) ?? promo;
+      await recordPromotionInvoice({
+        promo: active,
+        method: "mpesa",
+        status: "paid",
+      }).catch(() => null);
+      await sendInvoiceEmailById(invoicePromoId(promo.id), { reason: "paid", origin: req.nextUrl.origin }).catch(() => null);
     } else {
       await store.setPromotionStatus(promo.id, "expired");
       const rest = await store.listPromotionsByListing(promo.listingId);

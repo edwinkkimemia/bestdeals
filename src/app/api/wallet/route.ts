@@ -26,6 +26,18 @@ export async function POST(req: NextRequest) {
     const r = await debitWallet(user.id, promo.amount, "boost", `Boost ${promo.id}`);
     if (!r.ok) return NextResponse.json({ error: `Insufficient balance (${r.balance} KES). Top up first.` }, { status: 402 });
     await getStore().activatePromotion(promo.id).catch(() => {});
+    const { invoicePromoId, recordPromotionInvoice } = await import("@/lib/invoices");
+    const { sendInvoiceEmailById } = await import("@/lib/invoice-email");
+    const active = (await getStore().getPromotion(promo.id).catch(() => null)) ?? promo;
+    await recordPromotionInvoice({
+      promo: active,
+      ownerId: user.id,
+      ownerName: user.name,
+      ownerEmail: user.email,
+      method: "wallet",
+      status: "paid",
+    }).catch(() => null);
+    await sendInvoiceEmailById(invoicePromoId(promo.id), { reason: "paid", origin: new URL(req.url).origin }).catch(() => null);
     return NextResponse.json({ ok: true, balance: r.balance });
   }
   const amt = Math.round(Number(amount) || 0);

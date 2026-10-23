@@ -5,21 +5,24 @@ import { normalizePlan, planChangeKind, pendingSellerPlanKey, PLAN_IDS, PLAN_LIS
 import { SHOP_PLANS } from "@/data/catalog";
 import { initiateSTKPush } from "@/lib/payments";
 import { formatKES } from "@/lib/format";
-import type { PlanInvoice } from "@/app/api/shops/plan/route";
+import {
+  type PlanInvoice,
+  newPlanInvoiceId,
+  readInvoiceLedger,
+  writeInvoiceLedger,
+  updateInvoiceRecord,
+} from "@/lib/invoices";
+import { sendInvoiceEmailById } from "@/lib/invoice-email";
 
-async function readInvoices(): Promise<PlanInvoice[]> {
-  return ((await getStore().getSetting("invoices").catch(() => null)) as PlanInvoice[] | null) ?? [];
-}
-
-async function writeInvoices(items: PlanInvoice[]): Promise<void> {
-  await getStore().setSetting("invoices", items.slice(0, 500)).catch(() => {});
-}
+const readInvoices = readInvoiceLedger;
+const writeInvoices = writeInvoiceLedger;
 
 async function markInvoice(invoiceId: string, status: "paid" | "pending", providerRef?: string): Promise<void> {
-  const inv = await readInvoices();
-  await writeInvoices(
-    inv.map((i) => (i.id === invoiceId ? { ...i, status, ...(providerRef ? { providerRef } : {}) } : i))
-  );
+  await updateInvoiceRecord(invoiceId, {
+    status,
+    ...(providerRef ? { providerRef } : {}),
+    ...(status === "paid" ? { paidAt: new Date().toISOString() } : {}),
+  });
 }
 
 /** Downgrade sweep: hide oldest over-limit actives beyond the target cap. */
@@ -91,6 +94,15 @@ export async function POST(req: NextRequest) {
     }
     await store.setSetting(key, null).catch(() => {});
     await markInvoice(pending.invoiceId, "paid");
+    if (shop) {
+      const def = SHOP_PLANS.find((p) => p.id === pending.planId);
+      await updateInvoiceRecord(pending.invoiceId, {
+        shopSlug: shop.slug,
+        shopName: shop.name,
+        description: `${def?.name ?? pending.planId} shop plan - monthly subscription`,
+      }).catch(() => null);
+    }
+    await sendInvoiceEmailById(pending.invoiceId, { reason: "paid", origin: req.nextUrl.origin }).catch(() => null);
     const { logAudit } = await import("@/lib/audit");
     await logAudit({ actorId: user.id, actorEmail: user.email, action: "plan.confirm", entity: "user", entityId: targetId, reason: pending.planId }).catch(() => {});
     return NextResponse.json({ ok: true, planId: pending.planId, confirmed: true });
@@ -145,7 +157,9 @@ export async function POST(req: NextRequest) {
   const { getBalance, debitWallet } = await import("@/lib/wallet");
   const bal = await getBalance(user.id).catch(() => 0);
   const invoice: PlanInvoice = {
-    id: `INV-seller-${targetId.slice(0, 6)}-${Date.now().toString(36)}`,
+    id: newPlanInvoiceId("seller"),
+    kind: "plan",
+    ownerId: targetId,
     shopSlug: "",
     planId: plan,
     amount: def.monthly,
@@ -153,9 +167,12 @@ export async function POST(req: NextRequest) {
     renewsAt: new Date(Date.now() + 30 * 86400_000).toISOString(),
     method: "wallet",
     status: "paid",
+    customerName: target.businessName || target.name,
+    customerEmail: target.email,
+    description: `${def.name} seller plan - monthly subscription`,
   };
   const saveSellerInvoice = async (inv: PlanInvoice) => {
-    await writeInvoices([{ ...inv, userId: targetId } as PlanInvoice, ...(await readInvoices())]);
+    await writeInvoices([{ ...inv, userId: targetId, ownerId: targetId } as PlanInvoice, ...(await readInvoices())]);
   };
   if (bal >= def.monthly && def.monthly > 0) {
     const spent = await debitWallet(user.id, def.monthly, "plan", `${def.name} seller plan`);
@@ -163,6 +180,7 @@ export async function POST(req: NextRequest) {
       await store.setSetting(key, null).catch(() => {});
       await store.setUserPlan(targetId, plan);
       await saveSellerInvoice({ ...invoice, method: "wallet" });
+      await sendInvoiceEmailById(invoice.id, { reason: "paid", origin: req.nextUrl.origin }).catch(() => null);
       return NextResponse.json({
         ok: true,
         planId: plan,
@@ -185,6 +203,7 @@ export async function POST(req: NextRequest) {
   if (!existing || existing.planId !== plan) {
     await saveSellerInvoice({ ...invoice, method: "mpesa", status: "pending" });
   }
+  await sendInvoiceEmailById(invoiceId, { reason: "created", origin: req.nextUrl.origin }).catch(() => null);
   const payment = await initiateSTKPush({
     orderId: `sellerplan-${targetId.slice(0, 8)}-${plan}`,
     amount: def.monthly,

@@ -4,12 +4,24 @@
 
 export type Channel = "email" | "sms" | "whatsapp";
 
+export type NotificationAttachment = {
+  filename: string;
+  /** Base64-encoded bytes. */
+  content: string;
+  contentType?: string;
+};
+
 export function isNotifyLive(channel: Channel): boolean {
   if (channel === "email") return Boolean(process.env.EMAIL_PROVIDER && process.env.EMAIL_API_KEY);
   return Boolean(process.env.SMS_PROVIDER && process.env.SMS_API_KEY);
 }
 
-async function sendEmail(to: string, subject: string, message: string): Promise<{ ok: boolean; provider: string; error?: string }> {
+async function sendEmail(
+  to: string,
+  subject: string,
+  message: string,
+  opts?: { html?: string; attachments?: NotificationAttachment[] }
+): Promise<{ ok: boolean; provider: string; error?: string }> {
   const provider = (process.env.EMAIL_PROVIDER || "").toLowerCase();
   const key = process.env.EMAIL_API_KEY || "";
   if (!provider || !key) return { ok: false, provider: "log" };
@@ -18,7 +30,22 @@ async function sendEmail(to: string, subject: string, message: string): Promise<
       const r = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: process.env.EMAIL_FROM || "Chap <info@chap.co.ke>", to, subject, text: message }),
+        body: JSON.stringify({
+          from: process.env.EMAIL_FROM || "Chap <info@chap.co.ke>",
+          to,
+          subject,
+          text: message,
+          ...(opts?.html ? { html: opts.html } : {}),
+          ...(opts?.attachments?.length
+            ? {
+                attachments: opts.attachments.map((a) => ({
+                  filename: a.filename,
+                  content: a.content,
+                  ...(a.contentType ? { content_type: a.contentType } : {}),
+                })),
+              }
+            : {}),
+        }),
       });
       if (!r.ok) {
         const err = (await r.text().catch(() => "")).slice(0, 300);
@@ -28,10 +55,34 @@ async function sendEmail(to: string, subject: string, message: string): Promise<
       return { ok: true, provider: "resend" };
     }
     if (provider === "sendgrid") {
+      // SendGrid accepts "Name <email@domain>" for from.email only when it is
+      // split into email/name fields. Keep the configured value simple.
+      const from = process.env.EMAIL_FROM || "info@chap.co.ke";
+      const fromMatch = from.match(/^(.*)<([^>]+)>\s*$/);
+      const fromEmail = (fromMatch ? fromMatch[2] : from).trim();
+      const fromName = (fromMatch ? fromMatch[1] : "").trim().replace(/^"|"$/g, "");
       const r = await fetch("https://api.sendgrid.com/v3/mail/send", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ personalizations: [{ to: [{ email: to }] }], from: { email: process.env.EMAIL_FROM || "info@chap.co.ke" }, subject, content: [{ type: "text/plain", value: message }] }),
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email: to }] }],
+          from: { email: fromEmail, ...(fromName ? { name: fromName.slice(0, 60) } : {}) },
+          subject,
+          content: [
+            { type: "text/plain", value: message },
+            ...(opts?.html ? [{ type: "text/html", value: opts.html }] : []),
+          ],
+          ...(opts?.attachments?.length
+            ? {
+                attachments: opts.attachments.map((a) => ({
+                  content: a.content,
+                  filename: a.filename,
+                  type: a.contentType || "application/octet-stream",
+                  disposition: "attachment",
+                })),
+              }
+            : {}),
+        }),
       });
       if (!r.ok) {
         const err = (await r.text().catch(() => "")).slice(0, 300);
@@ -56,7 +107,16 @@ async function sendEmail(to: string, subject: string, message: string): Promise<
           to: [{ email_address: { address: to } }],
           subject,
           textbody: message,
-          htmlbody: `<div>${esc.replace(/\n/g, "<br>")}</div>`,
+          htmlbody: opts?.html || `<div>${esc.replace(/\n/g, "<br>")}</div>`,
+          ...(opts?.attachments?.length
+            ? {
+                attachments: opts.attachments.map((a) => ({
+                  content: a.content,
+                  mime_type: a.contentType || "application/octet-stream",
+                  name: a.filename,
+                })),
+              }
+            : {}),
         }),
       });
       if (!r.ok) {
@@ -109,10 +169,17 @@ export async function sendNotification(opts: {
   to: string;
   subject?: string;
   message: string;
+  /** Optional responsive HTML body. All built-in email adapters support it. */
+  html?: string;
+  /** Optional attachments. Content is base64-encoded bytes. */
+  attachments?: NotificationAttachment[];
 }): Promise<{ queued: boolean; provider: string; live: boolean }> {
   // WhatsApp deep-links stay seller-approved numbers only; provider send is SMS-based.
   if (opts.channel === "email") {
-    const r = await sendEmail(opts.to, opts.subject || "Chap", opts.message);
+    const r = await sendEmail(opts.to, opts.subject || "Chap", opts.message, {
+      html: opts.html,
+      attachments: opts.attachments,
+    });
     if (!r.ok) console.log(`[notify:email] to=${opts.to} msg=${opts.message.slice(0, 140)}`);
     return { queued: r.ok, provider: r.provider, live: r.ok };
   }

@@ -2,6 +2,13 @@ import type { Store } from "./store";
 import { pendingPlanKey, pendingSellerPlanKey } from "./plans";
 import { logAudit } from "./audit";
 import { querySTKPush } from "./payments";
+import {
+  invoicePromoId,
+  markInvoicePaid,
+  recordPromotionInvoice,
+  updateInvoiceRecord,
+} from "./invoices";
+import { sendInvoiceEmailById } from "./invoice-email";
 
 export type PlanLink = {
   promoId?: string;
@@ -61,6 +68,17 @@ export async function fulfilLinkedPurchase(
     // The read path derives featured from live promos, but keep the stored
     // flag in sync for catalogue/search paths that read it directly.
     await store.setListingFeatured(promo.listingId, true).catch(() => {});
+    const activePromo = (await store.getPromotion(link.promoId).catch(() => null)) ?? promo;
+    await recordPromotionInvoice(
+      {
+        promo: activePromo,
+        method: "mpesa",
+        status: "paid",
+        providerRef: v.providerRef,
+      },
+      store
+    ).catch(() => null);
+    await sendInvoiceEmailById(invoicePromoId(promo.id), { reason: "paid", store }).catch(() => null);
     if (promo.ownerId) {
       const { notifyUser } = await import("./notifications");
       await notifyUser({
@@ -83,13 +101,8 @@ export async function fulfilLinkedPurchase(
 
   const settleInvoice = async (invoiceId?: string) => {
     if (!invoiceId) return;
-    const inv = ((await store.getSetting("invoices").catch(() => null)) as { id: string }[] | null) ?? [];
-    await store
-      .setSetting(
-        "invoices",
-        inv.map((i) => (i.id === invoiceId ? { ...i, status: "paid", providerRef: v.providerRef } : i))
-      )
-      .catch(() => {});
+    await markInvoicePaid(invoiceId, v.providerRef, store).catch(() => null);
+    await sendInvoiceEmailById(invoiceId, { reason: "paid", store }).catch(() => null);
   };
 
   if (link.planShop && link.planId) {
@@ -151,6 +164,17 @@ export async function fulfilLinkedPurchase(
     if (shop) {
       await store.setShopPlan(shop.slug, link.planId).catch(() => {});
       await store.setUserPlan(link.planUser, "free").catch(() => {});
+      if (pending?.invoiceId) {
+        await updateInvoiceRecord(
+          pending.invoiceId,
+          {
+            shopSlug: shop.slug,
+            shopName: shop.name,
+            description: `${link.planId[0].toUpperCase()}${link.planId.slice(1)} shop plan - monthly subscription`,
+          },
+          store
+        ).catch(() => null);
+      }
     } else {
       await store.setUserPlan(link.planUser, link.planId).catch(() => {});
     }
