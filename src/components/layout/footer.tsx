@@ -182,7 +182,7 @@ export async function Footer() {
             </p>
             <form action="/api/newsletter" method="post" className="mt-4 space-y-2.5" data-newsletter>
               <label htmlFor="nl-email" className="sr-only">Email address</label>
-              <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-2">
+              <div className="flex flex-col gap-2.5 sm:flex-row">
                 <input
                   id="nl-email"
                   name="email"
@@ -194,10 +194,10 @@ export async function Footer() {
                   enterKeyHint="send"
                   required
                   placeholder="you@example.co.ke"
-                  className="h-12 min-w-0 flex-1 rounded-xl border border-neutral-300 bg-white px-5 text-base text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20 sm:h-11 sm:px-4 sm:text-sm"
+                  className="h-14 w-full min-w-0 rounded-xl border border-neutral-300 bg-white px-5 text-base text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20 sm:w-auto sm:flex-1"
                 />
                 <button
-                  className="inline-flex h-12 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 text-sm font-semibold text-white transition hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white sm:h-11"
+                  className="inline-flex h-14 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand-600 px-6 text-base font-semibold text-white transition hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                   type="submit"
                 >
                   Join <ArrowRight className="h-4 w-4" />
