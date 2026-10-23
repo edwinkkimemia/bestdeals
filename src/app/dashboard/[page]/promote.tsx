@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BOOST_PRODUCTS } from "@/data/catalog";
 import { formatKES } from "@/lib/format";
@@ -11,11 +12,13 @@ type Promo = { id: string; listingId: string; kind: string; days: number; amount
 
 /** Buy Featured boosts (wallet / M-Pesa) and track receipts — replaces the eligibility-only list. */
 export function PromotePanel({ listings, phone: defaultPhone, isAdmin, focusListingId }: { listings: Listing[]; phone: string; isAdmin: boolean; focusListingId?: string }) {
+  const router = useRouter();
   const [promos, setPromos] = useState<Promo[]>([]);
   const [product, setProduct] = useState<Record<string, string>>({});
   const [phone, setPhone] = useState(defaultPhone);
   const [msg, setMsg] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string | null>(null);
+  const [awaiting, setAwaiting] = useState<string | null>(null);
 
   const load = async () => {
     const r = await fetch("/api/promotions");
@@ -24,6 +27,36 @@ export function PromotePanel({ listings, phone: defaultPhone, isAdmin, focusList
   useEffect(() => {
     load();
   }, []);
+
+  // The Daraja callback activates the boost server-side. Poll until this
+  // listing's promotion goes live so the buyer sees the result immediately.
+  useEffect(() => {
+    if (!awaiting) return;
+    const listingId = awaiting;
+    let tries = 0;
+    const t = setInterval(async () => {
+      tries += 1;
+      try {
+        const r = await fetch("/api/promotions");
+        if (r.ok) {
+          const items = (((await r.json()) as { items?: Promo[] }).items ?? []) as Promo[];
+          const live = items.find((p) => p.listingId === listingId && p.status === "active");
+          if (live) {
+            setAwaiting(null);
+            setMsg((m) => ({ ...m, [listingId]: "Payment confirmed — your boost is live 🚀" }));
+            await load();
+            router.refresh();
+            return;
+          }
+        }
+      } catch {}
+      if (tries >= 45) {
+        setAwaiting(null);
+        setMsg((m) => ({ ...m, [listingId]: "Still waiting for M-Pesa. Refresh once you receive the confirmation SMS." }));
+      }
+    }, 4000);
+    return () => clearInterval(t);
+  }, [awaiting, router]);
   useEffect(() => {
     if (focusListingId) {
       document.getElementById("promote-focus")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -42,7 +75,10 @@ export function PromotePanel({ listings, phone: defaultPhone, isAdmin, focusList
       const j = await r.json().catch(() => ({}));
       if (!r.ok) return setMsg((m) => ({ ...m, [listingId]: j.error || "Purchase failed." }));
       setMsg((m) => ({ ...m, [listingId]: j.summary || "Boost reserved — complete M-Pesa payment." }));
-      load();
+      const processing = j.payment?.status === "processing";
+      setAwaiting(processing ? listingId : null);
+      await load();
+      if (!processing) router.refresh();
     } finally {
       setBusy(null);
     }
@@ -85,6 +121,7 @@ export function PromotePanel({ listings, phone: defaultPhone, isAdmin, focusList
           const ps = promosFor(l.id);
           const active = ps.find((p) => p.status === "active");
           const isFocus = l.id === focusListingId;
+          const waiting = awaiting === l.id;
           return (
             <li key={l.id} id={isFocus ? "promote-focus" : undefined} className={`card scroll-mt-32 p-4 text-sm ${isFocus ? "border-2 border-brand-600" : ""}`}>
               <div className="flex flex-wrap items-center gap-2">
@@ -117,10 +154,10 @@ export function PromotePanel({ listings, phone: defaultPhone, isAdmin, focusList
                       );
                     })}
                   </div>
-                  <button className="btn-primary mt-2 w-full !py-2 text-sm sm:w-auto sm:!px-6" disabled={busy === l.id} onClick={() => buy(l.id)}>
-                    {busy === l.id ? "Processing…" : `Boost for ${formatKES((BOOST_PRODUCTS.find((b) => b.id === (product[l.id] ?? BOOST_PRODUCTS[0].id)) ?? BOOST_PRODUCTS[0]).price)}`}
+                  <button className="btn-primary mt-2 w-full !py-2 text-sm sm:w-auto sm:!px-6" disabled={busy === l.id || waiting} onClick={() => buy(l.id)}>
+                    {busy === l.id ? "Processing…" : waiting ? "Waiting for M-Pesa…" : `Boost for ${formatKES((BOOST_PRODUCTS.find((b) => b.id === (product[l.id] ?? BOOST_PRODUCTS[0].id)) ?? BOOST_PRODUCTS[0]).price)}`}
                   </button>
-                  <p className="mt-1 text-xs text-ink-400">Wallet balance pays instantly — otherwise an M-Pesa prompt goes to the number above.</p>
+                  <p className="mt-1 text-xs text-ink-400">Wallet balance pays instantly — otherwise an M-Pesa prompt goes to the number above. This page updates automatically after payment.</p>
                 </div>
               )}
               {msg[l.id] && <p role="status" className="mt-2 rounded-lg bg-sand-50 p-2">{msg[l.id]}</p>}
