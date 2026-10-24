@@ -27,7 +27,7 @@ import { ReviewsBlock } from "./reviews-block";
 import { ReviewForm } from "./review-form";
 import { ViewTracker } from "./view-tracker";
 import { ViewCount } from "./view-count";
-import { Badge, ConditionBadge, VerifiedBadge, PlanCheckmark } from "@/components/ui/badge";
+import { Badge, ConditionBadge, VerifiedBadge, PlanCheckmark, tenureLabel } from "@/components/ui/badge";
 import { WmImage } from "@/components/ui/wm-image";
 import { SafeImage } from "@/components/ui/safe-image";
 import { ProductGallery } from "@/components/product-gallery";
@@ -127,6 +127,15 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
   const shopCard = shopInfo ?? (shop ? { name: shop.name, logoUrl: shop.logo, verified: shop.verified, businessCategory: shop.businessCategory, town: shop.town, county: shop.county, planId: "free" } : null);
   // Avatar: owner's photo for individual sellers, shop logo for shop listings.
   const avatarUrl = shopCard ? shopCard.logoUrl : (sellerPhotoUrl ?? null);
+  const sellerDisplayName = shopCard ? shopCard.name : listing.sellerName;
+  const sellerHref = listing.shopSlug
+    ? `/shops/${listing.shopSlug}`
+    : sellerPageUrl(listing.ownerId, listing.sellerName);
+  const sellerReviewCount = (reviews ?? []).length;
+  const sellerRating = sellerReviewCount > 0
+    ? (reviews ?? []).reduce((total, review) => total + review.rating, 0) / sellerReviewCount
+    : null;
+  const sellerTenure = tenureLabel(listing.sellerSince);
   // WhatsApp ordering always uses the verified number: the snapshot taken at
   // posting time first, then the shop's approved contact (store twin wins —
   // the catalogue phone goes stale after seller edits). No number, no button.
@@ -210,17 +219,21 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
         </div>
       </nav>
       <div className="container-bd">
-      <div className="mt-6 flex flex-col gap-6 lg:grid lg:grid-cols-[1.2fr_1fr] lg:items-start">
-        <div className="order-1 min-w-0 lg:order-1">
+      <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_370px] lg:items-start xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
           {/* Keyed by listing: same-title listings must never inherit gallery state. */}
           <ProductGallery key={listing.id} images={listing.images} title={listing.title} />
         </div>
 
-        {/* Buy card — right after gallery on mobile, sticky rail on desktop.
-            Capped to the viewport so a tall rail never covers content scrolling
-            beneath it; extra buttons stay reachable via inner scroll. */}
-        <div className="order-2 min-w-0 lg:order-2 lg:sticky lg:top-36 lg:z-10 lg:self-start">
-          <div className="card space-y-3 p-5 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto">
+        {/* Purchase panel — below the gallery on mobile, sticky beside the
+            gallery + details on desktop. Explicit grid placement keeps the
+            sidebar beside the whole content column instead of floating in an
+            empty auto-placed cell. */}
+        <aside
+          className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:sticky lg:top-24 lg:z-10 lg:self-start"
+          aria-label="Purchase options"
+        >
+          <div className="card space-y-3 p-5 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain">
             <div className="flex flex-wrap items-center gap-2">
               <Badge>{listing.listingType}</Badge>
               <ConditionBadge condition={listing.condition} />
@@ -233,20 +246,28 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
             </div>
             <h1 className="break-words text-xl font-bold leading-snug sm:text-2xl">{listing.title}</h1>
             <Price value={listing.price} compareAt={listing.compareAt} />
-            <p className="flex items-center gap-1 text-sm text-ink-500">
-              <MapPin className="h-3.5 w-3.5" /> {listing.town}, {listing.county} ·{" "}
-              {listing.stock > 0 ? `In stock (${listing.stock})` : "Out of stock"}
-            </p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-500">
+              <span className="flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" /> {listing.town}, {listing.county}
+              </span>
+              <span className={listing.stock > 0 ? "font-medium text-green-700" : "font-medium text-red-600"}>
+                {listing.stock > 0 ? `In stock (${listing.stock})` : "Out of stock"}
+              </span>
+            </div>
             <ViewCount listingId={listing.id} />
             {lowStock && <p className="text-sm font-semibold text-accent-600">Only {listing.stock} left — order soon.</p>}
 
             {listing.transactionMethod === "buy_online" ? (
               <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium">Qty:</span>
-                  <button aria-label="Decrease quantity" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutral-300" onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus className="h-4 w-4" /></button>
-                  <span className="w-8 text-center font-bold" aria-live="polite">{qty}</span>
-                  <button aria-label="Increase quantity" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-neutral-300" onClick={() => setQty((q) => Math.min(Math.max(listing.stock, 1), 99, q + 1))}><Plus className="h-4 w-4" /></button>
+                <div className="flex items-center justify-between rounded-xl border border-neutral-200 px-3 py-2">
+                  <span className="text-sm font-medium">Quantity</span>
+                  <div className="flex items-center gap-3">
+                    <button aria-label="Decrease quantity" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-neutral-300" onClick={() => setQty((q) => Math.max(1, q - 1))}><Minus className="h-4 w-4" /></button>
+                    <span className="w-6 text-center font-bold" aria-live="polite">{qty}</span>
+                    <button aria-label="Increase quantity" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-neutral-300" onClick={() => setQty((q) => Math.min(Math.max(listing.stock, 1), 99, q + 1))}><Plus className="h-4 w-4" /></button>
+                  </div>
+                </div>
+                <div className="flex gap-2">
                   <button
                     className="btn-primary min-w-0 flex-1"
                     disabled={listing.stock <= 0}
@@ -258,7 +279,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
                   >
                     {added ? "Added ✓" : `Add to cart · ${formatKES(listing.price * qty)}`}
                   </button>
-                  <WishlistButton id={listing.id} title={listing.title} />
+                  <WishlistButton id={listing.id} title={listing.title} className="!h-11 !w-11 !rounded-xl !border !border-neutral-300 !bg-white !shadow-none" />
                 </div>
                 <Link href={`/dashboard/messages/new?listing=${listing.id}`} className="btn-secondary w-full">
                   <MessageCircle className="h-4 w-4" /> Message seller
@@ -293,125 +314,174 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
               </div>
             )}
 
-            <ShareButtons title={listing.title} />
-          </div>
-        </div>
+            <div className="border-t border-neutral-200 pt-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Sold by</p>
+              <div className="mt-2 flex items-center gap-2.5">
+                <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-sm font-black text-white">
+                  {avatarUrl ? (
+                    <SafeImage src={avatarUrl} alt="" className="h-full w-full object-cover" fallback={sellerDisplayName.charAt(0).toUpperCase()} />
+                  ) : (
+                    sellerDisplayName.charAt(0).toUpperCase()
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-1.5 text-sm font-semibold">
+                    <span className="truncate">{sellerDisplayName}</span>
+                    <PlanCheckmark plan={shopCard ? shopCard.planId : sellerPlan ?? listing.planId} size="sm" />
+                  </p>
+                  <p className="truncate text-xs text-ink-400">
+                    {shopCard
+                      ? shopCard.verified ? "Verified business" : "Business shop"
+                      : listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}
+                  </p>
+                </div>
+                <Link href={sellerHref} className="shrink-0 text-xs font-semibold text-brand-700 hover:underline">
+                  View →
+                </Link>
+              </div>
+            </div>
 
-        <div className="order-3 min-w-0 lg:order-3">
-          <div className="card mt-4 p-5 lg:mt-0">
-            <h2 className="font-bold">Description</h2>
+            <div className="border-t border-neutral-200 pt-3">
+              <ShareButtons title={listing.title} />
+            </div>
+          </div>
+        </aside>
+
+        <div className="min-w-0 space-y-5 lg:col-start-1 lg:row-start-2">
+          <section className="card p-5 sm:p-6" aria-labelledby="listing-description">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h2 id="listing-description" className="text-lg font-bold">Product details</h2>
+                <p className="mt-0.5 text-xs text-ink-400">Everything the seller has shared about this listing.</p>
+              </div>
+              <Badge>{listing.listingType}</Badge>
+            </div>
             <div
-              className="rich-text mt-2 break-words text-sm leading-relaxed text-ink-700"
+              className="rich-text mt-4 break-words text-sm leading-relaxed text-ink-700"
               dangerouslySetInnerHTML={{ __html: toSafeHtml(listing.description, 6000) }}
             />
             {Object.keys(listing.attributes).length > 0 && (
-              <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
-                {Object.entries(listing.attributes).map(([k, v]) => (
-                  <div key={k} className="min-w-0 rounded-lg bg-sand-50 px-3 py-2">
-                    <dt className="text-xs capitalize text-ink-400">{k}</dt>
-                    <dd className="break-words font-semibold">{v}</dd>
-                  </div>
-                ))}
-              </dl>
+              <>
+                <h3 className="mt-5 text-sm font-bold">Specifications</h3>
+                <dl className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+                  {Object.entries(listing.attributes).map(([k, v]) => (
+                    <div key={k} className="min-w-0 rounded-lg bg-sand-50 px-3 py-2">
+                      <dt className="text-[11px] uppercase tracking-wide text-ink-400">{k.replace(/_/g, " ")}</dt>
+                      <dd className="break-words font-semibold">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </>
             )}
-            <p className="mt-4 text-xs text-ink-400">Posted {formatFull(listing.createdAt)} ({timeAgo(listing.createdAt)}) · Listing ID: {listing.id.toUpperCase()}</p>
-          </div>
+            <p className="mt-4 border-t border-neutral-100 pt-3 text-xs text-ink-400">
+              Posted {formatFull(listing.createdAt)} ({timeAgo(listing.createdAt)}) · Listing ID: {listing.id.toUpperCase()}
+            </p>
+          </section>
 
-          {/* Seller — directly after description so buyers see who they're
-              dealing with (plus Message / Visit shop) before delivery info. */}
-          <div className="card mt-4 space-y-3 p-5">
-            <div className="flex items-center gap-3">
-              <span aria-hidden className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-lg font-black text-white">
+          <section className="card p-5 sm:p-6" aria-labelledby="seller-card">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 id="seller-card" className="text-lg font-bold">Seller</h2>
+              <Link href={sellerHref} className="text-xs font-semibold text-brand-700 hover:underline">
+                View profile →
+              </Link>
+            </div>
+            <div className="mt-4 flex items-start gap-3">
+              <span aria-hidden className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-lg font-black text-white">
                 {avatarUrl ? (
-                  <SafeImage src={avatarUrl} alt="" className="h-full w-full object-cover" fallback={(shopCard ? shopCard.name : listing.sellerName).charAt(0).toUpperCase()} />
+                  <SafeImage src={avatarUrl} alt="" className="h-full w-full object-cover" fallback={sellerDisplayName.charAt(0).toUpperCase()} />
                 ) : (
-                  (shopCard ? shopCard.name : listing.sellerName).charAt(0).toUpperCase()
+                  sellerDisplayName.charAt(0).toUpperCase()
                 )}
               </span>
               <div className="min-w-0 flex-1">
-                {shopCard ? (
-                  <>
-                    <p className="flex flex-wrap items-center gap-2 font-bold">
-                      {shopCard.name} <PlanCheckmark plan={shopCard.planId} size="sm" /> {shopCard.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>}
-                    </p>
-                    <p className="truncate text-xs text-ink-500">
-                      {shopCard.businessCategory} · {shopCard.town}, {shopCard.county} · Enquiries go straight to their inbox
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    {/* listing.planId covers name-matched static rows where ownerId is absent. */}
-                    <p className="flex flex-wrap items-center gap-2 font-bold">{listing.sellerName} <PlanCheckmark plan={sellerPlan ?? listing.planId} size="sm" /> <VerifiedBadge verified={listing.verified} /></p>
-                    <p className="truncate text-xs text-ink-500">
-                      {listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}, {listing.county} · Enquiries go straight to their inbox
-                    </p>
-                  </>
-                )}
+                <p className="flex flex-wrap items-center gap-2 text-base font-bold">
+                  {sellerDisplayName}
+                  <PlanCheckmark plan={shopCard ? shopCard.planId : sellerPlan ?? listing.planId} size="sm" />
+                  {shopCard ? (
+                    shopCard.verified ? <Badge tone="green">✓ Verified business</Badge> : <Badge>Verification pending</Badge>
+                  ) : (
+                    <VerifiedBadge verified={listing.verified} />
+                  )}
+                </p>
+                <p className="mt-0.5 text-xs text-ink-500">
+                  {shopCard
+                    ? `${shopCard.businessCategory} · ${shopCard.town}, ${shopCard.county}`
+                    : `${listing.sellerType === "business" ? "Business seller" : "Individual seller"} · ${listing.town}, ${listing.county}`}
+                </p>
+                <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-500">
+                  {sellerRating ? (
+                    <span><span className="text-amber-500">★</span> {sellerRating.toFixed(1)} ({sellerReviewCount} review{sellerReviewCount === 1 ? "" : "s"})</span>
+                  ) : (
+                    <span>No verified reviews yet</span>
+                  )}
+                  {sellerTenure && <span>· {sellerTenure} on Chap</span>}
+                </p>
+                <p className="mt-1 text-xs text-ink-400">Enquiries go straight to their inbox.</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
               <Link href={`/dashboard/messages/new?listing=${listing.id}`} onClick={() => trackReveal("chat")} className="btn-primary !px-3">
-                <MessageCircle className="h-4 w-4" /> Message
+                <MessageCircle className="h-4 w-4" /> Message seller
               </Link>
-              {listing.shopSlug ? (
-                <Link href={`/shops/${listing.shopSlug}`} className="btn-secondary !px-3">
-                  <Store className="h-4 w-4" /> Visit shop
-                </Link>
-              ) : (
-                <Link href={sellerPageUrl(listing.ownerId, listing.sellerName)} className="btn-secondary !px-3">
-                  <Store className="h-4 w-4" /> Visit seller
-                </Link>
-              )}
+              <Link href={sellerHref} className="btn-secondary !px-3">
+                <Store className="h-4 w-4" /> {listing.shopSlug ? "Visit shop" : "View seller"}
+              </Link>
             </div>
-          </div>
+          </section>
 
-          {/* Delivery & payments */}
-          <div className="card mt-4 space-y-2 p-5 text-sm">
-            <h2 className="flex items-center gap-2 font-bold"><Truck className="h-4 w-4 text-brand-600" /> Delivery & payments</h2>
-            <p className="text-ink-700">{shop?.deliveryInfo ?? "Delivery arranged with the seller — confirm fee and timeline before paying."}</p>
-            <p className="text-ink-500">Shop checkout is cash on delivery — pay the courier in cash when your order arrives. Totals are always computed on our servers.</p>
-          </div>
+          <section className="card p-5 sm:p-6" aria-labelledby="delivery-protection">
+            <h2 id="delivery-protection" className="text-lg font-bold">Delivery & buyer protection</h2>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl bg-sand-50 p-4 text-sm">
+                <h3 className="flex items-center gap-2 font-bold"><Truck className="h-4 w-4 text-brand-600" /> Delivery</h3>
+                <p className="mt-1 text-ink-700">{shop?.deliveryInfo ?? "Delivery is arranged with the seller — confirm the fee and timeline before paying."}</p>
+                <p className="mt-2 text-xs text-ink-500">Cash on delivery. Pay the courier when your order arrives; totals are always computed on our servers.</p>
+              </div>
+              <div className="rounded-xl bg-sand-50 p-4 text-sm">
+                <h3 className="flex items-center gap-2 font-bold"><ShieldCheck className="h-4 w-4 text-brand-600" /> Stay safe</h3>
+                <ul className="mt-1 list-disc space-y-1 pl-4 text-ink-700">
+                  <li>Meet in public, inspect before paying, never share your M-Pesa PIN.</li>
+                  <li>Keep chats on Chap until you&apos;re confident in the seller.</li>
+                  <li>Too good to be true? Compare with related sellers below.</li>
+                </ul>
+                <Link href="/safety" className="link-bd mt-2 inline-block text-xs">Full buyer-safety guide →</Link>
+              </div>
+            </div>
+          </section>
 
-          {/* Safety */}
-          <div className="card mt-4 space-y-2 p-5 text-sm">
-            <h2 className="flex items-center gap-2 font-bold"><ShieldCheck className="h-4 w-4 text-brand-600" /> Stay safe</h2>
-            <ul className="list-disc space-y-1 pl-5 text-ink-700">
-              <li>Meet in public, inspect before paying, never share your M-Pesa PIN.</li>
-              <li>Keep chats on Chap until you&apos;re confident in the seller.</li>
-              <li>Too good to be true? Compare with related sellers below.</li>
-            </ul>
-            <Link href="/safety" className="link-bd">Full buyer-safety guide →</Link>
-          </div>
+          <details className="card p-5 text-sm sm:p-6">
+            <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-ink-700 [&::-webkit-details-marker]:hidden">
+              <Flag className="h-4 w-4 text-ink-400" /> Report this listing
+              <span className="ml-auto text-xs font-normal text-ink-400">Something wrong?</span>
+            </summary>
+            {reportDone ? (
+              <p className="mt-3 text-sm text-green-700">Thanks — our moderators will review with a recorded reason.</p>
+            ) : (
+              <div className="mt-3 space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {REPORT_PICKER.map((r) => (
+                    <button key={r.code} onClick={() => submitReport(r.code, report)} className="rounded-full border px-3 py-1 text-xs hover:bg-sand-50">{r.label}</button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input value={report} onChange={(e) => setReport(e.target.value)} placeholder="Details (optional)…" className="input-bd" aria-label="Report details" />
+                  <button onClick={() => submitReport("other", report)} className="btn-secondary shrink-0">Send</button>
+                </div>
+              </div>
+            )}
+          </details>
         </div>
 
       </div>
 
       {/* Sponsored unit below the buy flow (never between price and seller CTAs). */}
       <InArticleAd slot={AD_SLOTS.article} />
-      {/* Report — full width BELOW the grid. The seller card lives up in the
-          left column (before Delivery) so buyers see Message / Visit shop
-          first; anything sharing the sticky buy rail's column would scroll up
-          underneath it while pinned, down here nothing can pass under it. */}
-      <section className="mt-6" aria-label="Report">
-        <div className="card p-5">
-          <h2 className="flex items-center gap-2 text-sm font-bold"><Flag className="h-4 w-4" /> Report this listing</h2>
-          {reportDone ? (
-            <p className="mt-2 text-sm text-green-700">Thanks — our moderators will review with a recorded reason.</p>
-          ) : (
-            <div className="mt-2 space-y-2">
-              <div className="flex flex-wrap gap-2">
-                {REPORT_PICKER.map((r) => (
-                  <button key={r.code} onClick={() => submitReport(r.code, report)} className="rounded-full border px-3 py-1 text-xs hover:bg-sand-50">{r.label}</button>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <input value={report} onChange={(e) => setReport(e.target.value)} placeholder="Details (optional)…" className="input-bd" aria-label="Report details" />
-                <button onClick={() => submitReport("other", report)} className="btn-secondary shrink-0">Send</button>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
+
+      <ReviewsBlock reviews={reviews ?? []} title={`Reviews for ${listing.sellerName}`} />
+      {(listingReviews ?? []).length > 0 && (
+        <ReviewsBlock reviews={listingReviews ?? []} title={`Reviews for this listing`} />
+      )}
+      <ReviewForm listingId={listing.id} shopSlug={listing.shopSlug} sellerName={listing.sellerName} />
 
       {moreFromSeller && moreFromSeller.length > 0 && (
         <section className="mt-10 scroll-mt-36" id="more-from-seller">
@@ -466,12 +536,6 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
           </div>
         </section>
       )}
-
-      <ReviewsBlock reviews={reviews ?? []} title={`Reviews for ${listing.sellerName}`} />
-      {(listingReviews ?? []).length > 0 && (
-        <ReviewsBlock reviews={listingReviews ?? []} title={`Reviews for this listing`} />
-      )}
-      <ReviewForm listingId={listing.id} shopSlug={listing.shopSlug} sellerName={listing.sellerName} />
       </div>
     </div>
   );

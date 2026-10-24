@@ -14,7 +14,7 @@ export function getWishlist(): string[] {
   }
 }
 
-export function WishlistButton({ id, title }: { id: string; title?: string }) {
+export function WishlistButton({ id, title, className }: { id: string; title?: string; className?: string }) {
   const [active, setActive] = useState(false);
   useEffect(() => {
     setActive(getWishlist().includes(id));
@@ -41,7 +41,8 @@ export function WishlistButton({ id, title }: { id: string; title?: string }) {
       }}
       className={cn(
         "flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow transition hover:scale-105",
-        active ? "text-red-600" : "text-ink-500"
+        active ? "text-red-600" : "text-ink-500",
+        className
       )}
     >
       <Heart className={cn("h-4 w-4", active && "fill-red-600")} />
