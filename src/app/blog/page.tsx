@@ -7,8 +7,20 @@ import { BlogSidebar } from "@/components/blog-sidebar";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Blog",
+  title: "Blog — buying guides, safety tips & marketplace news",
   description: "Guides, safety tips and marketplace news from Chap — Kenya's marketplace for everything.",
+  keywords: ["Kenya buying guides", "marketplace safety", "online shopping tips Kenya", "chap blog"],
+  alternates: { canonical: "https://chap.co.ke/blog" },
+  openGraph: {
+    type: "website",
+    title: "Chap blog — buying guides & marketplace news",
+    description: "Guides, safety tips and marketplace news from Chap.",
+    url: "https://chap.co.ke/blog",
+    siteName: "chap.co.ke",
+    locale: "en_KE",
+    images: [{ url: "/chaplogo.png", width: 1147, height: 287, alt: "chap.co.ke" }],
+  },
+  twitter: { card: "summary_large_image", title: "Chap blog", description: "Buying guides, safety tips and marketplace news.", images: ["/chaplogo.png"] },
 };
 
 function fmtDate(iso: string | null | undefined): string {

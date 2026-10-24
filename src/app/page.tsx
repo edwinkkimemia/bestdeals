@@ -15,8 +15,33 @@ import { AdAfterEvery } from "@/components/ads";
 import { AD_SLOTS } from "@/lib/ads";
 
 export const metadata: Metadata = {
-  title: "chap.co.ke — Kenya's Marketplace for Everything",
+  title: { absolute: "chap.co.ke — Kenya's Marketplace for Everything" },
   description: "Discover great deals, shop trusted businesses, buy and sell new or pre-owned items, and find services across Kenya.",
+  keywords: [
+    "Kenya marketplace",
+    "buy and sell in Kenya",
+    "online shopping Kenya",
+    "shops in Nairobi",
+    "classifieds Kenya",
+    "services Kenya",
+    "chap.co.ke",
+  ],
+  alternates: { canonical: "https://chap.co.ke/" },
+  openGraph: {
+    type: "website",
+    title: "chap.co.ke — Everything You Need. All in One Place.",
+    description: "Shop products, classifieds, business shops and local services across Kenya.",
+    url: "https://chap.co.ke/",
+    siteName: "chap.co.ke",
+    locale: "en_KE",
+    images: [{ url: "/chaplogo.png", width: 1147, height: 287, alt: "chap.co.ke — Kenya's marketplace" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "chap.co.ke — Kenya's Marketplace for Everything",
+    description: "Shop products, classifieds, business shops and local services across Kenya.",
+    images: ["/chaplogo.png"],
+  },
 };
 
 // Fresh rails on every visit: shuffle runs per request (below), featured/promoted always lead.

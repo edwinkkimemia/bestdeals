@@ -18,8 +18,9 @@ import {
   Truck,
 } from "lucide-react";
 import { formatKES, timeAgo, formatFull } from "@/lib/format";
+import { slugify } from "@/lib/utils";
 import { toSafeHtml } from "@/lib/richtext";
-import { getListing, getShop, type Listing } from "@/data/catalog";
+import { categoryBySlug, getListing, getShop, type Listing } from "@/data/catalog";
 import { listingHref } from "@/lib/related";
 import type { ReviewRecord } from "@/lib/store";
 import { ReviewsBlock } from "./reviews-block";
@@ -194,6 +195,10 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
             {listing.listingType === "classified" ? "Classifieds" : listing.listingType === "service" ? "Services" : "Browse"}
           </Link>
           <span aria-hidden className="shrink-0 text-ink-300">/</span>
+          <Link href={`/browse/${listing.categorySlug}`} className="font-medium hover:text-brand-700 hover:underline">
+            {categoryBySlug(listing.categorySlug)?.name ?? "Category"}
+          </Link>
+          <span aria-hidden className="shrink-0 text-ink-300">/</span>
           <span className="min-w-0 break-words font-semibold text-ink-700">{listing.title.slice(0, 60)}…</span>
         </div>
       </nav>
@@ -214,7 +219,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
               <ConditionBadge condition={listing.condition} />
               {listing.negotiable && <Badge tone="red">Negotiable</Badge>}
               {listing.subcategory && (
-                <Link href={`/search?category=${listing.categorySlug}&subcategory=${encodeURIComponent(listing.subcategory)}`} className="chip hover:border-brand-600 hover:text-brand-700">
+                <Link href={`/browse/${listing.categorySlug}/${slugify(listing.subcategory)}`} className="chip hover:border-brand-600 hover:text-brand-700">
                   {listing.subcategory}
                 </Link>
               )}

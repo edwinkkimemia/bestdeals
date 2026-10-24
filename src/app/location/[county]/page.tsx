@@ -3,38 +3,67 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { MapPin } from "lucide-react";
 import { LISTINGS } from "@/data/catalog";
-import { KENYA_COUNTIES, countyMatches } from "@/lib/kenya";
+import { KENYA_COUNTIES, countyMatches, countySlug, resolveCountyEntry } from "@/lib/kenya";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { CountyStrip } from "@/components/county-strip";
 import { ListingRail } from "@/components/listing-rail";
+import { breadcrumbJsonLd, collectionJsonLd } from "@/lib/seo";
+import { listingPath } from "@/lib/category-seo";
 
 // Live seller listings must appear instantly — a static prerender would freeze
 // this page at build time and hide every product posted afterwards.
 export const dynamic = "force-dynamic";
 
 export function generateStaticParams() {
-  return KENYA_COUNTIES.map((c) => ({ county: c.county }));
+  return KENYA_COUNTIES.map((c) => ({ county: countySlug(c.county) }));
 }
 
 export async function generateMetadata({ params }: { params: { county: string } }): Promise<Metadata> {
-  const entry = KENYA_COUNTIES.find((c) => c.county.toLowerCase() === decodeURIComponent(params.county).toLowerCase());
+  const entry = resolveCountyEntry(params.county);
   if (!entry) return { title: "Location not found" };
   // Thin-inventory guard: empty counties stay browsable ("be the first to
   // list") but out of the index until supply arrives.
-  const { countyMatches } = await import("@/lib/kenya");
   const { getLiveStoreListings, mergeStaticAndLive } = await import("@/lib/live-listings");
   const live = await getLiveStoreListings().catch(() => []);
   const all = mergeStaticAndLive(LISTINGS, live);
   const count = all.filter((l) => countyMatches(l.county, entry.county)).length;
+  const url = `https://chap.co.ke/location/${countySlug(entry.county)}`;
+  const title = `${entry.county} — shop near you`;
+  const description = count
+    ? `Shop ${count} products, classifieds and services listed in ${entry.county} (${entry.towns
+        .slice(0, 5)
+        .join(", ")}). Compare prices in KES from sellers near you on Chap.`
+    : `Products, classifieds and services in ${entry.county} (${entry.towns
+        .slice(0, 5)
+        .join(", ")}). Be the first seller to list in ${entry.county} on Chap.`;
   return {
-    title: `${entry.county} — shop near you`,
-    description: `Products, classifieds and services listed in ${entry.county} (${entry.towns.slice(0, 5).join(", ")}). Browse what's near you on Chap.`,
-    ...(count === 0 ? { robots: { index: false, follow: true } } : {}),
+    title,
+    description,
+    keywords: [
+      `${entry.county} marketplace`,
+      `buy in ${entry.county}`,
+      `shops in ${entry.county}`,
+      ...entry.towns.map((t) => `buy in ${t}`),
+      "Kenya",
+      "chap.co.ke",
+    ],
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      title,
+      description,
+      url,
+      siteName: "chap.co.ke",
+      locale: "en_KE",
+      images: [{ url: entry.image, alt: entry.county }],
+    },
+    twitter: { card: "summary_large_image", title, description, images: [entry.image] },
+    ...(count === 0 ? { robots: { index: false, follow: true } } : { robots: { index: true, follow: true } }),
   };
 }
 
 export default async function CountyPage({ params }: { params: { county: string } }) {
-  const entry = KENYA_COUNTIES.find((c) => c.county.toLowerCase() === decodeURIComponent(params.county).toLowerCase());
+  const entry = resolveCountyEntry(params.county);
   if (!entry) notFound();
 
   const county = entry as NonNullable<typeof entry>;
@@ -52,9 +81,27 @@ export default async function CountyPage({ params }: { params: { county: string 
     .map((c) => ({ ...c, count: all.filter((l) => countyMatches(l.county, c.county)).length }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 8);
+  const url = `https://chap.co.ke/location/${countySlug(county.county)}`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      collectionJsonLd({
+        name: `Shop in ${county.county}`,
+        description: `Products, classifieds and services listed in ${county.county}, Kenya.`,
+        url,
+        items: items.slice(0, 48).map((l) => ({ name: l.title, url: listingPath(l) })),
+      }),
+      breadcrumbJsonLd([
+        { name: "Home", url: "https://chap.co.ke/" },
+        { name: "Locations", url: "https://chap.co.ke/location" },
+        { name: county.county, url },
+      ]),
+    ],
+  };
 
   return (
     <div className="container-bd py-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { href: "/location", label: "Locations" }, { label: county.county }]} />
 
       {/* county hero */}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { MODERATION_REASONS } from "@/lib/moderation";
@@ -103,6 +104,12 @@ export async function POST(req: NextRequest) {
     }
   }
   await logAudit({ actorId: user.id, actorEmail: user.email, action: `moderate.${action}`, entity: "listing", entityId: uniqueIds.slice(0, 5).join(","), reason: `${done}/${uniqueIds.length} ${reasonCode || reason}`.slice(0, 300) }).catch(() => {});
+  // Approvals/removals change the public catalogue and sitemap immediately.
+  if (done > 0) {
+    try {
+      revalidatePath("/sitemap.xml");
+    } catch {}
+  }
   return isJson ? NextResponse.json({ ok: true, done }) : NextResponse.redirect(new URL("/admin", req.url), 303);
 }
 

@@ -2622,18 +2622,24 @@ class PrismaStore implements Store {
 
 /* ------------------------------- selector -------------------------------- */
 
-let demo: DemoStore | null = null;
-let prismaStore: PrismaStore | null = null;
+// Next.js bundles each route/page separately in dev, so module-level singletons
+// are duplicated per bundle. Keep the shared store on globalThis: without this,
+// a listing created via /api/listings was invisible to pages and moderation
+// (each route had its own empty DemoStore). Postgres mode is unaffected.
+const storeRoot = globalThis as unknown as {
+  __chapDemoStore?: DemoStore;
+  __chapPrismaStore?: PrismaStore;
+};
 
 /** Returns the Prisma backend when a database is configured, else demo. */
 export function getStore(): Store {
   const client = db() as PrismaClient | null;
   if (client) {
-    if (!prismaStore) prismaStore = new PrismaStore(client);
-    return prismaStore;
+    if (!storeRoot.__chapPrismaStore) storeRoot.__chapPrismaStore = new PrismaStore(client);
+    return storeRoot.__chapPrismaStore;
   }
-  if (!demo) demo = new DemoStore();
-  return demo;
+  if (!storeRoot.__chapDemoStore) storeRoot.__chapDemoStore = new DemoStore();
+  return storeRoot.__chapDemoStore;
 }
 
 /** Test hook: fresh isolated demo store. */

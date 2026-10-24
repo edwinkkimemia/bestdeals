@@ -28,7 +28,6 @@ export const metadata: Metadata = {
     "Discover great deals, shop trusted businesses, buy and sell new or pre-owned items, and find services across Kenya.",
   icons: { icon: "/fav.png", apple: "/fav.png" },
   manifest: "/manifest.webmanifest",
-  alternates: { canonical: "https://chap.co.ke/" },
   openGraph: {
     type: "website",
     locale: "en_KE",

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { requireVerifiedSeller } from "@/lib/gate";
 import { getStore } from "@/lib/store";
 import { slugify } from "@/lib/utils";
@@ -56,6 +57,9 @@ export async function POST(req: NextRequest) {
     ownerId: user.id,
     ...contacts,
   });
+  try {
+    revalidatePath("/sitemap.xml");
+  } catch {}
   return NextResponse.redirect(new URL(`/shops/${encodeURIComponent(slug)}`, req.url), 303);
 }
 
@@ -176,5 +180,8 @@ export async function DELETE(req: NextRequest) {
   await store.setSetting(`shop_closed:${slug}`, { by: user.id, at: new Date().toISOString() }).catch(() => {});
   const { logAudit } = await import("@/lib/audit");
   await logAudit({ actorId: user.id, actorEmail: user.email, action: "shop.close", entity: "shop", entityId: slug }).catch(() => {});
+  try {
+    revalidatePath("/sitemap.xml");
+  } catch {}
   return NextResponse.json({ ok: true, closed: true });
 }

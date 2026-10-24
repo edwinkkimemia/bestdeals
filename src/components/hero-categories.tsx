@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { CATEGORIES } from "@/data/catalog";
 import { CategoryIcon } from "@/components/category-icon";
+import { slugify } from "@/lib/utils";
 
 /**
  * Desktop hero category nav: hover or tap a category to reveal its
@@ -70,7 +71,7 @@ export function HeroCategories() {
             {active.subcategories.map((s) => (
               <li key={s}>
                 <Link
-                  href={`/search?category=${active.slug}&subcategory=${encodeURIComponent(s)}`}
+                  href={`/browse/${active.slug}/${slugify(s)}`}
                   className="block rounded-xl px-2.5 py-2 text-[13px] font-medium text-ink-700 hover:bg-sand-100 hover:text-brand-700"
                 >
                   {s}

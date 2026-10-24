@@ -8,6 +8,18 @@ import { shuffleFeaturedFirst } from "@/lib/search";
 export const metadata = {
   title: "Services across Kenya",
   description: "Find fundis, cleaners, tutors and professional services across Kenya. Compare coverage areas and request quotes.",
+  keywords: ["services Kenya", "fundis Nairobi", "plumber Kenya", "cleaning services Kenya", "tutors Kenya", "chap.co.ke"],
+  alternates: { canonical: "https://chap.co.ke/services" },
+  openGraph: {
+    type: "website",
+    title: "Local services across Kenya",
+    description: "Find fundis, cleaners, tutors and professional services across Kenya.",
+    url: "https://chap.co.ke/services",
+    siteName: "chap.co.ke",
+    locale: "en_KE",
+    images: [{ url: "/chaplogo.png", width: 1147, height: 287, alt: "chap.co.ke" }],
+  },
+  twitter: { card: "summary_large_image", title: "Local services across Kenya", description: "Find trusted fundis, cleaners, tutors and pros.", images: ["/chaplogo.png"] },
 };
 
 // Fresh order every visit: featured/promoted lead, the rest shuffle.

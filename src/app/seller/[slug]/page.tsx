@@ -13,7 +13,7 @@ import { Badge, PlanCheckmark, TenureBadge } from "@/components/ui/badge";
 import { ratingLabel } from "@/lib/ratings";
 import { ShareRow } from "@/components/share-row";
 import { SafeImage } from "@/components/ui/safe-image";
-import { breadcrumbJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd, profileJsonLd } from "@/lib/seo";
 
 // Seller catalogues change as sellers post and admins moderate — a static
 // prerender would freeze them at build time and hide new products.
@@ -45,9 +45,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return {
     title: `${p.name} — Seller on Chap`,
     description: description.slice(0, 160),
+    keywords: [p.name, p.businessName ?? "", `${p.name} Kenya`, "seller Kenya", "shop from seller", "chap.co.ke"].filter(Boolean),
     alternates: { canonical: `https://chap.co.ke/seller/${params.slug}` },
-    ...(shareImage ? { openGraph: { title: `${p.name} — Seller on Chap`, description: description.slice(0, 160), images: [shareImage] } } : {}),
-    ...(noindex ? { robots: { index: false, follow: true } } : {}),
+    ...(shareImage ? { openGraph: { type: "website", title: `${p.name} — Seller on Chap`, description: description.slice(0, 160), url: `https://chap.co.ke/seller/${params.slug}`, siteName: "chap.co.ke", locale: "en_KE", images: [{ url: shareImage, alt: p.name }] } } : {}),
+    twitter: { card: "summary_large_image", title: `${p.name} — Seller on Chap`, description: description.slice(0, 160), ...(shareImage ? { images: [shareImage] } : {}) },
+    ...(noindex ? { robots: { index: false, follow: true } } : { robots: { index: true, follow: true } }),
   };
 }
 
@@ -79,9 +81,28 @@ export default async function SellerPage({ params }: { params: { slug: string } 
   const liveItems = await withLiveVerification(items);
   const { getSellerPlan } = await import("@/lib/plans");
   const sellerPlan = profile.userId ? (await getSellerPlan(profile.userId).catch(() => null)) : null;
+  const profileDescription = (profile.bio ?? "").trim() || `${profile.businessName ? `${profile.businessName} · ` : ""}${profile.verified ? "Verified seller" : "Seller"} on Chap marketplace.`;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      profileJsonLd({
+        name: profile.name,
+        description: profileDescription,
+        url: `https://chap.co.ke/seller/${params.slug}`,
+        image: profile.photoUrl ?? profile.coverUrl ?? undefined,
+        kind: profile.sellerKind === "business" ? "Organization" : "Person",
+        area: "Kenya",
+      }),
+      breadcrumbJsonLd([
+        { name: "Home", url: "https://chap.co.ke/" },
+        { name: profile.name, url: `https://chap.co.ke/seller/${params.slug}` },
+      ]),
+    ],
+  };
 
   return (
     <div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <div aria-hidden className="relative h-32 w-full overflow-hidden bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 sm:h-44">
         {profile.coverUrl && (
           <SafeImage src={profile.coverUrl} alt={`${profile.name} cover`} className="absolute inset-0 h-full w-full object-cover" />

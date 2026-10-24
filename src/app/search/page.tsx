@@ -12,7 +12,14 @@ import { COUNTY_NAMES, resolveCounty, townsFor } from "@/lib/kenya";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { SaveSearchButton } from "@/components/save-search-button";
 
-export const metadata = { title: "Search" };
+export const metadata = {
+  title: "Search",
+  description: "Search products, classifieds, services, sellers and shops across Kenya on Chap.",
+  // Internal search results are thin/duplicate by nature; keep them out of the
+  // index and let category/subcategory/location landing pages rank instead.
+  robots: { index: false, follow: true },
+  alternates: { canonical: "https://chap.co.ke/search" },
+};
 
 type PageType = "all" | "product" | "classified" | "service" | "sellers" | "shops";
 

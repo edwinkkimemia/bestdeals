@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MapPin } from "lucide-react";
-import type { KenyaCounty } from "@/lib/kenya";
+import { countySlug, type KenyaCounty } from "@/lib/kenya";
 
 type CountyWithCount = KenyaCounty & { count?: number };
 
@@ -40,7 +40,7 @@ export function CountyStrip({
           return (
             <Link
               key={c.county}
-              href={`/location/${encodeURIComponent(c.county)}`}
+              href={`/location/${countySlug(c.county)}`}
               role="listitem"
               className="group w-28 shrink-0 snap-start overflow-hidden rounded-xl border border-neutral-200 bg-white transition hover:border-brand-600 sm:w-32"
             >

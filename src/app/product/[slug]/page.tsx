@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { LISTINGS, getListing } from "@/data/catalog";
 import { storeRead } from "@/lib/store";
 import { ListingDetail } from "@/components/listing-detail";
-import { productJsonLd, breadcrumbJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd } from "@/lib/seo";
+import { listingBreadcrumbs, listingKeywords, productSchema } from "@/lib/category-seo";
 
 // Store previews are per-viewer (admin/owner only) — never statically cache.
 export const dynamic = "force-dynamic";
@@ -15,22 +16,46 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const l = getListing(params.slug);
   if (l) {
+    const canonical = `https://chap.co.ke/product/${l.slug}`;
     return {
       title: l.title,
       description: l.description.slice(0, 160),
-      alternates: { canonical: `https://chap.co.ke/product/${l.slug}` },
-      openGraph: { title: l.title, description: l.description.slice(0, 160), images: [l.images[0]] },
+      keywords: listingKeywords(l),
+      alternates: { canonical },
+      openGraph: {
+        type: "website",
+        title: l.title,
+        description: l.description.slice(0, 160),
+        url: canonical,
+        siteName: "chap.co.ke",
+        locale: "en_KE",
+        images: l.images[0] ? [{ url: l.images[0], alt: l.title }] : undefined,
+      },
+      twitter: { card: "summary_large_image", title: l.title, description: l.description.slice(0, 160), images: l.images[0] ? [l.images[0]] : undefined },
+      robots: { index: true, follow: true },
     };
   }
   const { resolveStoreDetail } = await import("@/lib/live-listings");
   const resolved = await resolveStoreDetail(params.slug);
-  if (!resolved) return { title: "Product not found" };
+  if (!resolved) return { title: "Product not found", robots: { index: false, follow: true } };
+  const title = resolved.previewStatus ? `Preview: ${resolved.listing.title}` : resolved.listing.title;
+  const canonical = `https://chap.co.ke/product/${resolved.listing.slug}`;
   return {
-    title: resolved.previewStatus ? `Preview: ${resolved.listing.title}` : resolved.listing.title,
+    title,
     description: resolved.listing.description.slice(0, 160),
-    alternates: { canonical: `https://chap.co.ke/product/${resolved.listing.slug}` },
-    openGraph: { title: resolved.listing.title, description: resolved.listing.description.slice(0, 160), images: [resolved.listing.images[0]] },
-    robots: resolved.previewStatus ? { index: false, follow: false } : undefined,
+    keywords: listingKeywords(resolved.listing),
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title,
+      description: resolved.listing.description.slice(0, 160),
+      url: canonical,
+      siteName: "chap.co.ke",
+      locale: "en_KE",
+      images: resolved.listing.images[0] ? [{ url: resolved.listing.images[0], alt: resolved.listing.title }] : undefined,
+    },
+    twitter: { card: "summary_large_image", title, description: resolved.listing.description.slice(0, 160), images: resolved.listing.images[0] ? [resolved.listing.images[0]] : undefined },
+    robots: resolved.previewStatus ? { index: false, follow: false } : { index: true, follow: true },
   };
 }
 
@@ -48,12 +73,8 @@ export default async function ProductPage({ params }: { params: { slug: string }
     const jsonLd = {
       "@context": "https://schema.org",
       "@graph": [
-        productJsonLd({ name: l.title, description: l.description, image: l.images, price: l.price, url: `https://chap.co.ke/product/${l.slug}` }),
-        breadcrumbJsonLd([
-          { name: "Home", url: "https://chap.co.ke/" },
-          { name: "Browse", url: "https://chap.co.ke/browse" },
-          { name: l.title, url: `https://chap.co.ke/product/${l.slug}` },
-        ]),
+        productSchema(l),
+        breadcrumbJsonLd(listingBreadcrumbs(l, { name: "Browse", url: "/browse" })),
       ],
     };
     return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} />;
@@ -74,12 +95,8 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
-      productJsonLd({ name: listing.title, description: listing.description, image: listing.images, price: listing.price, url: `https://chap.co.ke/product/${listing.slug}` }),
-      breadcrumbJsonLd([
-        { name: "Home", url: "https://chap.co.ke/" },
-        { name: "Browse", url: "https://chap.co.ke/browse" },
-        { name: listing.title, url: `https://chap.co.ke/product/${listing.slug}` },
-      ]),
+      productSchema(listing),
+      breadcrumbJsonLd(listingBreadcrumbs(listing, { name: "Browse", url: "/browse" })),
     ],
   };
   return <ListingDetail listing={listing} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} previewStatus={previewStatus} />;

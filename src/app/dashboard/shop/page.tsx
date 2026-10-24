@@ -65,16 +65,21 @@ export default async function ShopDash({ searchParams }: { searchParams: { new?:
         <div className="min-w-0">
           <div className="card min-w-0 p-5">
             <p className="font-bold">Storefront{active ? ` · ${active.name}` : ""}</p>
-            <p className="text-sm text-ink-500">Your public URL will be <code className="break-all">chap.co.ke/shops/your-name</code> with availability check &amp; safe slugs.</p>
             {active ? (
-              <p className="mt-2 text-sm"><Link href={`/shops/${active.slug}`} className="link-bd">View your storefront →</Link></p>
+              <>
+                <p className="text-sm text-ink-500">Your public shop lives at <code className="break-all">chap.co.ke/shops/{active.slug}</code>.</p>
+                <p className="mt-2 text-sm"><Link href={`/shops/${active.slug}`} className="link-bd">View your storefront →</Link></p>
+              </>
             ) : (
-              <Link href="/shops/fon-zone-nairobi" className="link-bd text-sm">See an example storefront →</Link>
+              <>
+                <p className="text-sm text-ink-500">Your public URL will be <code className="break-all">chap.co.ke/shops/your-name</code> with availability check &amp; safe slugs.</p>
+                <Link href="/shops/fon-zone-nairobi" className="mt-2 inline-block link-bd text-sm">See an example storefront →</Link>
+                <form action="/api/shops" method="post" className="mt-3 space-y-2">
+                  <input name="name" required placeholder="Business name" defaultValue={fresh?.businessName ?? ""} className="input-bd" aria-label="Business name" />
+                  <button className="btn-primary w-full" formAction="/api/shops" type="submit">Check availability & create</button>
+                </form>
+              </>
             )}
-            <form action="/api/shops" method="post" className="mt-3 space-y-2">
-              <input name="name" required placeholder="Business name" defaultValue={fresh?.businessName ?? ""} className="input-bd" aria-label="Business name" />
-              <button className="btn-primary w-full" formAction="/api/shops" type="submit">Check availability & create</button>
-            </form>
             {active && <BulkPanel shopName={active.name} isGold={activePlan === "gold"} />}
           </div>
           {active && (

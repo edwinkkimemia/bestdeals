@@ -8,6 +8,18 @@ import { shuffleFeaturedFirst } from "@/lib/search";
 export const metadata = {
   title: "Today's Best Deals",
   description: "Genuine price drops from verified prices across Kenya — no fake countdowns or invented discounts.",
+  keywords: ["deals Kenya", "price drops Kenya", "discounts Nairobi", "online offers Kenya", "chap.co.ke"],
+  alternates: { canonical: "https://chap.co.ke/deals" },
+  openGraph: {
+    type: "website",
+    title: "Today's best deals in Kenya",
+    description: "Genuine price drops from verified sellers across Kenya.",
+    url: "https://chap.co.ke/deals",
+    siteName: "chap.co.ke",
+    locale: "en_KE",
+    images: [{ url: "/chaplogo.png", width: 1147, height: 287, alt: "chap.co.ke" }],
+  },
+  twitter: { card: "summary_large_image", title: "Today's best deals in Kenya", description: "Genuine price drops from verified sellers.", images: ["/chaplogo.png"] },
 };
 
 // Fresh order every visit: featured/promoted lead, the rest shuffle.

@@ -19,7 +19,6 @@ import { getStore } from "@/lib/store";
 import { formatKES } from "@/lib/format";
 import { getPlatformAnalytics } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
-import { LISTINGS, SHOPS } from "@/data/catalog";
 import { SeedDatabaseButton } from "./seed-button";
 
 export const dynamic = "force-dynamic";
@@ -68,11 +67,10 @@ export default async function AdminPage() {
       </p>
       {users.length === 0 && shops.length === 0 && posts.length === 0 && orders.length === 0 && (
         <div className="card mt-4 border-amber-300 bg-amber-50 p-5">
-          <p className="font-bold text-amber-900">Database is connected but empty</p>
+          <p className="font-bold text-amber-900">Database is empty</p>
           <p className="mt-1 text-sm text-amber-800">
-            No users, shops, posts or orders yet — usually means the deploy seed never ran.
-            One click fills it with the demo catalogue (re-runs are safe). Manual signups
-            only appear here when made on this same deployment.
+            No users, shops, posts or orders yet. Seed the demo catalogue to populate the
+            storefront — re-runs are safe and admin edits are never overwritten.
           </p>
           <SeedDatabaseButton />
         </div>
@@ -105,13 +103,6 @@ export default async function AdminPage() {
         {pending.length + verifications.length + openDisputes.length === 0 && <li>All queues clear ✓</li>}
       </ul>
 
-      <h2 className="mt-8 flex items-center gap-2 font-bold"><Package className="h-4 w-4 text-ink-400" /> Storefront demo catalogue (static)</h2>
-      <p className="mt-1 text-sm text-ink-500">
-        {LISTINGS.length} listings · {SHOPS.length} shops of seed data power the public storefront.
-        They are not database rows, so they never appear in the queues above — only seller-submitted
-        listings, signups and orders do. Without <code>DATABASE_URL</code> the store is in-memory demo
-        mode and resets on restart; set it + run migrations for persistent data.
-      </p>
       <p className="mt-8 text-xs text-ink-400">Restricted area. Every admin action is logged with a reason.</p>
     </div>
   );

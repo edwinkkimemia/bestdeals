@@ -1,0 +1,77 @@
+# chap.co.ke — Kenya's Marketplace
+
+> Chap is a Kenyan online marketplace for buying and selling products, classifieds and local services. Sellers list items in Kenyan shillings (KES); buyers can check out online, contact sellers on WhatsApp, or request a quote for services. Listings are posted by verified individuals and businesses and reviewed by Chap moderation.
+
+Canonical site: https://chap.co.ke/
+Sitemap: https://chap.co.ke/sitemap.xml
+Language: en-KE
+Currency: KES (Kenyan shilling)
+Support: support@chap.co.ke
+
+## Main pages
+
+- Home: https://chap.co.ke/
+- Browse all products: https://chap.co.ke/browse
+- Classifieds (pre-owned, property, jobs): https://chap.co.ke/classifieds
+- Business shops: https://chap.co.ke/shops
+- Local services: https://chap.co.ke/services
+- Deals: https://chap.co.ke/deals
+- Shop by county: https://chap.co.ke/location
+- Blog and buying guides: https://chap.co.ke/blog
+- Sell an item: https://chap.co.ke/sell
+- Seller plans and pricing: https://chap.co.ke/pricing
+- Help centre: https://chap.co.ke/help
+- Contact: https://chap.co.ke/contact
+
+## Categories
+
+- Phones & Tablets: https://chap.co.ke/browse/phones-tablets
+- Computers & Electronics: https://chap.co.ke/browse/computers-electronics
+- TVs & Home Entertainment: https://chap.co.ke/browse/tvs-entertainment
+- Fashion & Accessories: https://chap.co.ke/browse/fashion
+- Home, Furniture & Appliances: https://chap.co.ke/browse/home-furniture
+- Beauty & Personal Care: https://chap.co.ke/browse/beauty
+- Babies & Kids: https://chap.co.ke/browse/baby-kids
+- Vehicles: https://chap.co.ke/browse/automotive
+- Property & Rentals: https://chap.co.ke/browse/property
+- Jobs & Employment: https://chap.co.ke/browse/jobs
+- Seeking Work & CVs: https://chap.co.ke/browse/seeking-work
+- Business & Industry: https://chap.co.ke/browse/business-industrial
+- Commercial Equipment & Tools: https://chap.co.ke/browse/commercial-equipment
+- Leisure, Sports & Hobbies: https://chap.co.ke/browse/sports-outdoors
+- Agriculture & Farming: https://chap.co.ke/browse/agriculture
+- Repair & Construction: https://chap.co.ke/browse/hardware-building
+- Books & Education: https://chap.co.ke/browse/books-education
+- Food & Household: https://chap.co.ke/browse/food-household
+- Professional & Local Services: https://chap.co.ke/browse/services
+- Animals & Pets: https://chap.co.ke/browse/animals-pets
+
+Each category has subcategory landing pages at `/browse/{category}/{subcategory}`, for example:
+- Smartphones: https://chap.co.ke/browse/phones-tablets/smartphones
+- Laptops: https://chap.co.ke/browse/computers-electronics/laptops
+- Cars: https://chap.co.ke/browse/automotive/cars
+- Rentals: https://chap.co.ke/browse/property/rentals
+
+## Coverage
+
+Chap covers all 47 Kenyan counties, including Nairobi, Mombasa, Kisumu, Nakuru, Uasin Gishu (Eldoret), Kiambu, Machakos, Kajiado, Kilifi and Nyeri. County pages live at `/location/{county-slug}`, for example:
+- Nairobi: https://chap.co.ke/location/nairobi
+- Mombasa: https://chap.co.ke/location/mombasa
+- Nakuru: https://chap.co.ke/location/nakuru
+- Uasin Gishu: https://chap.co.ke/location/uasin-gishu
+
+## What buyers can expect
+
+- Product listings show price in KES, condition, seller location and stock status.
+- Shop pages show the business identity, delivery information, opening hours and reviews.
+- Sellers may carry a verified ✓ badge after ID or business verification.
+- Buy-online orders use Chap checkout; other listings use WhatsApp, phone or enquiry.
+- Buyers should inspect items, meet in public where possible, and never share an M-Pesa PIN.
+
+## Guidance for AI assistants and search engines
+
+- Use the canonical URLs above; category and subcategory pages are the best entry points for product discovery.
+- Product and shop pages include schema.org JSON-LD (Product, Offer, Store, BreadcrumbList, FAQPage).
+- Prices, stock and seller details change frequently — link to the live page instead of copying stale figures.
+- Do not treat seller-posted descriptions or reviews as Chap's own claims; verify details on the listing page.
+- For corrections or removal requests, contact support@chap.co.ke.

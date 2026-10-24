@@ -59,8 +59,18 @@ const MEMORY_CAP = 50_000;
 
 /* ------------------------- in-memory fallback ------------------------- */
 
-const memory: ViewEvent[] = [];
-const dedup = new Map<string, number>();
+// Keep the fallback on globalThis: Next.js bundles each route/page separately,
+// so a module-level array is duplicated per bundle and views recorded by the
+// track API would never appear in the analytics pages. A process-wide singleton
+// keeps demo mode working across routes (a real DB is still required across
+// serverless instances).
+type MemoryState = { events: ViewEvent[]; dedup: Map<string, number> };
+const root = globalThis as unknown as { __chapAnalyticsMemory?: MemoryState };
+const state =
+  root.__chapAnalyticsMemory ??
+  (root.__chapAnalyticsMemory = { events: [], dedup: new Map<string, number>() });
+const memory = state.events;
+const dedup = state.dedup;
 
 export function resetAnalyticsMemory(): void {
   memory.length = 0;
@@ -153,7 +163,7 @@ export function summarizeListing(events: ViewEvent[], listingId: string, days: n
     views7: last7.length,
     uniques7: new Set(last7.map(identityOf)).size,
     views30: last30.length,
-    daily: aggregateDaily(mine, Math.min(days, 30), now),
+    daily: aggregateDaily(mine, Math.min(Math.max(days, 1), 90), now),
   };
 }
 
@@ -297,7 +307,7 @@ export async function getListingsStats(
     perListing: ids.map((id) => summarizeListing(events, id, days, now)),
     totalViews: events.length,
     uniqueViewers: new Set(events.map(identityOf)).size,
-    daily: aggregateDaily(events, Math.min(days, 30), now),
+    daily: aggregateDaily(events, Math.min(Math.max(days, 1), 90), now),
   };
 }
 
@@ -311,7 +321,8 @@ export async function getTopReferrersForListings(
   return topReferrers(events, limit);
 }
 
-export async function getPlatformAnalytics(days = 30, topN = 10, now = Date.now()): Promise<PlatformAnalytics> {  const rangeDays = Math.min(Math.max(days, 1), 90);
+export async function getPlatformAnalytics(days = 30, topN = 10, now = Date.now()): Promise<PlatformAnalytics> {
+  const rangeDays = Math.min(Math.max(days, 1), 90);
   const since = now - rangeDays * 86400_000;
   const events = await readViews({ since });
   const byListing = new Map<string, ViewEvent[]>();
@@ -333,7 +344,7 @@ export async function getPlatformAnalytics(days = 30, topN = 10, now = Date.now(
     totalViews: events.length,
     uniqueViewers: new Set(events.map(identityOf)).size,
     viewedListings: byListing.size,
-    daily: aggregateDaily(events, Math.min(rangeDays, 30), now),
+    daily: aggregateDaily(events, rangeDays, now),
     topListings,
     topReferrers: topReferrers(events),
   };

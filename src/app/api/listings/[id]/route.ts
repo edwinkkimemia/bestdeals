@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { listingSchema } from "@/lib/validators";
 import { currentUser } from "@/lib/auth";
 import { canManageListing } from "@/lib/gate";
@@ -95,6 +96,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       );
     }
   } catch {}
+  try {
+    revalidatePath("/sitemap.xml");
+  } catch {}
   return NextResponse.json({ ok: true, id: params.id, status: fresh?.status ?? "pending", item: fresh });
 }
 
@@ -132,6 +136,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: "Unknown action. Use sold, hidden, republish or renew." }, { status: 400 });
   }
   const fresh = await store.getListing(params.id);
+  try {
+    revalidatePath("/sitemap.xml");
+  } catch {}
   return NextResponse.json({ ok: true, status: fresh?.status, item: fresh });
 }
 
@@ -139,5 +146,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   const res = await owned(params.id);
   if ("error" in res) return res.error;
   await getStore().deleteListing(params.id);
+  try {
+    revalidatePath("/sitemap.xml");
+  } catch {}
   return NextResponse.json({ ok: true });
 }

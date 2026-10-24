@@ -10,6 +10,18 @@ import { StaticInfo } from "@/components/static-info";
 export const metadata = {
   title: "Business Shops",
   description: "Branded Kenyan storefronts with catalogues, delivery info, wholesale enquiries and verified reviews.",
+  keywords: ["Kenyan shops", "online shops Nairobi", "verified businesses Kenya", "wholesale Kenya", "chap.co.ke"],
+  alternates: { canonical: "https://chap.co.ke/shops" },
+  openGraph: {
+    type: "website",
+    title: "Business shops on Chap",
+    description: "Branded Kenyan storefronts with catalogues, delivery info and verified reviews.",
+    url: "https://chap.co.ke/shops",
+    siteName: "chap.co.ke",
+    locale: "en_KE",
+    images: [{ url: "/chaplogo.png", width: 1147, height: 287, alt: "chap.co.ke" }],
+  },
+  twitter: { card: "summary_large_image", title: "Business shops on Chap", description: "Shop verified Kenyan businesses.", images: ["/chaplogo.png"] },
 };
 
 // New shops open daily — a static prerender would freeze this index at build time.

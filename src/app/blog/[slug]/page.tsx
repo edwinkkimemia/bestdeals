@@ -7,21 +7,33 @@ import { ShareRow } from "@/components/share-row";
 import { BlogSidebar } from "@/components/blog-sidebar";
 import { InArticleAd } from "@/components/ads";
 import { AD_SLOTS } from "@/lib/ads";
+import { articleJsonLd, breadcrumbJsonLd } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const post = await storeRead((s) => s.getBlogPost(params.slug), null);
-  if (!post || post.status !== "published") return { title: "Article not found" };
+  if (!post || post.status !== "published") return { title: "Article not found", robots: { index: false, follow: true } };
+  const description = (post.excerpt ?? "").slice(0, 160) || post.title;
+  const canonical = `https://chap.co.ke/blog/${post.slug}`;
   return {
     title: post.title,
-    description: (post.excerpt ?? "").slice(0, 160) || post.title,
-    alternates: { canonical: `https://chap.co.ke/blog/${post.slug}` },
+    description,
+    keywords: [post.title, "Kenya marketplace", "buying guide Kenya", "chap.co.ke"],
+    alternates: { canonical },
     openGraph: {
+      type: "article",
       title: post.title,
-      description: (post.excerpt ?? "").slice(0, 160),
-      ...(post.coverUrl ? { images: [post.coverUrl] } : {}),
+      description,
+      url: canonical,
+      siteName: "chap.co.ke",
+      locale: "en_KE",
+      ...(post.publishedAt ? { publishedTime: post.publishedAt } : {}),
+      ...(post.updatedAt ? { modifiedTime: post.updatedAt } : {}),
+      ...(post.coverUrl ? { images: [{ url: post.coverUrl, alt: post.title }] } : {}),
     },
+    twitter: { card: "summary_large_image", title: post.title, description, ...(post.coverUrl ? { images: [post.coverUrl] } : {}) },
+    robots: { index: true, follow: true },
   };
 }
 
@@ -38,8 +50,28 @@ export default async function BlogArticle({ params }: { params: { slug: string }
   const post = await storeRead((s) => s.getBlogPost(params.slug), null);
   if (!post || post.status !== "published") notFound();
   const more = (await storeRead((s) => s.listBlogPosts("published"), [])).filter((p) => p.id !== post.id).slice(0, 3);
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      articleJsonLd({
+        title: post.title,
+        description: post.excerpt ?? post.title,
+        url: `https://chap.co.ke/blog/${post.slug}`,
+        image: post.coverUrl ?? undefined,
+        datePublished: post.publishedAt ?? post.createdAt ?? undefined,
+        dateModified: post.updatedAt ?? post.publishedAt ?? undefined,
+        authorName: post.authorName ?? undefined,
+      }),
+      breadcrumbJsonLd([
+        { name: "Home", url: "https://chap.co.ke/" },
+        { name: "Blog", url: "https://chap.co.ke/blog" },
+        { name: post.title, url: `https://chap.co.ke/blog/${post.slug}` },
+      ]),
+    ],
+  };
   return (
     <div className="container-bd py-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { href: "/blog", label: "Blog" }, { label: post.title.slice(0, 40) }]} />
       <div className="mt-4 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
       <div className="min-w-0">

@@ -61,6 +61,27 @@ export function countyImage(county: string): string {
 
 export const COUNTY_NAMES = KENYA_COUNTIES.map((c) => c.county);
 
+/** Stable URL slug for a county (e.g. "Homa Bay" → "homa-bay"). */
+export function countySlug(county: string): string {
+  return county
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
+
+/** Resolve a location URL segment ("homa-bay", "Homa Bay", "NAIROBI") to a county record. */
+export function resolveCountyEntry(input: string): (typeof KENYA_COUNTIES)[number] | undefined {
+  const decoded = decodeURIComponent(input).trim();
+  const low = decoded.toLowerCase();
+  const slug = countySlug(decoded);
+  return KENYA_COUNTIES.find(
+    (c) => c.county.toLowerCase() === low || countySlug(c.county) === slug
+  );
+}
+
 export function townsFor(county: string): string[] {
   const t = county.trim().toLowerCase();
   return KENYA_COUNTIES.find((c) => c.county.toLowerCase() === t)?.towns ?? [];

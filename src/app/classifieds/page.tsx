@@ -11,6 +11,18 @@ import { shuffleFeaturedFirst } from "@/lib/search";
 export const metadata = {
   title: "Classifieds — New & Pre-owned in Kenya",
   description: "Buy and sell new and second-hand goods person-to-person across Kenya. Enquire, negotiate, meet safely.",
+  keywords: ["Kenya classifieds", "second hand Kenya", "buy and sell Kenya", "used goods Nairobi", "chap.co.ke"],
+  alternates: { canonical: "https://chap.co.ke/classifieds" },
+  openGraph: {
+    type: "website",
+    title: "Classifieds in Kenya",
+    description: "Buy and sell new and second-hand goods person-to-person across Kenya.",
+    url: "https://chap.co.ke/classifieds",
+    siteName: "chap.co.ke",
+    locale: "en_KE",
+    images: [{ url: "/chaplogo.png", width: 1147, height: 287, alt: "chap.co.ke" }],
+  },
+  twitter: { card: "summary_large_image", title: "Classifieds in Kenya", description: "Buy and sell new and second-hand goods across Kenya.", images: ["/chaplogo.png"] },
 };
 
 // Fresh order every visit: featured/promoted lead, the rest shuffle.

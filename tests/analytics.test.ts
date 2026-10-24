@@ -114,6 +114,12 @@ describe("analytics recording (in-memory)", () => {
     assert.equal(platform.viewedListings, 2);
     assert.equal(platform.topListings[0].listingId, "p1");
     assert.equal(platform.topListings[0].views, 2);
+
+    // The 90-day range must return 90 daily buckets, not a truncated 30.
+    const seller90 = await getListingsStats(["p1", "p2"], 90);
+    assert.equal(seller90.daily.length, 90);
+    const platform90 = await getPlatformAnalytics(90, 10);
+    assert.equal(platform90.daily.length, 90);
   });
 
   it("ignores empty listing ids", async () => {

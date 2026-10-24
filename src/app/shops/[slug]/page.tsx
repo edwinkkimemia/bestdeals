@@ -34,8 +34,18 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     return {
       title: `${name} — Shop on Chap`,
       description: description.slice(0, 160),
+      keywords: [
+        name,
+        `${name} ${s.town}`,
+        `${s.businessCategory} ${s.county}`,
+        `shop in ${s.county}`,
+        `buy from ${name}`,
+        "chap.co.ke",
+      ],
       alternates: { canonical: `https://chap.co.ke/shops/${s.slug}` },
-      ...(cover ? { openGraph: { title: `${name} — Shop on Chap`, description: description.slice(0, 160), images: [cover] } } : {}),
+      ...(cover ? { openGraph: { type: "website", title: `${name} — Shop on Chap`, description: description.slice(0, 160), url: `https://chap.co.ke/shops/${s.slug}`, siteName: "chap.co.ke", locale: "en_KE", images: [{ url: cover, alt: name }] } } : {}),
+      twitter: { card: "summary_large_image", title: `${name} — Shop on Chap`, description: description.slice(0, 160), ...(cover ? { images: [cover] } : {}) },
+      robots: { index: true, follow: true },
     };
   }
   // Seller-created shops live in the store, not the static catalogue —
@@ -46,8 +56,18 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return {
     title: `${stored.name} — Shop on Chap`,
     description: storedDescription,
+    keywords: [
+      stored.name,
+      `${stored.name} ${stored.town}`,
+      `${stored.businessCategory} ${stored.county}`,
+      `shop in ${stored.county}`,
+      `buy from ${stored.name}`,
+      "chap.co.ke",
+    ],
     alternates: { canonical: `https://chap.co.ke/shops/${stored.slug}` },
-    ...(stored.coverUrl ? { openGraph: { title: `${stored.name} — Shop on Chap`, description: storedDescription, images: [stored.coverUrl] } } : {}),
+    ...(stored.coverUrl ? { openGraph: { type: "website", title: `${stored.name} — Shop on Chap`, description: storedDescription, url: `https://chap.co.ke/shops/${stored.slug}`, siteName: "chap.co.ke", locale: "en_KE", images: [{ url: stored.coverUrl, alt: stored.name }] } } : {}),
+    twitter: { card: "summary_large_image", title: `${stored.name} — Shop on Chap`, description: storedDescription, ...(stored.coverUrl ? { images: [stored.coverUrl] } : {}) },
+    robots: { index: true, follow: true },
   };
 }
 
@@ -65,6 +85,28 @@ export default async function ShopPage({ params }: { params: { slug: string } })
     // seller products looked "not live" even after admin approval.
     const { getLiveShopListings } = await import("@/lib/live-listings");
     const catalogue = await getLiveShopListings(nonNull.slug);
+    const storedJsonLd = {
+      "@context": "https://schema.org",
+      "@graph": [
+        localBusinessJsonLd({
+          name: nonNull.name,
+          description: nonNull.description,
+          url: `https://chap.co.ke/shops/${nonNull.slug}`,
+          phone: nonNull.phone,
+          area: `${nonNull.town}, ${nonNull.county}`,
+          image: nonNull.coverUrl ?? undefined,
+          logo: nonNull.logoUrl ?? undefined,
+          town: nonNull.town,
+          county: nonNull.county,
+          hours: nonNull.hours ?? undefined,
+        }),
+        breadcrumbJsonLd([
+          { name: "Home", url: "https://chap.co.ke/" },
+          { name: "Shops", url: "https://chap.co.ke/shops" },
+          { name: nonNull.name, url: `https://chap.co.ke/shops/${nonNull.slug}` },
+        ]),
+      ],
+    };
     return (
       <div>
         <div aria-hidden className="relative h-32 w-full overflow-hidden bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 sm:h-44">
@@ -73,6 +115,7 @@ export default async function ShopPage({ params }: { params: { slug: string } })
           )}
         </div>
         <div className="container-bd py-6">
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(storedJsonLd) }} />
           <div className="card grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 p-5 lg:flex lg:flex-row lg:gap-4">
             <span className="col-start-1 row-start-1 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand-600 text-2xl font-black text-white">
               {nonNull.logoUrl ? (
@@ -135,7 +178,18 @@ export default async function ShopPage({ params }: { params: { slug: string } })
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
-      localBusinessJsonLd({ name: v.name, description: v.description, url: `https://chap.co.ke/shops/${v.slug}`, phone: v.phone, area: `${v.town}, ${v.county}` }),
+      localBusinessJsonLd({
+        name: v.name,
+        description: v.description,
+        url: `https://chap.co.ke/shops/${v.slug}`,
+        phone: v.phone,
+        area: `${v.town}, ${v.county}`,
+        image: v.cover ?? undefined,
+        logo: v.logo ?? undefined,
+        town: v.town,
+        county: v.county,
+        hours: v.hours || undefined,
+      }),
       breadcrumbJsonLd([{ name: "Home", url: "https://chap.co.ke/" }, { name: "Shops", url: "https://chap.co.ke/shops" }, { name: v.name, url: `https://chap.co.ke/shops/${v.slug}` }]),
     ],
   };

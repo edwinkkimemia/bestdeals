@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
@@ -38,5 +39,8 @@ export async function DELETE(req: NextRequest) {
     entityId: slug,
     reason: "Admin deleted the storefront and its catalogue.",
   }).catch(() => {});
+  try {
+    revalidatePath("/sitemap.xml");
+  } catch {}
   return NextResponse.json({ ok: true });
 }

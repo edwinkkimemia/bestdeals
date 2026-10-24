@@ -51,7 +51,7 @@ export async function UsersSection({ status, role, sort }: { status: string; rol
       <FilterRow label="Role" tabs={ROLE_TABS} current={roleTab} makeHref={(t) => href(tab, t, sortTab)} />
       <FilterRow label="Sort" tabs={SORT_TABS} current={sortTab} makeHref={(t) => href(tab, roleTab, t)} />
       {items.length === 0 && (
-        <p className="mt-4 text-sm text-ink-500">No accounts match — try another filter. In-memory demo mode (no DATABASE_URL) resets on restart.</p>
+        <p className="mt-4 text-sm text-ink-500">No accounts match — try another filter.</p>
       )}
       {items.length > 0 && (
         <AdminTable columns={["User", "Contact", "Role", "Kind", "Plan", "Seller ✓", "Email ✓", "Joined", "Actions"]}>

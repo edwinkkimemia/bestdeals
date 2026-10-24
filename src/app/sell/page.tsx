@@ -7,6 +7,9 @@ import { PageBreadcrumb } from "@/components/page-breadcrumb";
 export const metadata = {
   title: "Sell an item",
   description: "Post a product, classified or service on Chap in minutes. Free for individuals, moderated for trust.",
+  // Transactional form — the public marketing page is /start-selling.
+  robots: { index: false, follow: true },
+  alternates: { canonical: "https://chap.co.ke/sell" },
 };
 
 export default async function SellPage() {

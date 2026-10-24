@@ -4,6 +4,7 @@ import { LISTINGS, getListing } from "@/data/catalog";
 import { storeRead } from "@/lib/store";
 import { ListingDetail } from "@/components/listing-detail";
 import { breadcrumbJsonLd } from "@/lib/seo";
+import { listingBreadcrumbs, listingKeywords, productSchema } from "@/lib/category-seo";
 
 // Store previews are per-viewer (admin/owner only) — never statically cache.
 export const dynamic = "force-dynamic";
@@ -15,22 +16,46 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const l = getListing(params.slug);
   if (l) {
+    const canonical = `https://chap.co.ke/classifieds/${l.slug}`;
     return {
       title: l.title,
       description: l.description.slice(0, 160),
-      alternates: { canonical: `https://chap.co.ke/classifieds/${l.slug}` },
-      openGraph: { title: l.title, images: [l.images[0]] },
+      keywords: listingKeywords(l),
+      alternates: { canonical },
+      openGraph: {
+        type: "website",
+        title: l.title,
+        description: l.description.slice(0, 160),
+        url: canonical,
+        siteName: "chap.co.ke",
+        locale: "en_KE",
+        images: l.images[0] ? [{ url: l.images[0], alt: l.title }] : undefined,
+      },
+      twitter: { card: "summary_large_image", title: l.title, description: l.description.slice(0, 160), images: l.images[0] ? [l.images[0]] : undefined },
+      robots: { index: true, follow: true },
     };
   }
   const { resolveStoreDetail } = await import("@/lib/live-listings");
   const resolved = await resolveStoreDetail(params.slug);
-  if (!resolved) return { title: "Listing not found" };
+  if (!resolved) return { title: "Listing not found", robots: { index: false, follow: true } };
+  const title = resolved.previewStatus ? `Preview: ${resolved.listing.title}` : resolved.listing.title;
+  const canonical = `https://chap.co.ke/classifieds/${resolved.listing.slug}`;
   return {
-    title: resolved.previewStatus ? `Preview: ${resolved.listing.title}` : resolved.listing.title,
+    title,
     description: resolved.listing.description.slice(0, 160),
-    alternates: { canonical: `https://chap.co.ke/classifieds/${resolved.listing.slug}` },
-    openGraph: { title: resolved.listing.title, images: [resolved.listing.images[0]] },
-    robots: resolved.previewStatus ? { index: false, follow: false } : undefined,
+    keywords: listingKeywords(resolved.listing),
+    alternates: { canonical },
+    openGraph: {
+      type: "website",
+      title,
+      description: resolved.listing.description.slice(0, 160),
+      url: canonical,
+      siteName: "chap.co.ke",
+      locale: "en_KE",
+      images: resolved.listing.images[0] ? [{ url: resolved.listing.images[0], alt: resolved.listing.title }] : undefined,
+    },
+    twitter: { card: "summary_large_image", title, description: resolved.listing.description.slice(0, 160), images: resolved.listing.images[0] ? [resolved.listing.images[0]] : undefined },
+    robots: resolved.previewStatus ? { index: false, follow: false } : { index: true, follow: true },
   };
 }
 
@@ -45,11 +70,13 @@ export default async function ClassifiedDetail({ params }: { params: { slug: str
     const shopInfo = await resolveShopInfo(staticHit.shopSlug);
     const { getSellerPlan } = await import("@/lib/plans");
     const sellerPlan = staticHit.ownerId ? (await getSellerPlan(staticHit.ownerId).catch(() => null))?.planId ?? null : null;
-    const jsonLd = breadcrumbJsonLd([
-      { name: "Home", url: "https://chap.co.ke/" },
-      { name: "Classifieds", url: "https://chap.co.ke/classifieds" },
-      { name: staticHit.title, url: `https://chap.co.ke/classifieds/${staticHit.slug}` },
-    ]);
+    const jsonLd = {
+      "@context": "https://schema.org",
+      "@graph": [
+        ...(staticHit.price > 0 ? [productSchema(staticHit)] : []),
+        breadcrumbJsonLd(listingBreadcrumbs(staticHit, { name: "Classifieds", url: "/classifieds" })),
+      ],
+    };
     return <ListingDetail listing={staticHit} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} />;
   }
   const { resolveStoreDetail } = await import("@/lib/live-listings");
@@ -63,10 +90,12 @@ export default async function ClassifiedDetail({ params }: { params: { slug: str
   const shopInfo = await resolveShopInfo(l.shopSlug);
   const { getSellerPlan: getPlan } = await import("@/lib/plans");
   const sellerPlan = l.ownerId ? (await getPlan(l.ownerId).catch(() => null))?.planId ?? null : null;
-  const jsonLd = breadcrumbJsonLd([
-    { name: "Home", url: "https://chap.co.ke/" },
-    { name: "Classifieds", url: "https://chap.co.ke/classifieds" },
-    { name: l.title, url: `https://chap.co.ke/classifieds/${l.slug}` },
-  ]);
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      ...(l.price > 0 ? [productSchema(l)] : []),
+      breadcrumbJsonLd(listingBreadcrumbs(l, { name: "Classifieds", url: "/classifieds" })),
+    ],
+  };
   return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} previewStatus={previewStatus} />;
 }

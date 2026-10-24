@@ -9,8 +9,9 @@ import { ChevronDown, ChevronRight, Heart, LogOut, MapPin, Menu, MessageCircle, 
 import { useCart } from "../cart-provider";
 import { NotificationsBell } from "../notifications-bell";
 import { CategoryIcon } from "../category-icon";
-import { KENYA_COUNTIES } from "@/lib/kenya";
+import { KENYA_COUNTIES, countySlug } from "@/lib/kenya";
 import { CATEGORIES, POPULAR_SEARCHES } from "@/data/catalog";
+import { slugify } from "@/lib/utils";
 
 export function Header({ user }: { user?: { name: string; role: string } | null }) {
   const router = useRouter();
@@ -52,7 +53,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
     } catch {}
     setLocOpen(false);
     setLocFilter("");
-    router.push(next === "all" ? "/location" : `/location/${encodeURIComponent(next)}`);
+    router.push(next === "all" ? "/location" : `/location/${countySlug(next)}`);
   };
 
   const locQuery = locFilter.trim().toLowerCase();
@@ -477,7 +478,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
                             {c.subcategories.map((s) => (
                               <li key={s}>
                                 <Link
-                                  href={`/search?category=${c.slug}&subcategory=${encodeURIComponent(s)}`}
+                                  href={`/browse/${c.slug}/${slugify(s)}`}
                                   onClick={() => setOpen(false)}
                                   className="block rounded-lg px-2 py-1.5 text-[13px] text-ink-500 hover:bg-sand-50 hover:text-brand-700"
                                 >

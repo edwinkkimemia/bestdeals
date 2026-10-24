@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Package } from "lucide-react";
 import { getStore } from "@/lib/store";
 import { formatKES } from "@/lib/format";
-import { LISTINGS } from "@/data/catalog";
 import { AdminButtons } from "../actions";
 import { AdminTable, Td, StatusChip, SectionHeading, SectionTabs, fmtDate, listingPath } from "../table";
 
@@ -14,9 +13,6 @@ export async function ListingsSection({ status }: { status: string }) {
   return (
     <div>
       <SectionHeading icon={Package}>Listing moderation ({items.length})</SectionHeading>
-      <p className="mt-1 text-sm text-ink-500">
-        Seller-submitted listings only — the {LISTINGS.length} static demo-catalogue listings on the storefront don&apos;t need moderation and aren&apos;t listed here.
-      </p>
       <SectionTabs base="/admin/listings" tabs={STATUSES} current={current} />
       <AdminTable
         columns={["Listing", "Type", "Price", "Seller", "Location", "Status", "Submitted", "Preview", "Actions"]}
