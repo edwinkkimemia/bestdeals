@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { LISTINGS, getListing } from "@/data/catalog";
+import { getCategoryBySlug } from "@/lib/categories";
 import { storeRead } from "@/lib/store";
 import { ListingDetail } from "@/components/listing-detail";
 import { breadcrumbJsonLd } from "@/lib/seo";
@@ -17,10 +18,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const l = getListing(params.slug);
   if (l) {
     const canonical = `https://chap.co.ke/product/${l.slug}`;
+    const category = await getCategoryBySlug(l.categorySlug);
     return {
       title: l.title,
       description: l.description.slice(0, 160),
-      keywords: listingKeywords(l),
+      keywords: listingKeywords(l, category ?? null),
       alternates: { canonical },
       openGraph: {
         type: "website",
@@ -40,10 +42,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!resolved) return { title: "Product not found", robots: { index: false, follow: true } };
   const title = resolved.previewStatus ? `Preview: ${resolved.listing.title}` : resolved.listing.title;
   const canonical = `https://chap.co.ke/product/${resolved.listing.slug}`;
+  const category = await getCategoryBySlug(resolved.listing.categorySlug);
   return {
     title,
     description: resolved.listing.description.slice(0, 160),
-    keywords: listingKeywords(resolved.listing),
+    keywords: listingKeywords(resolved.listing, category ?? null),
     alternates: { canonical },
     openGraph: {
       type: "website",
@@ -70,14 +73,15 @@ export default async function ProductPage({ params }: { params: { slug: string }
     const shopInfo = await resolveShopInfo(l.shopSlug);
     const { getSellerPlan } = await import("@/lib/plans");
     const sellerPlan = l.ownerId ? (await getSellerPlan(l.ownerId).catch(() => null))?.planId ?? null : null;
+    const category = await getCategoryBySlug(l.categorySlug);
     const jsonLd = {
       "@context": "https://schema.org",
       "@graph": [
-        productSchema(l),
-        breadcrumbJsonLd(listingBreadcrumbs(l, { name: "Browse", url: "/browse" })),
+        productSchema(l, category ?? null),
+        breadcrumbJsonLd(listingBreadcrumbs(l, { name: "Browse", url: "/browse" }, category ?? null)),
       ],
     };
-    return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} />;
+    return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} categoryName={category ? category.name : null} />;
   }
   // Seller-posted listing: `active` is public, anything else previews only
   // for admins / the owner / shop staff (banner inside ListingDetail).
@@ -92,12 +96,13 @@ export default async function ProductPage({ params }: { params: { slug: string }
   const shopInfo = await resolveShopInfo(listing.shopSlug);
   const { getSellerPlan: getPlan } = await import("@/lib/plans");
   const sellerPlan = listing.ownerId ? (await getPlan(listing.ownerId).catch(() => null))?.planId ?? null : null;
+  const category = await getCategoryBySlug(listing.categorySlug);
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
-      productSchema(listing),
-      breadcrumbJsonLd(listingBreadcrumbs(listing, { name: "Browse", url: "/browse" })),
+      productSchema(listing, category ?? null),
+      breadcrumbJsonLd(listingBreadcrumbs(listing, { name: "Browse", url: "/browse" }, category ?? null)),
     ],
   };
-  return <ListingDetail listing={listing} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} previewStatus={previewStatus} />;
+  return <ListingDetail listing={listing} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} previewStatus={previewStatus} categoryName={category ? category.name : null} />;
 }

@@ -8,6 +8,8 @@ import { AD_SLOTS } from "@/lib/ads";
 import { CartProvider } from "@/components/cart-provider";
 import { currentUser } from "@/lib/auth";
 import { storeRead } from "@/lib/store";
+import { getCategories } from "@/lib/categories";
+import { CATEGORIES } from "@/data/catalog";
 import { websiteJsonLd } from "@/lib/seo";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -47,6 +49,7 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser().catch(() => null);
+  const categories = await getCategories().catch(() => CATEGORIES);
   // Site-wide announcement bar (Admin → Settings). Silent when disabled/unset.
   const announcement = await storeRead(async (s) => {
     const [enabled, text] = await Promise.all([
@@ -66,6 +69,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             user={user ? { name: user.name, role: user.role } : null}
             adminUser={user ? { name: user.name, email: user.email } : null}
             announcement={announcement}
+            categories={categories}
             footer={<Footer />}
           >
             {children}

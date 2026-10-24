@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Fragment } from "react";
-import { CATEGORIES, LISTINGS } from "@/data/catalog";
+import { LISTINGS } from "@/data/catalog";
+import { getCategories } from "@/lib/categories";
 import { ListingCard } from "@/components/ui/listing-card";
 import { AdAfterEvery } from "@/components/ads";
 import { AD_SLOTS } from "@/lib/ads";
@@ -29,6 +30,7 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function ClassifiedsIndex() {
+  const categories = await getCategories();
   const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
   const live = (await getLiveStoreListings()).filter((l) => l.listingType === "classified");
   const items = shuffleFeaturedFirst(
@@ -47,12 +49,13 @@ export default async function ClassifiedsIndex() {
       <h1 className="sr-only">Classifieds</h1>
 
       <CategoryStrip
+        categories={categories}
         className="mt-2"
         title="Browse by category"
         viewAllHref="/search?type=classified"
         viewAllLabel="View all ads →"
         hrefFor={(c) => `/search?category=${c.slug}&type=classified`}
-        counts={Object.fromEntries(CATEGORIES.map((c) => [c.slug, catCount(c.slug)]))}
+        counts={Object.fromEntries(categories.map((c) => [c.slug, catCount(c.slug)]))}
       />
 
       <h2 className="mb-2 mt-5 font-bold">Latest classifieds ({items.length})</h2>

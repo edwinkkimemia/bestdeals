@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Fragment } from "react";
 import { ChevronDown, SlidersHorizontal } from "lucide-react";
-import { CATEGORIES, categoryBySlug } from "@/data/catalog";
+import { getCategories } from "@/lib/categories";
 import { searchAll, type SearchParams } from "@/lib/search";
 import { searchEntities } from "@/lib/entity-search";
 import { ListingCard } from "@/components/ui/listing-card";
@@ -24,6 +24,7 @@ export const metadata = {
 type PageType = "all" | "product" | "classified" | "service" | "sellers" | "shops";
 
 export default async function SearchPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+  const categories = await getCategories();
   // Canonicalises case ("nakuru" → "Nakuru") and towns ("Eldoret" → "Uasin Gishu").
   const rawCounty = (searchParams.county ?? "").trim();
   const county = resolveCounty(rawCounty);
@@ -85,7 +86,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
   };
   const total =
     pageType === "sellers" ? sellerCount : pageType === "shops" ? shopCount : pageType === "all" ? allCount : listingTotal;
-  const cat = categoryBySlug(params.category ?? "");
+  const cat = categories.find((c) => c.slug === params.category);
 
   const keep = new URLSearchParams();
   if (params.q) keep.set("q", params.q);
@@ -234,7 +235,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Recor
               <label className="label-bd" htmlFor="f-cat">Category</label>
               <select id="f-cat" name="category" defaultValue={params.category} className="input-bd">
                 <option value="all">All categories</option>
-                {CATEGORIES.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+                {categories.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
               </select>
             </div>
           )}

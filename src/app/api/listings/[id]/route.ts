@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { listingSchema } from "@/lib/validators";
+import { listingSchemaFor } from "@/lib/validators";
 import { currentUser } from "@/lib/auth";
 import { canManageListing } from "@/lib/gate";
 import { normalizeListingImages } from "@/lib/image-urls";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
+import { categorySelectionError, getCategories } from "@/lib/categories";
 
 async function owned(id: string) {
   const user = await currentUser();
@@ -33,11 +34,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   if (!rl.ok) return NextResponse.json({ error: "Too many edits. Try again later." }, { status: 429 });
 
   const body = await req.json().catch(() => ({}));
-  const parsed = listingSchema.safeParse(body);
+  const categories = await getCategories();
+  const parsed = listingSchemaFor(categories).safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Check the form and try again." }, { status: 400 });
   }
   const d = parsed.data;
+  const categoryError = await categorySelectionError(d.categorySlug, d.subcategory);
+  if (categoryError) return NextResponse.json({ error: categoryError }, { status: 400 });
   if (d.compareAt && d.compareAt <= d.price) {
     return NextResponse.json({ error: "Previous price must be higher than the current price, or left empty." }, { status: 400 });
   }

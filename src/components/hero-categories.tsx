@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { CATEGORIES } from "@/data/catalog";
+import { CATEGORIES, type Category } from "@/data/catalog";
 import { CategoryIcon } from "@/components/category-icon";
 import { slugify } from "@/lib/utils";
 
@@ -12,9 +12,9 @@ import { slugify } from "@/lib/utils";
  * subcategories in a flyout — every row navigates (subcategory → filtered
  * search, category → its page).
  */
-export function HeroCategories() {
+export function HeroCategories({ categories = CATEGORIES }: { categories?: Category[] }) {
   const [open, setOpen] = useState<string | null>(null);
-  const active = CATEGORIES.find((c) => c.slug === open);
+  const active = categories.find((c) => c.slug === open);
 
   return (
     <nav
@@ -24,7 +24,7 @@ export function HeroCategories() {
     >
       <p className="px-2.5 pb-1 pt-1.5 text-[11px] font-bold uppercase tracking-wide text-ink-400">Browse by category</p>
       <ul>
-        {CATEGORIES.slice(0, 12).map((c) => {
+        {categories.slice(0, 12).map((c) => {
           const isOpen = open === c.slug;
           return (
             <li key={c.slug}>
@@ -56,7 +56,7 @@ export function HeroCategories() {
         })}
       </ul>
       <Link href="/browse" className="mt-1 block rounded-xl px-2.5 py-2 text-[13px] font-bold text-brand-700 hover:bg-brand-50">
-        View all {CATEGORIES.length} categories →
+        View all {categories.length} categories →
       </Link>
 
       {active && active.subcategories.length > 0 && (

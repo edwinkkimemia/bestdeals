@@ -5,6 +5,7 @@ import { canManageListing } from "@/lib/gate";
 import { redirect, notFound } from "next/navigation";
 import { getListing } from "@/data/catalog";
 import { getStore } from "@/lib/store";
+import { getCategories } from "@/lib/categories";
 import { formatKES } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { ListingForm } from "@/components/listing-form";
@@ -22,6 +23,7 @@ export default async function ManageListing({
 }) {
   const user = await currentUser();
   if (!user) redirect(`/auth/signin?next=${encodeURIComponent(`/dashboard/listings/${params.id}`)}`);
+  const categories = await getCategories();
   const stored = await getStore().getListing(params.id);
   const demo = !stored ? getListing(params.id) : null;
   if (!stored && !demo) notFound();
@@ -107,6 +109,7 @@ export default async function ManageListing({
       <ListingForm
         listingId={stored!.id}
         submitLabel="Save changes"
+        categories={categories}
         initialValues={{
           title: stored!.title,
           description: stored!.description,

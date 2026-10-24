@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { currentUser } from "@/lib/auth";
+import { getCategories } from "@/lib/categories";
 import { ListingForm } from "@/components/listing-form";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
@@ -14,6 +15,7 @@ export const metadata = {
 
 export default async function SellPage() {
   const user = await currentUser().catch(() => null);
+  const categories = await getCategories();
 
   if (!user) {
     return (
@@ -40,7 +42,7 @@ export default async function SellPage() {
         <VerificationGate userId={user.id} />
         <p className="mt-1 text-sm text-ink-500">Fields adapt to the category. Photos upload from your phone; listings go live after moderation.</p>
         <Suspense fallback={<div className="card mt-4 p-8 text-center text-sm">Loading form…</div>}>
-          <ListingForm />
+          <ListingForm categories={categories} />
         </Suspense>
         <div className="mt-4 flex flex-wrap gap-2 text-sm">
           <Link href="/dashboard/listings" className="link-bd">My listings →</Link>

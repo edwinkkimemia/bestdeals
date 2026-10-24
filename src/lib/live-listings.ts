@@ -40,7 +40,7 @@ export function storeRecordToListing(s: ListingRecord): Listing {
     slug: s.slug,
     title: s.title,
     description: s.description,
-    categorySlug: s.categorySlug || "other",
+    categorySlug: s.categorySlug || "",
     subcategory: s.subcategory,
     price: s.price,
     compareAt: s.compareAt ?? null,

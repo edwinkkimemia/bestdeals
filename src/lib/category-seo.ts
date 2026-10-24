@@ -140,8 +140,12 @@ export function sellerPath(l: Pick<Listing, "shopSlug" | "sellerName">): string 
 }
 
 /** Schema breadcrumb trail for a listing: Home → section → category → listing. */
-export function listingBreadcrumbs(l: Listing, section: { name: string; url: string }): { name: string; url: string }[] {
-  const category = categoryBySlug(l.categorySlug);
+export function listingBreadcrumbs(
+  l: Listing,
+  section: { name: string; url: string },
+  categoryOverride?: Category | null
+): { name: string; url: string }[] {
+  const category = categoryOverride === null ? undefined : categoryOverride ?? categoryBySlug(l.categorySlug);
   return [
     { name: "Home", url: "/" },
     section,
@@ -155,8 +159,8 @@ export function listingBreadcrumbs(l: Listing, section: { name: string; url: str
 }
 
 /** Keyword set for a product/classified/service page. */
-export function listingKeywords(l: Listing): string[] {
-  const category = categoryBySlug(l.categorySlug);
+export function listingKeywords(l: Listing, categoryOverride?: Category | null): string[] {
+  const category = categoryOverride === null ? undefined : categoryOverride ?? categoryBySlug(l.categorySlug);
   const brand = String(l.attributes?.brand ?? "").trim();
   return [
     l.title,
@@ -172,8 +176,8 @@ export function listingKeywords(l: Listing): string[] {
 }
 
 /** Product schema for a shop listing (priced items only). */
-export function productSchema(l: Listing): Record<string, unknown> {
-  const category = categoryBySlug(l.categorySlug);
+export function productSchema(l: Listing, categoryOverride?: Category | null): Record<string, unknown> {
+  const category = categoryOverride === null ? undefined : categoryOverride ?? categoryBySlug(l.categorySlug);
   return productJsonLd({
     name: l.title,
     description: l.description,

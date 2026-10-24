@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { listingSchema, type ListingInput } from "@/lib/validators";
-import { CATEGORIES, categoryBySlug } from "@/data/catalog";
+import { listingSchemaFor, type ListingInput } from "@/lib/validators";
+import { CATEGORIES, type Category } from "@/data/catalog";
 import { COUNTY_NAMES, townsFor } from "@/lib/kenya";
 import { parseImageLinks } from "@/lib/image-urls";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -17,7 +17,7 @@ const TYPES = ["product", "classified", "service"] as const;
 type Initial = Partial<ListingInput> & { images?: string[] };
 
 /** Post-a-listing form. Create mode respects ?type=; edit mode PUTs to /api/listings/[id]. */
-export function ListingForm({ listingId, initialValues, submitLabel }: { listingId?: string; initialValues?: Initial; submitLabel?: string }) {
+export function ListingForm({ listingId, initialValues, submitLabel, categories = CATEGORIES }: { listingId?: string; initialValues?: Initial; submitLabel?: string; categories?: Category[] }) {
   const sp = useSearchParams();
   const router = useRouter();
   const isEdit = !!listingId;
@@ -36,6 +36,7 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
   const [picked, setPicked] = useState<{ file: File; url: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [linkText, setLinkText] = useState((initialValues?.images ?? []).join(", "));
+  const schema = useMemo(() => listingSchemaFor(categories), [categories]);
   // URLs currently contributed by the links box, so typing there merges
   // instead of wiping uploaded photos (the old bug).
   const linkUrls = useRef<string[]>(parseImageLinks((initialValues?.images ?? []).join(", ")));
@@ -74,7 +75,7 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
   };
 
   const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm({
-    resolver: zodResolver(listingSchema),
+    resolver: zodResolver(schema),
     defaultValues: {
       listingType: (initialValues?.listingType as never) ?? ((TYPES as readonly string[]).includes(typeParam ?? "") ? (typeParam as never) : ("classified" as never)),
       condition: (initialValues?.condition as never) ?? ("new" as never),
@@ -96,7 +97,7 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
   const catSlug = watch("categorySlug");
   const county = watch("county");
   const description = (watch("description") as string | undefined) ?? "";
-  const cat = categoryBySlug(catSlug ?? "");
+  const cat = categories.find((c) => c.slug === catSlug);
 
   return (
     <form
@@ -173,7 +174,7 @@ export function ListingForm({ listingId, initialValues, submitLabel }: { listing
       <div className="grid gap-3 sm:grid-cols-2">
         <div><label className="label-bd" htmlFor="l-cat">Category</label>
           <select id="l-cat" className="input-bd" {...register("categorySlug")}>
-            <option value="">Select…</option>{CATEGORIES.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
+            <option value="">Select…</option>{categories.map((c) => <option key={c.slug} value={c.slug}>{c.name}</option>)}
           </select>{errors.categorySlug && <p className="text-xs text-red-600">Required</p>}</div>
         <div><label className="label-bd" htmlFor="l-cond">Condition</label>
           <select id="l-cond" className="input-bd" {...register("condition")}>

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { listingSchema } from "@/lib/validators";
+import { listingSchemaFor } from "@/lib/validators";
 import { currentUser } from "@/lib/auth";
 import { requireVerifiedSeller } from "@/lib/gate";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { getSellerPlan, countLiveListings, planAllowsListings, limitMessage } from "@/lib/plans";
 import { normalizeListingImages } from "@/lib/image-urls";
+import { categorySelectionError, getCategories } from "@/lib/categories";
 
 /** Listing intake: verified sellers only; validates, spam-checks, queues for moderation. */
 export async function POST(req: NextRequest) {
@@ -44,11 +45,14 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const parsed = listingSchema.safeParse(body);
+  const categories = await getCategories();
+  const parsed = listingSchemaFor(categories).safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Check the form and try again." }, { status: 400 });
   }
   const d = parsed.data;
+  const categoryError = await categorySelectionError(d.categorySlug, d.subcategory);
+  if (categoryError) return NextResponse.json({ error: categoryError }, { status: 400 });
   if (d.compareAt && d.compareAt <= d.price) {
     return NextResponse.json({ error: "Previous price must be higher than the current price, or left empty." }, { status: 400 });
   }

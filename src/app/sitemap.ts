@@ -1,4 +1,5 @@
-import { CATEGORIES, LISTINGS, SHOPS } from "@/data/catalog";
+import { LISTINGS, SHOPS } from "@/data/catalog";
+import { getCategories } from "@/lib/categories";
 import { COUNTY_NAMES, countyMatches, countySlug } from "@/lib/kenya";
 import { INFO_PAGES } from "@/content/info-pages";
 import { storeRead } from "@/lib/store";
@@ -51,7 +52,7 @@ export default async function sitemap(): Promise<Entry[]> {
   // thin-inventory pages (which are noindex on-page) never enter the sitemap.
   const inventory = [
     ...LISTINGS.map((l) => ({ categorySlug: l.categorySlug, subcategory: (l.subcategory ?? "").toLowerCase(), county: l.county })),
-    ...live.listings.map((l) => ({ categorySlug: l.categorySlug || "other", subcategory: (l.subcategory ?? "").toLowerCase(), county: l.county })),
+    ...live.listings.map((l) => ({ categorySlug: l.categorySlug || "", subcategory: (l.subcategory ?? "").toLowerCase(), county: l.county })),
   ];
   const categoryCount = new Map<string, number>();
   const subcategoryCount = new Map<string, number>();
@@ -63,7 +64,8 @@ export default async function sitemap(): Promise<Entry[]> {
     }
   }
 
-  for (const c of CATEGORIES) {
+  const categories = await getCategories();
+  for (const c of categories) {
     if ((categoryCount.get(c.slug) ?? 0) === 0) continue;
     add({ url: `${base}/browse/${c.slug}`, lastModified: now, changeFrequency: "daily", priority: 0.8 });
     for (const sub of c.subcategories) {

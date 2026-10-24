@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Fragment } from "react";
 import { LISTINGS } from "@/data/catalog";
+import { getCategories } from "@/lib/categories";
 import { ListingCard } from "@/components/ui/listing-card";
 import { AdAfterEvery } from "@/components/ads";
 import { AD_SLOTS } from "@/lib/ads";
@@ -29,6 +30,7 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function BrowseIndex() {
+  const categories = await getCategories();
   const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
   const live = (await getLiveStoreListings()).filter((l) => l.listingType === "product");
   const products = shuffleFeaturedFirst(
@@ -48,7 +50,7 @@ export default async function BrowseIndex() {
         Compare prices in KES, check delivery options and buy online or contact the seller.
       </p>
 
-      <CategoryStrip className="mt-4" title="Browse by category" viewAllHref={null} />
+      <CategoryStrip categories={categories} className="mt-4" title="Browse by category" viewAllHref={null} />
 
       <div className="mb-2 mt-6 flex items-end justify-between">
         <h2 className="font-bold">All shoppable products ({products.length})</h2>

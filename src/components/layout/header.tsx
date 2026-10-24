@@ -10,10 +10,10 @@ import { useCart } from "../cart-provider";
 import { NotificationsBell } from "../notifications-bell";
 import { CategoryIcon } from "../category-icon";
 import { KENYA_COUNTIES, countySlug } from "@/lib/kenya";
-import { CATEGORIES, POPULAR_SEARCHES } from "@/data/catalog";
+import { CATEGORIES, POPULAR_SEARCHES, type Category } from "@/data/catalog";
 import { slugify } from "@/lib/utils";
 
-export function Header({ user }: { user?: { name: string; role: string } | null }) {
+export function Header({ user, categories = CATEGORIES }: { user?: { name: string; role: string } | null; categories?: Category[] }) {
   const router = useRouter();
   const { count } = useCart();
   const [open, setOpen] = useState(false);
@@ -448,7 +448,7 @@ export function Header({ user }: { user?: { name: string; role: string } | null 
               </div>
               <nav aria-label="Browse by category">
                 <ul className="space-y-0.5">
-                  {CATEGORIES.map((c) => {
+                  {categories.map((c) => {
                     const expanded = openCat === c.slug;
                     return (
                       <li key={c.slug}>

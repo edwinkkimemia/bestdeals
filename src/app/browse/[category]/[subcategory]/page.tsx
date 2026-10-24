@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { CATEGORIES, categoryBySlug } from "@/data/catalog";
+import { getCategoryBySlug } from "@/lib/categories";
 import { searchAll, shuffleFeaturedFirst } from "@/lib/search";
 import { CategoryLanding } from "@/components/category-landing";
 import {
@@ -13,7 +13,6 @@ import {
   categoryPath,
   priceRangeOf,
   subcategoryBySlug,
-  subcategorySlug,
   topBrandsOf,
   topCountiesOf,
 } from "@/lib/category-seo";
@@ -21,14 +20,8 @@ import {
 // Live inventory changes constantly; keep the landing page fresh.
 export const dynamic = "force-dynamic";
 
-export function generateStaticParams() {
-  return CATEGORIES.flatMap((c) =>
-    c.subcategories.map((s) => ({ category: c.slug, subcategory: subcategorySlug(s) }))
-  );
-}
-
 const getSubcategoryData = cache(async (categorySlug: string, subSlug: string) => {
-  const category = categoryBySlug(categorySlug);
+  const category = await getCategoryBySlug(categorySlug);
   if (!category) return null;
   const subcategory = subcategoryBySlug(category, subSlug);
   if (!subcategory) return null;

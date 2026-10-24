@@ -111,7 +111,7 @@ function ShareButtons({ title }: { title: string }) {
   );
 }
 
-export function ListingDetail({ listing, related, moreFromSeller, reviews, listingReviews, jsonLd, sellerPhotoUrl, previewStatus, shopInfo, sellerPlan }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; listingReviews?: ReviewRecord[]; jsonLd: Record<string, unknown>; sellerPhotoUrl?: string | null; previewStatus?: string | null; shopInfo?: { name: string; logoUrl: string | null; verified: boolean; businessCategory: string; town: string; county: string; phone?: string | null; planId?: string | null } | null; sellerPlan?: string | null }) {
+export function ListingDetail({ listing, related, moreFromSeller, reviews, listingReviews, jsonLd, sellerPhotoUrl, previewStatus, shopInfo, sellerPlan, categoryName }: { listing: Listing; related: Listing[]; moreFromSeller?: Listing[]; reviews?: ReviewRecord[]; listingReviews?: ReviewRecord[]; jsonLd: Record<string, unknown>; sellerPhotoUrl?: string | null; previewStatus?: string | null; shopInfo?: { name: string; logoUrl: string | null; verified: boolean; businessCategory: string; town: string; county: string; phone?: string | null; planId?: string | null } | null; sellerPlan?: string | null; categoryName?: string | null }) {
   const { add } = useCart();
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
@@ -120,6 +120,9 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
   const [recent, setRecent] = useState<Listing[]>([]);
 
   const shop = listing.shopSlug ? getShop(listing.shopSlug) : undefined;
+  // `null` means the admin looked up the live taxonomy and it no longer exists
+  // (hidden category) — don't fall back to the static catalogue in that case.
+  const categoryLabel = categoryName === null ? null : categoryName ?? (listing.categorySlug ? categoryBySlug(listing.categorySlug)?.name : undefined);
   // Shop listings show the shop identity, not the owner's personal profile.
   const shopCard = shopInfo ?? (shop ? { name: shop.name, logoUrl: shop.logo, verified: shop.verified, businessCategory: shop.businessCategory, town: shop.town, county: shop.county, planId: "free" } : null);
   // Avatar: owner's photo for individual sellers, shop logo for shop listings.
@@ -194,10 +197,14 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
           <Link href={listing.listingType === "classified" ? "/classifieds" : listing.listingType === "service" ? "/services" : "/browse"} className="font-medium hover:text-brand-700 hover:underline">
             {listing.listingType === "classified" ? "Classifieds" : listing.listingType === "service" ? "Services" : "Browse"}
           </Link>
-          <span aria-hidden className="shrink-0 text-ink-300">/</span>
-          <Link href={`/browse/${listing.categorySlug}`} className="font-medium hover:text-brand-700 hover:underline">
-            {categoryBySlug(listing.categorySlug)?.name ?? "Category"}
-          </Link>
+          {listing.categorySlug && categoryLabel && (
+            <>
+              <span aria-hidden className="shrink-0 text-ink-300">/</span>
+              <Link href={`/browse/${listing.categorySlug}`} className="font-medium hover:text-brand-700 hover:underline">
+                {categoryLabel}
+              </Link>
+            </>
+          )}
           <span aria-hidden className="shrink-0 text-ink-300">/</span>
           <span className="min-w-0 break-words font-semibold text-ink-700">{listing.title.slice(0, 60)}…</span>
         </div>

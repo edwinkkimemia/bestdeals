@@ -309,7 +309,7 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
         slug: s.slug,
         title: s.title,
         description: s.description,
-        categorySlug: s.categorySlug || "other",
+        categorySlug: s.categorySlug || "",
         subcategory: s.subcategory,
         price: s.price,
         compareAt: s.compareAt,

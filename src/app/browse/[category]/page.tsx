@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { CATEGORIES, categoryBySlug } from "@/data/catalog";
+import { getCategoryBySlug } from "@/lib/categories";
 import { searchAll, shuffleFeaturedFirst } from "@/lib/search";
 import { CategoryLanding } from "@/components/category-landing";
 import {
@@ -18,13 +18,9 @@ import {
 // Fresh order every visit: featured/promoted lead, the rest shuffle.
 export const dynamic = "force-dynamic";
 
-export function generateStaticParams() {
-  return CATEGORIES.map((c) => ({ category: c.slug }));
-}
-
 /** One data fetch per request shared by generateMetadata + the page render. */
 const getCategoryData = cache(async (slug: string) => {
-  const category = categoryBySlug(slug);
+  const category = await getCategoryBySlug(slug);
   if (!category) return null;
   const { items, total } = await searchAll({
     category: category.slug,

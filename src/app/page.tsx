@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Fragment } from "react";
 import type { Metadata } from "next";
 import { ArrowRight, BadgeCheck, MapPin, Search, ShieldCheck, Store, Truck } from "lucide-react";
-import { CATEGORIES, LISTINGS, POPULAR_SEARCHES } from "@/data/catalog";
+import { LISTINGS, POPULAR_SEARCHES } from "@/data/catalog";
+import { getCategories } from "@/lib/categories";
 import { currentUser } from "@/lib/auth";
 import { ListingCard } from "@/components/ui/listing-card";
 import { HeroCategories } from "@/components/hero-categories";
@@ -46,15 +47,14 @@ export const metadata: Metadata = {
 // Fresh rails on every visit: shuffle runs per request (below), featured/promoted always lead.
 export const dynamic = "force-dynamic";
 
-const ICONS: Record<string, string> = {};
-
 export default async function HomePage() {
   const user = await currentUser().catch(() => null);
+  const categories = await getCategories();
   const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
   // Hero collage: four different categories (and distinct photos) shuffled on every request.
   const seenHeroImages = new Set<string>();
   const heroCategories = shuffleSeeded(
-    CATEGORIES.filter((c) => c.slug !== "other"),
+    categories,
     Math.floor(Math.random() * 1_000_000_000)
   )
     .filter((c) => {
@@ -87,7 +87,7 @@ export default async function HomePage() {
       <section className="bg-gradient-to-b from-brand-50 via-white to-white">
         <div className="container-bd grid items-center gap-6 py-8 md:py-10 lg:grid-cols-[240px_minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-8">
           {/* Categories column — desktop (hover/tap reveals subcategories) */}
-          <HeroCategories />
+          <HeroCategories categories={categories} />
           <div className="min-w-0">
             <h1 className="text-[28px] font-extrabold leading-[1.08] tracking-tight text-ink-900 sm:text-4xl xl:text-5xl">
               Discover It. Buy It. <span className="text-brand-600">Sell It.</span>
@@ -138,7 +138,7 @@ export default async function HomePage() {
         </div>
         {/* Mobile/tablet swipeable category strip — all categories, one compact row */}
         <div className="container-bd pb-7 lg:hidden">
-          <CategoryStrip title="Browse by category" viewAllHref="/browse" />
+          <CategoryStrip categories={categories} title="Browse by category" viewAllHref="/browse" />
         </div>
       </section>
 
@@ -170,7 +170,7 @@ export default async function HomePage() {
 
       {/* B: categories — compact desktop rail; mobile uses the hero slider */}
       <section className="container-bd hidden py-8 lg:block">
-        <CategoryStrip title="Browse categories" viewAllHref="/browse" />
+        <CategoryStrip categories={categories} title="Browse categories" viewAllHref="/browse" />
       </section>
 
       {/* C: Today's Best Deals — genuine savings only */}

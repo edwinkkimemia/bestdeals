@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { categoryBySlug } from "@/data/catalog";
+import { CATEGORIES, type Category } from "@/data/catalog";
 
 export const signupSchema = z.object({
   name: z.string().min(2, "Enter your name").max(80),
@@ -28,32 +28,42 @@ export const passwordResetSchema = z.object({
   password: z.string().min(8, "Minimum 8 characters").max(72),
 });
 
-export const listingSchema = z.object({
-  title: z.string().min(8, "Title needs at least 8 characters").max(120),
-  description: z.string().min(20, "Describe the item (min 20 chars)").max(1000, "Keep it under 1000 characters"),
-  categorySlug: z.string().min(1, "Choose a category"),
-  subcategory: z.string().max(60).optional().default(""),
-  price: z.coerce.number().int().min(1, "Enter a price in KES").max(500_000_000),
-  compareAt: z.coerce.number().int().min(0).max(500_000_000).optional().nullable(),
-  condition: z.enum(["new", "like_new", "used_good", "used_fair", "refurbished"]),
-  listingType: z.enum(["product", "classified", "service"]),
-  county: z.string().min(1, "Choose a county"),
-  town: z.string().min(1, "Choose a town"),
-  negotiable: z.boolean().default(false),
-  transactionMethod: z.enum(["buy_online", "contact_seller", "request_quote", "enquiry"]),
-  stock: z.coerce.number().int().min(0).max(100000).default(1),
-  // Absolute URLs or server-issued /uploads/* paths (relative refs can't use .url()).
-  images: z.array(z.string().min(1).max(500)).max(8).default([]),
-  attributes: z.record(z.string(), z.string()).default({}),
-}).refine(
-  (d) => {
-    const sub = (d.subcategory ?? "").trim();
-    if (!sub) return true;
-    const cat = categoryBySlug(d.categorySlug);
-    return !!cat && cat.subcategories.some((s) => s.toLowerCase() === sub.toLowerCase());
-  },
-  { message: "Pick a subcategory from the list", path: ["subcategory"] }
-);
+/**
+ * Listing validation with a taxonomy-aware subcategory check. The storefront
+ * passes its live (admin-managed) categories; tests/server defaults use the
+ * static catalogue.
+ */
+export function listingSchemaFor(categories: Category[] = CATEGORIES) {
+  return z.object({
+    title: z.string().min(8, "Title needs at least 8 characters").max(120),
+    description: z.string().min(20, "Describe the item (min 20 chars)").max(1000, "Keep it under 1000 characters"),
+    categorySlug: z.string().min(1, "Choose a category"),
+    subcategory: z.string().max(60).optional().default(""),
+    price: z.coerce.number().int().min(1, "Enter a price in KES").max(500_000_000),
+    compareAt: z.coerce.number().int().min(0).max(500_000_000).optional().nullable(),
+    condition: z.enum(["new", "like_new", "used_good", "used_fair", "refurbished"]),
+    listingType: z.enum(["product", "classified", "service"]),
+    county: z.string().min(1, "Choose a county"),
+    town: z.string().min(1, "Choose a town"),
+    negotiable: z.boolean().default(false),
+    transactionMethod: z.enum(["buy_online", "contact_seller", "request_quote", "enquiry"]),
+    stock: z.coerce.number().int().min(0).max(100000).default(1),
+    // Absolute URLs or server-issued /uploads/* paths (relative refs can't use .url()).
+    images: z.array(z.string().min(1).max(500)).max(8).default([]),
+    attributes: z.record(z.string(), z.string()).default({}),
+  }).refine(
+    (d) => {
+      const sub = (d.subcategory ?? "").trim();
+      if (!sub) return true;
+      const cat = categories.find((c) => c.slug === d.categorySlug);
+      if (!cat) return false;
+      return cat.subcategories.some((s) => s.toLowerCase() === sub.toLowerCase());
+    },
+    { message: "Pick a subcategory from the list", path: ["subcategory"] }
+  );
+}
+
+export const listingSchema = listingSchemaFor();
 
 export const shopSchema = z.object({
   name: z.string().min(3).max(80),

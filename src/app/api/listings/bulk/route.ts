@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireVerifiedSeller } from "@/lib/gate";
 import { getStore } from "@/lib/store";
-import { listingSchema } from "@/lib/validators";
+import { listingSchemaFor } from "@/lib/validators";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { getSellerPlan, goldRequiredMessage } from "@/lib/plans";
-import { categoryBySlug } from "@/data/catalog";
+import { getCategories } from "@/lib/categories";
 import { resolveCounty, townsFor } from "@/lib/kenya";
 import { parseCSV } from "@/lib/csv";
 
@@ -53,6 +53,8 @@ export async function POST(req: NextRequest) {
   }
   const data = rows.slice(1, MAX_ROWS + 1);
   const store = getStore();
+  const categories = await getCategories();
+  const categoryMap = new Map(categories.map((c) => [c.slug, c]));
   const created: string[] = [];
   const errors: { row: number; error: string }[] = [];
 
@@ -62,7 +64,12 @@ export async function POST(req: NextRequest) {
     const cell = (name: string) => (idx(name) === -1 ? "" : (r[idx(name)] ?? "").trim());
     try {
       const categorySlug = cell("category");
-      if (!categoryBySlug(categorySlug)) throw new Error(`Unknown category "${categorySlug || "—"}".`);
+      const category = categoryMap.get(categorySlug);
+      if (!category) throw new Error(`Unknown category "${categorySlug || "—"}".`);
+      const subcategory = cell("subcategory");
+      if (subcategory && !category.subcategories.some((s) => s.toLowerCase() === subcategory.toLowerCase())) {
+        throw new Error(`Unknown subcategory "${subcategory}" for ${category.name}.`);
+      }
       const county = resolveCounty(cell("county"));
       if (county === "all") throw new Error(`Unknown county "${cell("county") || "—"}".`);
       const town = cell("town");
@@ -84,7 +91,7 @@ export async function POST(req: NextRequest) {
       const price = Number(cell("price"));
       const stock = cell("stock") === "" ? 1 : Number(cell("stock"));
       const compareAt = cell("compareat") === "" ? null : Number(cell("compareat"));
-      const parsed = listingSchema.safeParse({
+      const parsed = listingSchemaFor(categories).safeParse({
         title: cell("title"),
         description: cell("description"),
         categorySlug,

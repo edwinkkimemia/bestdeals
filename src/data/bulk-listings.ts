@@ -51,7 +51,8 @@ const CAT_IMG: Record<string, string> = {
   "books-education": u("photo-1481627834876-b7833e8f5570"),
   "food-household": u("photo-1542838132-92c53300491e"),
   services: u("photo-1521791136064-7986c2920216"),
-  other: u("photo-1441986300917-64674bd600d8"),
+  "safety-equipment": u("photo-1581092160562-40aa08e78837"),
+  "solar-energy": u("photo-1509391366360-2e959784a276"),
 };
 
 type Opts = {
@@ -210,6 +211,6 @@ export const BULK_LISTINGS: Listing[] = [
   B("Maths/Physics Home Tutor (Thika)", "KCSE maths/physics tutor, 6 years experience, proven A-grade track record.", "services", 1500, { sub: "Tutoring", type: "service", seller: 4, imgs: [u("photo-1503676260728-1c00da094a0b")], attr: { coverage: "Thika, Ruiru", priceRange: "KSh 1,500/hr" }, hrs: 96 }),
   B("Event MC + Decor (Nakuru)", "Weddings, ruracios and corporate events. Sound, decor and coordination packages.", "services", 25000, { sub: "Events", type: "service", seller: 7, attr: { coverage: "Nakuru, Naivasha", priceRange: "From KSh 25,000" }, hrs: 188 }),
   // ---- Other (2)
-  B("5.5kVA Petrol Generator — Low Hours", "Single-phase generator, electric start, 60 running hours. Powers home + shop.", "other", 95000, { sub: "Misc", was: 10, seller: 2, hrs: 52 }),
-  B("Hot & Cold Water Dispenser", "Bottom-load dispenser with child lock. Energy saving compressor cooling.", "other", 13500, { sub: "Misc", seller: 0, imgs: [u("photo-1556911220-bff31c812dba")], hrs: 148 }),
+  B("5.5kVA Petrol Generator — Low Hours", "Single-phase generator, electric start, 60 running hours. Powers home + shop.", "solar-energy", 95000, { sub: "Generators", was: 10, seller: 2, hrs: 52 }),
+  B("Hot & Cold Water Dispenser", "Bottom-load dispenser with child lock. Energy saving compressor cooling.", "home-furniture", 13500, { sub: "Appliances", seller: 0, imgs: [u("photo-1556911220-bff31c812dba")], hrs: 148 }),
 ];

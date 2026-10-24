@@ -6,6 +6,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { AdminHeader } from "@/components/layout/admin-header";
 import { AdminFooter } from "@/components/layout/admin-footer";
 import { AnnouncementBar } from "@/components/announcement-bar";
+import type { Category } from "@/data/catalog";
 
 type ChromeUser = { name: string; role: string } | null;
 type AdminUser = { name: string; email: string } | null;
@@ -18,12 +19,14 @@ export function Chrome({
   user,
   adminUser,
   announcement,
+  categories,
   footer,
   children,
 }: {
   user: ChromeUser;
   adminUser: AdminUser;
   announcement: string | null;
+  categories: Category[];
   footer: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -42,7 +45,7 @@ export function Chrome({
   return (
     <>
       {announcement && <AnnouncementBar text={announcement} />}
-      <Header user={user} />
+      <Header user={user} categories={categories} />
       <main className="min-h-[60vh]">{children}</main>
       {footer}
       <BottomNav />

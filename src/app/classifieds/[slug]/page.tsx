@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { LISTINGS, getListing } from "@/data/catalog";
+import { getCategoryBySlug } from "@/lib/categories";
 import { storeRead } from "@/lib/store";
 import { ListingDetail } from "@/components/listing-detail";
 import { breadcrumbJsonLd } from "@/lib/seo";
@@ -17,10 +18,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const l = getListing(params.slug);
   if (l) {
     const canonical = `https://chap.co.ke/classifieds/${l.slug}`;
+    const category = await getCategoryBySlug(l.categorySlug);
     return {
       title: l.title,
       description: l.description.slice(0, 160),
-      keywords: listingKeywords(l),
+      keywords: listingKeywords(l, category ?? null),
       alternates: { canonical },
       openGraph: {
         type: "website",
@@ -40,10 +42,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!resolved) return { title: "Listing not found", robots: { index: false, follow: true } };
   const title = resolved.previewStatus ? `Preview: ${resolved.listing.title}` : resolved.listing.title;
   const canonical = `https://chap.co.ke/classifieds/${resolved.listing.slug}`;
+  const category = await getCategoryBySlug(resolved.listing.categorySlug);
   return {
     title,
     description: resolved.listing.description.slice(0, 160),
-    keywords: listingKeywords(resolved.listing),
+    keywords: listingKeywords(resolved.listing, category ?? null),
     alternates: { canonical },
     openGraph: {
       type: "website",
@@ -70,14 +73,15 @@ export default async function ClassifiedDetail({ params }: { params: { slug: str
     const shopInfo = await resolveShopInfo(staticHit.shopSlug);
     const { getSellerPlan } = await import("@/lib/plans");
     const sellerPlan = staticHit.ownerId ? (await getSellerPlan(staticHit.ownerId).catch(() => null))?.planId ?? null : null;
+    const category = await getCategoryBySlug(staticHit.categorySlug);
     const jsonLd = {
       "@context": "https://schema.org",
       "@graph": [
-        ...(staticHit.price > 0 ? [productSchema(staticHit)] : []),
-        breadcrumbJsonLd(listingBreadcrumbs(staticHit, { name: "Classifieds", url: "/classifieds" })),
+        ...(staticHit.price > 0 ? [productSchema(staticHit, category ?? null)] : []),
+        breadcrumbJsonLd(listingBreadcrumbs(staticHit, { name: "Classifieds", url: "/classifieds" }, category ?? null)),
       ],
     };
-    return <ListingDetail listing={staticHit} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} />;
+    return <ListingDetail listing={staticHit} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} categoryName={category ? category.name : null} />;
   }
   const { resolveStoreDetail } = await import("@/lib/live-listings");
   const resolved = await resolveStoreDetail(params.slug);
@@ -90,12 +94,13 @@ export default async function ClassifiedDetail({ params }: { params: { slug: str
   const shopInfo = await resolveShopInfo(l.shopSlug);
   const { getSellerPlan: getPlan } = await import("@/lib/plans");
   const sellerPlan = l.ownerId ? (await getPlan(l.ownerId).catch(() => null))?.planId ?? null : null;
+  const category = await getCategoryBySlug(l.categorySlug);
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
-      ...(l.price > 0 ? [productSchema(l)] : []),
-      breadcrumbJsonLd(listingBreadcrumbs(l, { name: "Classifieds", url: "/classifieds" })),
+      ...(l.price > 0 ? [productSchema(l, category ?? null)] : []),
+      breadcrumbJsonLd(listingBreadcrumbs(l, { name: "Classifieds", url: "/classifieds" }, category ?? null)),
     ],
   };
-  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} previewStatus={previewStatus} />;
+  return <ListingDetail listing={l} related={fromOthers} moreFromSeller={fromSeller} reviews={reviews} listingReviews={listingReviews} sellerPhotoUrl={sellerPhotoUrl} shopInfo={shopInfo} sellerPlan={sellerPlan} jsonLd={jsonLd} previewStatus={previewStatus} categoryName={category ? category.name : null} />;
 }
