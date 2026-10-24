@@ -2,14 +2,15 @@ import Link from "next/link";
 import { Fragment } from "react";
 import type { Metadata } from "next";
 import { ArrowRight, BadgeCheck, MapPin, Search, ShieldCheck, Store, Truck } from "lucide-react";
-import { LISTINGS, SHOPS, POPULAR_SEARCHES, shopListings } from "@/data/catalog";
+import { CATEGORIES, LISTINGS, SHOPS, POPULAR_SEARCHES, shopListings } from "@/data/catalog";
 import { storeRead } from "@/lib/store";
+import { currentUser } from "@/lib/auth";
 import { ListingCard } from "@/components/ui/listing-card";
 import { HeroCategories } from "@/components/hero-categories";
 import { CategoryStrip } from "@/components/category-strip";
 import { CountyStrip } from "@/components/county-strip";
 import { COUNTY_NAMES, KENYA_COUNTIES } from "@/lib/kenya";
-import { shuffleFeaturedFirst } from "@/lib/search";
+import { shuffleFeaturedFirst, shuffleSeeded } from "@/lib/search";
 import { ratingLabel } from "@/lib/ratings";
 import { AdAfterEvery } from "@/components/ads";
 import { AD_SLOTS } from "@/lib/ads";
@@ -70,7 +71,20 @@ type ShopRailCard = {
 };
 
 export default async function HomePage() {
+  const user = await currentUser().catch(() => null);
   const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
+  // Hero collage: four different categories (and distinct photos) shuffled on every request.
+  const seenHeroImages = new Set<string>();
+  const heroCategories = shuffleSeeded(
+    CATEGORIES.filter((c) => c.slug !== "other"),
+    Math.floor(Math.random() * 1_000_000_000)
+  )
+    .filter((c) => {
+      if (seenHeroImages.has(c.image)) return false;
+      seenHeroImages.add(c.image);
+      return true;
+    })
+    .slice(0, 4);
   const liveAll = await getLiveStoreListings();
   // Stamp the merged set: static catalogue rows need live plan/verified flags
   // for card checkmarks, not just the store half.
@@ -140,7 +154,7 @@ export default async function HomePage() {
           <HeroCategories />
           <div className="min-w-0">
             <h1 className="text-[28px] font-extrabold leading-[1.08] tracking-tight text-ink-900 sm:text-4xl xl:text-5xl">
-              Everything You Need. <span className="text-brand-600">All in One Place.</span>
+              Discover It. Buy It. <span className="text-brand-600">Sell It.</span>
             </h1>
             <p className="mt-2 max-w-xl text-[15px] text-ink-500 sm:text-base">
               Shop trusted businesses, buy and sell new or pre-owned items, and find services across Kenya.
@@ -153,7 +167,7 @@ export default async function HomePage() {
             </form>
             <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
               <Link href="/browse" className="btn-primary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base">Explore <ArrowRight className="h-4 w-4" /></Link>
-              <Link href="/start-selling" className="btn-secondary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base"><Store className="h-4 w-4" /> Sell on Chap</Link>
+              <Link href={user ? "/sell" : "/start-selling"} className="btn-secondary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base"><Store className="h-4 w-4" /> Sell on Chap</Link>
             </div>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
               <span className="self-center text-ink-400">Popular:</span>
@@ -162,16 +176,28 @@ export default async function HomePage() {
               ))}
             </div>
           </div>
-          {/* Desktop collage */}
-          <div className="hidden grid-cols-2 gap-3 lg:grid" aria-hidden={false}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=800&q=80" alt="Smartphones on Chap" className="h-52 rounded-2xl object-cover shadow-card" loading="eager" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80" alt="Cars on Chap" className="mt-5 h-52 rounded-2xl object-cover shadow-card" loading="eager" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800&q=80" alt="Furniture on Chap" className="h-44 rounded-2xl object-cover shadow-card" loading="lazy" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80" alt="Fashion on Chap" className="mt-5 h-44 rounded-2xl object-cover shadow-card" loading="lazy" />
+          {/* Desktop collage — four random categories, refreshed every visit */}
+          <div className="hidden grid-cols-2 gap-3 lg:grid">
+            {heroCategories.map((c, i) => (
+              <Link
+                key={c.slug}
+                href={`/browse/${c.slug}`}
+                aria-label={`Browse ${c.name}`}
+                className={`group relative block overflow-hidden rounded-2xl shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 ${i % 2 === 1 ? "mt-5" : ""} ${i < 2 ? "h-52" : "h-44"}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={c.image}
+                  alt=""
+                  aria-hidden
+                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  loading={i < 2 ? "eager" : "lazy"}
+                />
+                <span aria-hidden className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2 pt-8 text-xs font-bold text-white">
+                  {c.name}
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
         {/* Mobile/tablet swipeable category strip — all categories, one compact row */}
