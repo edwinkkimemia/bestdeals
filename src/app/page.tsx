@@ -90,7 +90,7 @@ export default async function HomePage() {
           <HeroCategories categories={categories} />
           <div className="min-w-0">
             <h1 className="text-[28px] font-extrabold leading-[1.08] tracking-tight text-ink-900 sm:text-4xl xl:text-5xl">
-              Discover It. Buy It. <span className="text-brand-600">Sell It.</span>
+              <span className="text-brand-600">Buy.</span> <span className="text-accent-500">Sell.</span> <span className="text-brand-900">Discover.</span>
             </h1>
             <p className="mt-2 max-w-xl text-[15px] text-ink-500 sm:text-base">
               Shop trusted businesses, buy and sell new or pre-owned items, and find services across Kenya.
