@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 
 /** Leave a review. Posting requires a verified account (badge still needs a paid/delivered order). */
-export function ReviewForm({ listingId, shopSlug, sellerName }: { listingId?: string; shopSlug?: string; sellerName: string }) {
+export function ReviewForm({ listingId, shopSlug, sellerName, embedded = false }: { listingId?: string; shopSlug?: string; sellerName: string; embedded?: boolean }) {
   const [rating, setRating] = useState(5);
   const [name, setName] = useState("");
   const [body, setBody] = useState("");
@@ -41,11 +41,11 @@ export function ReviewForm({ listingId, shopSlug, sellerName }: { listingId?: st
   };
 
   if (done) {
-    return <p className="card mt-6 p-5 text-sm text-green-700">Thanks — your review is queued for moderation and will appear once approved.</p>;
+    return <p className={embedded ? "text-sm text-green-700" : "card mt-6 p-5 text-sm text-green-700"}>Thanks — your review is queued for moderation and will appear once approved.</p>;
   }
 
   return (
-    <section className="card mt-6 p-5" aria-label="Write a review">
+    <section className={embedded ? "border-t border-neutral-200 pt-5" : "card mt-6 p-5"} aria-label="Write a review">
       <h3 className="font-bold">Write a review</h3>
       <p className="mt-0.5 text-xs text-ink-500">Only verified accounts can review. Orders marked paid/delivered earn the ✓ Verified purchase badge.</p>
       <form onSubmit={submit} className="mt-3 space-y-3">

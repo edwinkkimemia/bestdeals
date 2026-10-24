@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Check,
+  ChevronDown,
   Flag,
   Link2,
   MapPin,
@@ -15,7 +16,6 @@ import {
   Share2,
   ShieldCheck,
   Store,
-  Truck,
 } from "lucide-react";
 import { formatKES, timeAgo, formatFull } from "@/lib/format";
 import { slugify } from "@/lib/utils";
@@ -80,17 +80,17 @@ function ShareButtons({ title }: { title: string }) {
   if (!url) return null;
   const text = `${title} — via Chap`;
   const items = [
-    { label: "Share on WhatsApp", href: `https://api.whatsapp.com/send?text=${encodeURIComponent(`${text} ${url}`)}`, Icon: WhatsAppIcon },
-    { label: "Share on X", href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, Icon: XIcon },
-    { label: "Share on Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, Icon: FacebookIcon },
-    { label: "Share on Telegram", href: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, Icon: Send },
+    { label: "Share on WhatsApp", href: `https://api.whatsapp.com/send?text=${encodeURIComponent(`${text} ${url}`)}`, Icon: WhatsAppIcon, tone: "border-transparent bg-[#25D366] text-white hover:bg-[#1EBE5B]" },
+    { label: "Share on X", href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, Icon: XIcon, tone: "border-transparent bg-black text-white hover:bg-neutral-800" },
+    { label: "Share on Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, Icon: FacebookIcon, tone: "border-transparent bg-[#1877F2] text-white hover:bg-[#0F65D0]" },
+    { label: "Share on Telegram", href: `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`, Icon: Send, tone: "border-transparent bg-[#229ED9] text-white hover:bg-[#1B8BBE]" },
   ];
   return (
     <div className="flex flex-wrap items-center gap-1.5" aria-label="Share this listing">
       <span className="flex items-center gap-1 text-xs font-semibold text-ink-500"><Share2 className="h-3.5 w-3.5" /> Share:</span>
-      {items.map(({ label, href, Icon }) => (
+      {items.map(({ label, href, Icon, tone }) => (
         <a key={label} href={href} target="_blank" rel="noreferrer" aria-label={label} title={label}
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 bg-white text-ink-500 transition hover:border-brand-600 hover:text-brand-700">
+          className={`flex h-8 w-8 items-center justify-center rounded-full border transition ${tone}`}>
           <Icon className="h-4 w-4" />
         </a>
       ))}
@@ -103,7 +103,7 @@ function ShareButtons({ title }: { title: string }) {
             setTimeout(() => setCopied(false), 2000);
           } catch {}
         }}
-        className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 bg-white text-ink-500 transition hover:border-brand-600 hover:text-brand-700"
+        className="flex h-8 w-8 items-center justify-center rounded-full border border-neutral-200 bg-white text-brand-700 transition hover:border-brand-600 hover:bg-brand-50"
       >
         {copied ? <Check className="h-4 w-4 text-green-600" /> : <Link2 className="h-4 w-4" />}
       </button>
@@ -136,6 +136,14 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
     ? (reviews ?? []).reduce((total, review) => total + review.rating, 0) / sellerReviewCount
     : null;
   const sellerTenure = tenureLabel(listing.sellerSince);
+  const reviewRatings = [
+    ...(reviews ?? []).map((review) => review.rating),
+    ...(listingReviews ?? []).map((review) => review.rating),
+  ];
+  const approvedReviewCount = reviewRatings.length;
+  const approvedReviewRating = approvedReviewCount
+    ? reviewRatings.reduce((total, rating) => total + rating, 0) / approvedReviewCount
+    : null;
   // WhatsApp ordering always uses the verified number: the snapshot taken at
   // posting time first, then the shop's approved contact (store twin wins —
   // the catalogue phone goes stale after seller edits). No number, no button.
@@ -219,21 +227,57 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
         </div>
       </nav>
       <div className="container-bd">
-      <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_370px] lg:items-start xl:grid-cols-[minmax(0,1fr)_400px]">
-        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
+      <div className="mt-5 grid gap-6 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start xl:grid-cols-[minmax(0,1fr)_450px]">
+        <div className="contents lg:block lg:col-start-1 lg:row-start-1 lg:min-w-0 lg:space-y-6">
+        <div className="min-w-0 max-lg:order-1">
           {/* Keyed by listing: same-title listings must never inherit gallery state. */}
           <ProductGallery key={listing.id} images={listing.images} title={listing.title} />
         </div>
 
-        {/* Purchase panel — below the gallery on mobile, sticky beside the
-            gallery + details on desktop. Explicit grid placement keeps the
-            sidebar beside the whole content column instead of floating in an
-            empty auto-placed cell. */}
+
+        <section className="card p-5 sm:p-6 max-lg:order-3" aria-labelledby="listing-description">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h2 id="listing-description" className="text-lg font-bold">Product details</h2>
+                <p className="mt-0.5 text-xs text-ink-400">Everything the seller has shared about this listing.</p>
+              </div>
+              <Badge>{listing.listingType}</Badge>
+            </div>
+            <div
+              className="rich-text mt-4 break-words text-sm leading-relaxed text-ink-700"
+              dangerouslySetInnerHTML={{ __html: toSafeHtml(listing.description, 6000) }}
+            />
+            {Object.keys(listing.attributes).length > 0 && (
+              <>
+                <h3 className="mt-5 text-sm font-bold">Specifications</h3>
+                <dl className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
+                  {Object.entries(listing.attributes).map(([k, v]) => (
+                    <div key={k} className="min-w-0 rounded-lg bg-sand-50 px-3 py-2">
+                      <dt className="text-[11px] uppercase tracking-wide text-ink-400">{k.replace(/_/g, " ")}</dt>
+                      <dd className="break-words font-semibold">{v}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </>
+            )}
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-3">
+              <p className="text-xs text-ink-400">
+                Posted {formatFull(listing.createdAt)} ({timeAgo(listing.createdAt)}) · Listing ID: {listing.id.toUpperCase()}
+              </p>
+              <ShareButtons title={listing.title} />
+            </div>
+          </section>
+        </div>
+
+        <div className="contents lg:block lg:col-start-2 lg:row-start-1 lg:min-w-0 lg:space-y-6">
+        {/* Purchase panel: follows the gallery on mobile and sits beside it on
+            desktop. The whole page scrolls as one document — no sticky rail and
+            no inner scroll area. */}
         <aside
-          className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:sticky lg:top-24 lg:z-10 lg:self-start"
+          className="min-w-0 max-lg:order-2"
           aria-label="Purchase options"
         >
-          <div className="card space-y-3 p-5 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overscroll-contain">
+          <div className="card space-y-3 p-5">
             <div className="flex flex-wrap items-center gap-2">
               <Badge>{listing.listingType}</Badge>
               <ConditionBadge condition={listing.condition} />
@@ -281,104 +325,46 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
                   </button>
                   <WishlistButton id={listing.id} title={listing.title} className="!h-11 !w-11 !rounded-xl !border !border-neutral-300 !bg-white !shadow-none" />
                 </div>
-                <Link href={`/dashboard/messages/new?listing=${listing.id}`} className="btn-secondary w-full">
-                  <MessageCircle className="h-4 w-4" /> Message seller
-                </Link>
-                {waPhone && waOrderHref && (
-                  <div className="grid grid-cols-2 gap-2">
-                    <a href={`tel:+${waPhone}`} className="btn-secondary !px-3" title={`Call ${listing.sellerName}`}>
-                      <Phone className="h-4 w-4" /> Call seller
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/dashboard/messages/new?listing=${listing.id}`} className="btn-secondary min-w-0 flex-1 !px-2 !text-xs">
+                    <MessageCircle className="h-4 w-4" /> Message
+                  </Link>
+                  {waPhone && (
+                    <a href={`tel:+${waPhone}`} className="btn-secondary min-w-0 flex-1 !px-2 !text-xs" title={`Call ${listing.sellerName}`}>
+                      <Phone className="h-4 w-4" /> Call
                     </a>
-                    <a href={waOrderHref} target="_blank" rel="noreferrer" className="btn-whatsapp !px-3">
+                  )}
+                  {waOrderHref && (
+                    <a href={waOrderHref} target="_blank" rel="noreferrer" className="btn-whatsapp min-w-0 flex-1 !px-2 !text-xs">
                       <WhatsAppIcon className="h-4 w-4" /> WhatsApp
                     </a>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             ) : (
               <div className="grid gap-2">
                 <Link href={`/dashboard/messages/new?listing=${listing.id}`} className="btn-primary"><MessageCircle className="h-4 w-4" /> {listing.transactionMethod === "request_quote" ? "Request a quote" : "Message seller"}</Link>
-                {waPhone && waOrderHref ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    <a href={`tel:+${waPhone}`} className="btn-secondary !px-3" title={`Call ${listing.sellerName}`}>
+                <div className="flex gap-2">
+                  {waPhone && (
+                    <a href={`tel:+${waPhone}`} className="btn-secondary min-w-0 flex-1 !px-2 !text-xs" title={`Call ${listing.sellerName}`}>
                       <Phone className="h-4 w-4" /> Call seller
                     </a>
-                    <a href={waOrderHref} target="_blank" rel="noreferrer" className="btn-whatsapp !px-3">
+                  )}
+                  {waOrderHref && (
+                    <a href={waOrderHref} target="_blank" rel="noreferrer" className="btn-whatsapp min-w-0 flex-1 !px-2 !text-xs">
                       <WhatsAppIcon className="h-4 w-4" /> WhatsApp
                     </a>
-                  </div>
-                ) : (
-                  <p className="text-xs text-ink-400">This seller hasn&apos;t shared a WhatsApp number — use Message seller and they&apos;ll reply with one if they choose.</p>
+                  )}
+                </div>
+                {!waPhone && (
+                  <p className="text-xs text-ink-400">This seller hasn&apos;t shared a contact number — use Message seller and they&apos;ll reply if they choose.</p>
                 )}
-                <p className="text-xs text-ink-400">Contact details are shared per the seller&apos;s preferences. Meet in public & verify before paying.</p>
               </div>
             )}
-
-            <div className="border-t border-neutral-200 pt-3">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-400">Sold by</p>
-              <div className="mt-2 flex items-center gap-2.5">
-                <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-sm font-black text-white">
-                  {avatarUrl ? (
-                    <SafeImage src={avatarUrl} alt="" className="h-full w-full object-cover" fallback={sellerDisplayName.charAt(0).toUpperCase()} />
-                  ) : (
-                    sellerDisplayName.charAt(0).toUpperCase()
-                  )}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-1.5 text-sm font-semibold">
-                    <span className="truncate">{sellerDisplayName}</span>
-                    <PlanCheckmark plan={shopCard ? shopCard.planId : sellerPlan ?? listing.planId} size="sm" />
-                  </p>
-                  <p className="truncate text-xs text-ink-400">
-                    {shopCard
-                      ? shopCard.verified ? "Verified business" : "Business shop"
-                      : listing.sellerType === "business" ? "Business seller" : "Individual seller"} · {listing.town}
-                  </p>
-                </div>
-                <Link href={sellerHref} className="shrink-0 text-xs font-semibold text-brand-700 hover:underline">
-                  View →
-                </Link>
-              </div>
-            </div>
-
-            <div className="border-t border-neutral-200 pt-3">
-              <ShareButtons title={listing.title} />
-            </div>
           </div>
         </aside>
 
-        <div className="min-w-0 space-y-5 lg:col-start-1 lg:row-start-2">
-          <section className="card p-5 sm:p-6" aria-labelledby="listing-description">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div>
-                <h2 id="listing-description" className="text-lg font-bold">Product details</h2>
-                <p className="mt-0.5 text-xs text-ink-400">Everything the seller has shared about this listing.</p>
-              </div>
-              <Badge>{listing.listingType}</Badge>
-            </div>
-            <div
-              className="rich-text mt-4 break-words text-sm leading-relaxed text-ink-700"
-              dangerouslySetInnerHTML={{ __html: toSafeHtml(listing.description, 6000) }}
-            />
-            {Object.keys(listing.attributes).length > 0 && (
-              <>
-                <h3 className="mt-5 text-sm font-bold">Specifications</h3>
-                <dl className="mt-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
-                  {Object.entries(listing.attributes).map(([k, v]) => (
-                    <div key={k} className="min-w-0 rounded-lg bg-sand-50 px-3 py-2">
-                      <dt className="text-[11px] uppercase tracking-wide text-ink-400">{k.replace(/_/g, " ")}</dt>
-                      <dd className="break-words font-semibold">{v}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </>
-            )}
-            <p className="mt-4 border-t border-neutral-100 pt-3 text-xs text-ink-400">
-              Posted {formatFull(listing.createdAt)} ({timeAgo(listing.createdAt)}) · Listing ID: {listing.id.toUpperCase()}
-            </p>
-          </section>
-
-          <section className="card p-5 sm:p-6" aria-labelledby="seller-card">
+          <section className="card p-5 sm:p-6 max-lg:order-4" aria-labelledby="seller-card">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h2 id="seller-card" className="text-lg font-bold">Seller</h2>
               <Link href={sellerHref} className="text-xs font-semibold text-brand-700 hover:underline">
@@ -429,59 +415,74 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
             </div>
           </section>
 
-          <section className="card p-5 sm:p-6" aria-labelledby="delivery-protection">
-            <h2 id="delivery-protection" className="text-lg font-bold">Delivery & buyer protection</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl bg-sand-50 p-4 text-sm">
-                <h3 className="flex items-center gap-2 font-bold"><Truck className="h-4 w-4 text-brand-600" /> Delivery</h3>
-                <p className="mt-1 text-ink-700">{shop?.deliveryInfo ?? "Delivery is arranged with the seller — confirm the fee and timeline before paying."}</p>
-                <p className="mt-2 text-xs text-ink-500">Cash on delivery. Pay the courier when your order arrives; totals are always computed on our servers.</p>
-              </div>
-              <div className="rounded-xl bg-sand-50 p-4 text-sm">
-                <h3 className="flex items-center gap-2 font-bold"><ShieldCheck className="h-4 w-4 text-brand-600" /> Stay safe</h3>
-                <ul className="mt-1 list-disc space-y-1 pl-4 text-ink-700">
-                  <li>Meet in public, inspect before paying, never share your M-Pesa PIN.</li>
-                  <li>Keep chats on Chap until you&apos;re confident in the seller.</li>
-                  <li>Too good to be true? Compare with related sellers below.</li>
-                </ul>
-                <Link href="/safety" className="link-bd mt-2 inline-block text-xs">Full buyer-safety guide →</Link>
-              </div>
+          <section className="card p-5 sm:p-6 max-lg:order-5" aria-labelledby="buyer-protection">
+            <h2 id="buyer-protection" className="text-lg font-bold">Buyer protection</h2>
+            <div className="mt-4 rounded-xl bg-sand-50 p-4 text-sm">
+              <h3 className="flex items-center gap-2 font-bold"><ShieldCheck className="h-4 w-4 text-brand-600" /> Stay safe</h3>
+              <ul className="mt-1 list-disc space-y-1 pl-4 text-ink-700">
+                <li>Meet in public, inspect before paying, never share your M-Pesa PIN.</li>
+                <li>Keep chats on Chap until you&apos;re confident in the seller.</li>
+                <li>Too good to be true? Compare with related sellers below.</li>
+              </ul>
+              <Link href="/safety" className="link-bd mt-2 inline-block text-xs">Full buyer-safety guide →</Link>
             </div>
           </section>
 
-          <details className="card p-5 text-sm sm:p-6">
-            <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-ink-700 [&::-webkit-details-marker]:hidden">
-              <Flag className="h-4 w-4 text-ink-400" /> Report this listing
-              <span className="ml-auto text-xs font-normal text-ink-400">Something wrong?</span>
-            </summary>
-            {reportDone ? (
-              <p className="mt-3 text-sm text-green-700">Thanks — our moderators will review with a recorded reason.</p>
-            ) : (
-              <div className="mt-3 space-y-2">
-                <div className="flex flex-wrap gap-2">
-                  {REPORT_PICKER.map((r) => (
-                    <button key={r.code} onClick={() => submitReport(r.code, report)} className="rounded-full border px-3 py-1 text-xs hover:bg-sand-50">{r.label}</button>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input value={report} onChange={(e) => setReport(e.target.value)} placeholder="Details (optional)…" className="input-bd" aria-label="Report details" />
-                  <button onClick={() => submitReport("other", report)} className="btn-secondary shrink-0">Send</button>
-                </div>
-              </div>
-            )}
-          </details>
         </div>
+      </div>
 
+      <div className="mt-6 grid items-start gap-4 md:grid-cols-2">
+        <details className="group card p-5 sm:p-6">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+            <div>
+              <h2 className="text-lg font-bold">Reviews & ratings</h2>
+              <p className="mt-0.5 text-sm text-ink-500">
+                {approvedReviewRating ? (
+                  <>
+                    <span className="text-amber-500">★</span> {approvedReviewRating.toFixed(1)} · {approvedReviewCount} approved review{approvedReviewCount === 1 ? "" : "s"}
+                  </>
+                ) : (
+                  "No approved reviews yet — be the first to review."
+                )}
+              </p>
+            </div>
+            <ChevronDown className="h-5 w-5 shrink-0 text-ink-400 transition group-open:rotate-180" aria-hidden />
+          </summary>
+          <div className="mt-5 space-y-6">
+            <ReviewsBlock reviews={reviews ?? []} title={`Reviews for ${listing.sellerName}`} embedded />
+            {(listingReviews ?? []).length > 0 && (
+              <ReviewsBlock reviews={listingReviews ?? []} title="Reviews for this listing" embedded />
+            )}
+            <ReviewForm listingId={listing.id} shopSlug={listing.shopSlug} sellerName={listing.sellerName} embedded />
+          </div>
+        </details>
+
+        <details className="group card p-5 text-sm sm:p-6">
+          <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-ink-700 [&::-webkit-details-marker]:hidden">
+            <Flag className="h-4 w-4 text-ink-400" /> Report this listing
+            <span className="ml-auto text-xs font-normal text-ink-400">Something wrong?</span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-ink-400 transition group-open:rotate-180" aria-hidden />
+          </summary>
+          {reportDone ? (
+            <p className="mt-3 text-sm text-green-700">Thanks — our moderators will review with a recorded reason.</p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {REPORT_PICKER.map((r) => (
+                  <button key={r.code} onClick={() => submitReport(r.code, report)} className="rounded-full border px-3 py-1 text-xs hover:bg-sand-50">{r.label}</button>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input value={report} onChange={(e) => setReport(e.target.value)} placeholder="Details (optional)…" className="input-bd" aria-label="Report details" />
+                <button onClick={() => submitReport("other", report)} className="btn-secondary shrink-0">Send</button>
+              </div>
+            </div>
+          )}
+        </details>
       </div>
 
       {/* Sponsored unit below the buy flow (never between price and seller CTAs). */}
       <InArticleAd slot={AD_SLOTS.article} />
-
-      <ReviewsBlock reviews={reviews ?? []} title={`Reviews for ${listing.sellerName}`} />
-      {(listingReviews ?? []).length > 0 && (
-        <ReviewsBlock reviews={listingReviews ?? []} title={`Reviews for this listing`} />
-      )}
-      <ReviewForm listingId={listing.id} shopSlug={listing.shopSlug} sellerName={listing.sellerName} />
 
       {moreFromSeller && moreFromSeller.length > 0 && (
         <section className="mt-10 scroll-mt-36" id="more-from-seller">

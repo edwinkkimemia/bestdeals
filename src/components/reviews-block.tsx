@@ -10,19 +10,21 @@ function Stars({ n }: { n: number }) {
 }
 
 /** Approved reviews only — callers must filter by status. Never renders pending. */
-export function ReviewsBlock({ reviews, title }: { reviews: ReviewRecord[]; title: string }) {
+export function ReviewsBlock({ reviews, title, embedded = false }: { reviews: ReviewRecord[]; title: string; embedded?: boolean }) {
+  const outer = embedded ? "" : "mt-10";
+  const heading = embedded ? "text-base font-bold" : "section-title";
   if (reviews.length === 0) {
     return (
-      <section className="mt-10">
-        <h2 className="section-title">{title}</h2>
+      <section className={outer}>
+        <h2 className={heading}>{title}</h2>
         <p className="mt-2 text-sm text-ink-500">No verified reviews yet — be the first buyer to leave one after your order.</p>
       </section>
     );
   }
   const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
   return (
-    <section className="mt-10">
-      <h2 className="section-title">{title}</h2>
+    <section className={outer}>
+      <h2 className={heading}>{title}</h2>
       <p className="mt-1 text-sm text-ink-500">
         <Stars n={Math.round(avg)} /> {avg.toFixed(1)} · {reviews.length} approved review{reviews.length === 1 ? "" : "s"}
       </p>
