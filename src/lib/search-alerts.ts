@@ -12,6 +12,13 @@ import { getStore, type Store } from "./store";
 import { countyMatches } from "./kenya";
 import { formatKES } from "./format";
 
+async function pushAlert(store: Store, userId: string, title: string, body: string, link: string) {
+  try {
+    const { sendPushToUser } = await import("./push");
+    await sendPushToUser(userId, { title, body, url: link }, store);
+  } catch {}
+}
+
 export type AlertQuery = {
   q?: string;
   category?: string;
@@ -138,6 +145,7 @@ export async function fanoutNewListingAlert(
   }
   const link = listingLink(listing);
   let sent = 0;
+  const pushes: Promise<void>[] = [];
   for (const u of users.slice(0, 200)) {
     if (sent >= 50) break;
     if (!u?.id || u.id === listing.ownerId) continue;
@@ -164,13 +172,10 @@ export async function fanoutNewListingAlert(
     });
     if (!hit) continue;
     try {
-      await store.createNotification({
-        userId: u.id,
-        type: "alert",
-        title: `New ad: ${listing.title.slice(0, 80)}`,
-        body: `Matches ${describeQuery(asAlertQuery(hit.query ?? {}))} — ${formatKES(listing.price)}.`,
-        link,
-      });
+      const title = `New ad: ${listing.title.slice(0, 80)}`;
+      const body = `Matches ${describeQuery(asAlertQuery(hit.query ?? {}))} — ${formatKES(listing.price)}.`;
+      await store.createNotification({ userId: u.id, type: "alert", title, body, link });
+      pushes.push(pushAlert(store, u.id, title, body, link));
       sent += 1;
       const nextSeen = [...seen, listing.id].slice(-200);
       await store.setSetting(`alerts_sent:${u.id}`, nextSeen).catch(() => {});
@@ -180,6 +185,7 @@ export async function fanoutNewListingAlert(
       await store.setSetting(`saved_searches:${u.id}`, nextSaved).catch(() => {});
     } catch {}
   }
+  await Promise.allSettled(pushes);
   return sent;
 }
 
@@ -205,6 +211,7 @@ export async function fanoutPriceDrop(
     return 0;
   }
   let sent = 0;
+  const pushes: Promise<void>[] = [];
   for (const u of users.slice(0, 200)) {
     if (sent >= 50) break;
     if (!u?.id || u.id === listing.ownerId) continue;
@@ -216,13 +223,10 @@ export async function fanoutPriceDrop(
         const done = (await store.getSetting(`price_alerts_sent:${u.id}`).catch(() => null)) as string[] | null;
         const arr = Array.isArray(done) ? done : [];
         if (!arr.includes(key)) {
-          await store.createNotification({
-            userId: u.id,
-            type: "alert",
-            title: `Price drop: ${listing.title.slice(0, 70)}`,
-            body: `Was ${formatKES(oldPrice)}, now ${formatKES(next)}${pct > 0 ? ` (−${pct}%)` : ""}.`,
-            link,
-          });
+          const title = `Price drop: ${listing.title.slice(0, 70)}`;
+          const body = `Was ${formatKES(oldPrice)}, now ${formatKES(next)}${pct > 0 ? ` (−${pct}%)` : ""}.`;
+          await store.createNotification({ userId: u.id, type: "alert", title, body, link });
+          pushes.push(pushAlert(store, u.id, title, body, link));
           sent += 1;
           await store.setSetting(`price_alerts_sent:${u.id}`, [...arr, key].slice(-200)).catch(() => {});
           continue; // one bell per user per edit is enough
@@ -243,16 +247,14 @@ export async function fanoutPriceDrop(
         }
       });
       if (hit) {
-        await store.createNotification({
-          userId: u.id,
-          type: "alert",
-          title: `Now in your budget: ${listing.title.slice(0, 70)}`,
-          body: `“${hit.name.slice(0, 40)}” — now ${formatKES(next)} (was ${formatKES(oldPrice)}).`,
-          link,
-        });
+        const title = `Now in your budget: ${listing.title.slice(0, 70)}`;
+        const body = `“${hit.name.slice(0, 40)}” — now ${formatKES(next)} (was ${formatKES(oldPrice)}).`;
+        await store.createNotification({ userId: u.id, type: "alert", title, body, link });
+        pushes.push(pushAlert(store, u.id, title, body, link));
         sent += 1;
       }
     } catch {}
   }
+  await Promise.allSettled(pushes);
   return sent;
 }

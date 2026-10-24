@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { timeAgo } from "@/lib/format";
 import { dedupeNotifications } from "@/lib/notification-dedupe";
+import { PushNotificationsCard } from "@/components/push-notifications-card";
 import { cn } from "@/lib/utils";
 
 type Item = {
@@ -147,6 +148,8 @@ export default function NotificationsPage() {
           </button>
         )}
       </div>
+
+      <PushNotificationsCard />
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {(["all", "unread"] as const).map((t) => (

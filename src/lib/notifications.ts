@@ -66,13 +66,25 @@ export async function notifyUser(input: {
     if (typeof fn !== "function") return null;
     const title = input.title.trim().slice(0, 120) || "Notification";
     const body = input.body.trim().slice(0, 500) || title;
-    return await fn.call(store, {
+    const created = await fn.call(store, {
       userId: input.userId,
       type: input.type,
       title,
       body,
       link: input.link?.slice(0, 500),
     });
+    if (created) {
+      try {
+        const { sendPushToUser } = await import("./push");
+        await sendPushToUser(input.userId, {
+          title,
+          body,
+          url: input.link || "/dashboard/notifications",
+          tag: created.id,
+        });
+      } catch {}
+    }
+    return created;
   } catch {
     return null;
   }
