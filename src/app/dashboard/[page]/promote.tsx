@@ -120,6 +120,7 @@ export function PromotePanel({ listings, phone: defaultPhone, isAdmin, focusList
           const eligible = l.status === "active" && l.images > 0;
           const ps = promosFor(l.id);
           const active = ps.find((p) => p.status === "active");
+          const pending = ps.find((p) => p.status === "pending_payment");
           const isFocus = l.id === focusListingId;
           const waiting = awaiting === l.id;
           return (
@@ -128,9 +129,20 @@ export function PromotePanel({ listings, phone: defaultPhone, isAdmin, focusList
                 <span className="flex-1"><strong>{l.title}</strong> <span className="text-ink-400">· {formatKES(l.price)}</span></span>
                 <Badge tone={l.status === "active" ? "green" : l.status === "pending" ? "amber" : "neutral"}>{l.status}</Badge>
                 {active ? <span className="chip !border-green-600 !text-green-700">Featured till {new Date(active.endsAt).toLocaleDateString()}</span>
+                  : pending ? <span className="chip !border-amber-500 !text-amber-700">Awaiting payment</span>
                   : <span className="chip">{eligible ? "Eligible ✓" : l.status !== "active" ? "Needs approval" : "Add photos"}</span>}
               </div>
-              {eligible && !active && (
+              {active && (
+                <p className="mt-2 text-xs text-ink-400">
+                  This product can be promoted again after {new Date(active.endsAt).toLocaleDateString()}.
+                </p>
+              )}
+              {pending && (
+                <p className="mt-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-800">
+                  A boost payment is pending. Complete the M-Pesa prompt or cancel it below before starting another boost.
+                </p>
+              )}
+              {eligible && !active && !pending && (
                 <div className="mt-3">
                   <div className="grid gap-2 sm:grid-cols-3" role="radiogroup" aria-label={`Boost option for ${l.title}`}>
                     {BOOST_PRODUCTS.map((b) => {

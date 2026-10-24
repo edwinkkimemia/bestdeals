@@ -2534,6 +2534,11 @@ class PrismaStore implements Store {
       messages: { body: string; createdAt: Date; senderId: string; readAt: Date | null }[];
     };
     const all = [...convos, ...owned].filter((c: { id: string }) => (seen.has(c.id) ? false : (seen.add(c.id), true))) as Row[];
+    // WhatsApp-style inbox: newest conversation activity first. The DB order is
+    // by creation, so sort again using the latest message timestamp.
+    all.sort((a, b) =>
+      +new Date(b.messages[0]?.createdAt ?? b.createdAt) - +new Date(a.messages[0]?.createdAt ?? a.createdAt)
+    );
     const listingIds = [...new Set(all.map((c) => c.listingId).filter((id): id is string => !!id && id !== "general" && !id.startsWith("shop:")))];
     const shopSlugs = [...new Set(all.map((c) => c.listingId?.startsWith("shop:") ? c.listingId.slice(5) : "").filter(Boolean))];
     const [listingRows, shopRows] = await Promise.all([

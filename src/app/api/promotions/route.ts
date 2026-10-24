@@ -58,6 +58,29 @@ export async function POST(req: NextRequest) {
   const product = boostProductById(parsed.data.productId);
   if (!product) return NextResponse.json({ error: "Unknown boost product." }, { status: 400 });
 
+  // One boost at a time per product: no stacking before the current window
+  // expires, and no duplicate payment prompts while one is pending.
+  const existingPromos = await store.listPromotionsByListing(listing.id);
+  const livePromo = existingPromos.find(
+    (p) => p.status === "active" && new Date(p.endsAt).getTime() > Date.now()
+  );
+  if (livePromo) {
+    const until = new Date(livePromo.endsAt).toLocaleDateString("en-KE", {
+      day: "numeric", month: "short", year: "numeric",
+    });
+    return NextResponse.json(
+      { error: `This product is already promoted until ${until}. You can boost it again after that.` },
+      { status: 409 }
+    );
+  }
+  const pendingPromo = existingPromos.find((p) => p.status === "pending_payment");
+  if (pendingPromo) {
+    return NextResponse.json(
+      { error: "A boost payment is already pending for this product. Complete the M-Pesa prompt, or cancel it below before trying again." },
+      { status: 409 }
+    );
+  }
+
   const promo = await store.createPromotion({
     listingId: listing.id,
     ownerId: user.id,
