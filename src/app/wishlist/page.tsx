@@ -85,7 +85,7 @@ export default function WishlistPage() {
           {storeItems.map((s) => (
             <Link key={s.id} href={storeHref(s)} className="card p-2.5">
               <WmImage src={s.images[0]} alt={s.title} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
-              <p className="clamp-2 mt-2 text-sm font-semibold">{s.title}</p>
+              <p className="clamp-2 mt-2 text-sm font-normal">{s.title}</p>
               <p className="text-sm font-bold">{formatKES(s.price)}</p>
               <p className="mt-0.5 truncate text-xs text-ink-400">{s.seller}</p>
             </Link>

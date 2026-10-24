@@ -2,8 +2,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import type { Metadata } from "next";
 import { ArrowRight, BadgeCheck, MapPin, Search, ShieldCheck, Store, Truck } from "lucide-react";
-import { CATEGORIES, LISTINGS, SHOPS, POPULAR_SEARCHES, shopListings } from "@/data/catalog";
-import { storeRead } from "@/lib/store";
+import { CATEGORIES, LISTINGS, POPULAR_SEARCHES } from "@/data/catalog";
 import { currentUser } from "@/lib/auth";
 import { ListingCard } from "@/components/ui/listing-card";
 import { HeroCategories } from "@/components/hero-categories";
@@ -11,7 +10,6 @@ import { CategoryStrip } from "@/components/category-strip";
 import { CountyStrip } from "@/components/county-strip";
 import { COUNTY_NAMES, KENYA_COUNTIES } from "@/lib/kenya";
 import { shuffleFeaturedFirst, shuffleSeeded } from "@/lib/search";
-import { ratingLabel } from "@/lib/ratings";
 import { AdAfterEvery } from "@/components/ads";
 import { AD_SLOTS } from "@/lib/ads";
 
@@ -50,26 +48,6 @@ export const dynamic = "force-dynamic";
 
 const ICONS: Record<string, string> = {};
 
-const SHOP_COVER_FALLBACKS = [
-  "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80",
-  "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=80",
-  "https://images.unsplash.com/photo-1504148455328-c376907d081c?w=800&q=80",
-  "https://images.unsplash.com/photo-1533228100845-08145b01de14?w=800&q=80",
-];
-
-type ShopRailCard = {
-  slug: string;
-  name: string;
-  description: string;
-  cover: string;
-  verified: boolean;
-  place: string;
-  countLabel: string;
-  rating: string;
-  featuredCount: number;
-  featured?: boolean;
-};
-
 export default async function HomePage() {
   const user = await currentUser().catch(() => null);
   const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
@@ -102,48 +80,6 @@ export default async function HomePage() {
       count: all.filter((l) => l.county.trim().toLowerCase() === c.county.toLowerCase()).length,
     }))
     .sort((a, b) => b.count - a.count);
-  // Trusted shops rail: catalogue shops + seller-created community shops.
-  // Shops holding featured products lead; the rest shuffle fresh every visit.
-  const communityShops = await storeRead((s) => s.listShops(), []);
-  const shopCards: ShopRailCard[] = [
-    ...SHOPS.map((s) => {
-      const items = shopListings(s.slug);
-      const featuredCount = items.filter((l) => l.featured).length;
-      return {
-        slug: s.slug,
-        name: s.name,
-        description: s.description,
-        cover: s.cover,
-        verified: s.verified,
-        place: `${s.town}, ${s.county}`,
-        countLabel: `${items.length} listing${items.length === 1 ? "" : "s"}`,
-        rating: "",
-        featuredCount,
-        featured: featuredCount > 0,
-      };
-    }),
-    ...communityShops
-      .filter((s) => !SHOPS.some((d) => d.slug === s.slug))
-      .map((s, i) => ({
-        slug: s.slug,
-        name: s.name,
-        description: s.description,
-        cover: s.coverUrl || SHOP_COVER_FALLBACKS[i % SHOP_COVER_FALLBACKS.length],
-        verified: s.verified,
-        place: `${s.town}, ${s.county}`,
-        countLabel: s.verified ? "Verified business" : "New shop",
-        rating: "",
-        featuredCount: 0,
-      })),
-  ];
-  const shopRail = shuffleFeaturedFirst(shopCards).slice(0, 4);
-  // Real ratings only: average of approved reviews per shown shop (no static stars).
-  const shopRailLive = await Promise.all(
-    shopRail.map(async (c) => ({
-      ...c,
-      rating: ratingLabel(await storeRead((st) => st.listApprovedReviewsForShop(c.slug), [])),
-    }))
-  );
 
   return (
     <div>
@@ -278,37 +214,6 @@ export default async function HomePage() {
             </select>
             <button className="btn-primary shrink-0" type="submit">Show</button>
           </form>
-        </div>
-      </section>
-
-      {/* F: trusted shops */}
-      <section className="container-bd py-10" aria-labelledby="shops">
-        <div className="mb-5 flex items-end justify-between">
-          <div>
-            <h2 id="shops" className="section-title">Trusted business shops</h2>
-            <p className="text-sm text-ink-500">Shops with featured products lead · fresh mix every visit.</p>
-          </div>
-          <Link href="/shops" className="link-bd">All shops →</Link>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {shopRailLive.map((s) => (
-            <Link key={s.slug} href={`/shops/${s.slug}`} className="card group overflow-hidden transition hover:shadow-lg">
-              <div className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={s.cover} alt={`${s.name} cover`} loading="lazy" className="h-28 w-full object-cover transition duration-300 group-hover:scale-105" />
-                {s.featuredCount > 0 && (
-                  <span className="absolute bottom-2.5 left-2.5 rounded-xl bg-brand-600 px-2.5 py-1 text-xs font-bold text-white shadow">
-                    ★ {s.featuredCount} featured
-                  </span>
-                )}
-              </div>
-              <div className="p-4">
-                <p className="font-bold">{s.name} {s.verified && <span className="text-brand-600">✓</span>}</p>
-                <p className="text-xs text-ink-500">{s.place} · {s.rating} · {s.countLabel}</p>
-                <p className="clamp-2 mt-1 text-sm text-ink-500">{s.description}</p>
-              </div>
-            </Link>
-          ))}
         </div>
       </section>
 

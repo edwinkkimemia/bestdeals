@@ -72,7 +72,7 @@ export function PlanCheckmark({ plan, size = "md" }: { plan?: string | null; siz
       aria-label={label}
       title={label}
       className={`inline-flex shrink-0 items-center justify-center rounded-full font-black text-white ${
-        id === "gold" ? "bg-amber-400" : "bg-[#1D9BF0]"
+        id === "gold" ? "bg-amber-400" : "bg-brand-600"
       } ${dims}`}
     >
       ✓

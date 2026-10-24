@@ -48,7 +48,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
         </div>
       </Link>
       <div className="space-y-1 p-2.5">
-        <Link href={href} className="clamp-2 min-h-9 text-[13px] font-semibold leading-snug text-ink-900 hover:text-brand-700">
+        <Link href={href} className="clamp-2 min-h-9 text-[13px] font-normal leading-snug text-ink-900 hover:text-brand-700">
           {listing.title}
         </Link>
         <p className="text-base font-bold text-ink-900">{formatKES(listing.price)}</p>

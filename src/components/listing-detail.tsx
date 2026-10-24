@@ -420,7 +420,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
             {moreFromSeller.map((r) => (
               <Link key={r.id} href={listingHref(r)} className="card p-2.5">
                 <WmImage src={r.images[0]} alt={r.title} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
-                <p className="clamp-2 mt-2 text-sm font-semibold">{r.title}</p>
+                <p className="clamp-2 mt-2 text-sm font-normal">{r.title}</p>
                 <p className="text-sm font-bold">{formatKES(r.price)}</p>
               </Link>
             ))}
@@ -436,7 +436,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
             {related.map((r) => (
               <Link key={r.id} href={listingHref(r)} className="card p-2.5">
                 <WmImage src={r.images[0]} alt={r.title} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
-                <p className="clamp-2 mt-2 text-sm font-semibold">{r.title}</p>
+                <p className="clamp-2 mt-2 text-sm font-normal">{r.title}</p>
                 <p className="text-sm font-bold">{formatKES(r.price)}</p>
                 <p className="mt-0.5 truncate text-xs text-ink-400">{r.sellerName} · {r.town}, {r.county}</p>
               </Link>
@@ -452,7 +452,7 @@ export function ListingDetail({ listing, related, moreFromSeller, reviews, listi
             {recent.map((r) => (
               <Link key={r.id} href={listingHref(r)} className="card p-2.5">
                 <WmImage src={r.images[0]} alt={r.title} loading="lazy" className="aspect-[4/3] w-full rounded-lg object-cover" />
-                <p className="clamp-2 mt-2 text-sm font-semibold">{r.title}</p>
+                <p className="clamp-2 mt-2 text-sm font-normal">{r.title}</p>
                 <p className="text-sm font-bold">{formatKES(r.price)}</p>
               </Link>
             ))}
