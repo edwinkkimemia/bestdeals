@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { getListing } from "@/data/catalog";
+import { formatKES } from "@/lib/format";
 import { newChatListingId } from "@/lib/chat-access";
 import { ChatComposer } from "@/components/chat-composer";
 
@@ -26,7 +27,7 @@ function NewMessageInner() {
   const listing = getListing(listingParam);
   const shopSlug = !listing && !listingParam.trim() ? (sp.get("shop") ?? "") : "";
   const toUser = !listing && !listingParam.trim() && !shopSlug ? (sp.get("user") ?? "") : "";
-  const [resolved, setResolved] = useState<{ title: string; seller: string } | null>(null);
+  const [resolved, setResolved] = useState<{ title: string; seller: string; price?: number } | null>(null);
 
   // Store-listing context for the header (catalogue hits render instantly).
   useEffect(() => {
@@ -38,8 +39,8 @@ function NewMessageInner() {
     fetch(`/api/listings/resolve?ids=${encodeURIComponent(listingParam.trim())}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
-        const it = j?.items?.[0] as { title?: string; seller?: string } | undefined;
-        if (live && it?.title) setResolved({ title: it.title, seller: it.seller ?? "Seller" });
+        const it = j?.items?.[0] as { title?: string; seller?: string; price?: number } | undefined;
+        if (live && it?.title) setResolved({ title: it.title, seller: it.seller ?? "Seller", price: it.price });
       })
       .catch(() => {});
     return () => {
@@ -65,6 +66,10 @@ function NewMessageInner() {
 
   const aboutTitle = listing?.title ?? resolved?.title;
   const aboutSeller = listing?.sellerName ?? resolved?.seller;
+  const aboutPrice = listing?.price ?? resolved?.price;
+  const draft = aboutTitle
+    ? `Hi, I'm interested in "${aboutTitle}"${aboutPrice && aboutPrice > 0 ? ` (${formatKES(aboutPrice)})` : ""}. Is it still available?`
+    : "";
 
   return (
     <div>
@@ -83,7 +88,7 @@ function NewMessageInner() {
       )}
       <div className="card mt-4 space-y-3 p-5">
         <p className="text-xs text-ink-400">You chat as your signed-in account.</p>
-        <ChatComposer onSend={send} placeholder={`Hi! Is "${aboutTitle ?? "this"}" still available?`} />
+        <ChatComposer onSend={send} initialText={draft} placeholder={`Hi! Is "${aboutTitle ?? "this"}" still available?`} />
         <p className="text-xs text-ink-400">Spam-protected & rate-limited. Keep chats on Chap until you&apos;re confident.</p>
       </div>
     </div>

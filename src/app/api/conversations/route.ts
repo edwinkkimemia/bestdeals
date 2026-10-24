@@ -5,6 +5,7 @@ import { getStore } from "@/lib/store";
 import { toSafeHtml, toExcerpt } from "@/lib/richtext";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { notifyLater } from "@/lib/notify";
+import { formatKES } from "@/lib/format";
 
 const startSchema = z.object({
   listingId: z.string().min(1).max(80).default("general"),
@@ -47,6 +48,16 @@ export async function POST(req: NextRequest) {
   }
   const title = shopName ? `Shop enquiry: ${shopName}` : (catalog?.title ?? stored?.title ?? "General enquiry");
   const seller = shopName ?? catalog?.sellerName ?? stored?.sellerName ?? "Seller";
+  // Product context belongs in the message itself: one buyer–seller thread can
+  // now cover several listings, so the seller must see which item this is.
+  const listingTitle = !shopName && d.listingId !== "general" ? (catalog?.title ?? stored?.title) : undefined;
+  const listingPrice = !shopName && d.listingId !== "general" ? (catalog?.price ?? stored?.price) : undefined;
+  const contextLine = listingTitle
+    ? `${listingTitle}${listingPrice && listingPrice > 0 ? ` — ${formatKES(listingPrice)}` : ""}`
+    : "";
+  const messageBody = contextLine && !plain.toLowerCase().includes(listingTitle!.toLowerCase())
+    ? `${contextLine}\n\n${plain}`
+    : plain;
 
   const viewerId = user.id;
   // Direct target (seller profile "Message seller") wins over name matching.
@@ -105,8 +116,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "You blocked this seller." }, { status: 403 });
     }
   } catch {}
-  // WhatsApp-style: same buyer + seller + listing reuses the one thread —
-  // the message lands in it instead of spawning a duplicate chat.
+  // WhatsApp-style: one buyer–seller thread. A new product continues the
+  // existing conversation instead of starting another one.
   try {
     const existing = await store.findConversationMatch({
       buyerIds: [viewerId, `phone:${user.phone}`],
@@ -115,9 +126,18 @@ export async function POST(req: NextRequest) {
       listingId: d.listingId,
     });
     if (existing) {
+      if (d.listingId !== "general") {
+        await store.updateConversationContext(existing.id, {
+          listingId: d.listingId,
+          listingTitle: title,
+          ...(sellerId ? { sellerId } : {}),
+        }).catch(() => {});
+      } else if (!existing.sellerId && sellerId) {
+        await store.updateConversationContext(existing.id, { sellerId }).catch(() => {});
+      }
       await store.addMessage({
         conversationId: existing.id, senderId: viewerId, senderLabel: name,
-        body: plain, bodyHtml: toSafeHtml(plain),
+        body: messageBody, bodyHtml: toSafeHtml(messageBody),
       });
       if (sellerId && sellerId !== viewerId) {
         try {
@@ -126,7 +146,7 @@ export async function POST(req: NextRequest) {
             userId: sellerId,
             type: "message",
             title: `New message from ${name}`,
-            body: `“${toExcerpt(plain, 90)}” — ${title.slice(0, 80)}`,
+            body: `“${toExcerpt(messageBody, 90)}” — ${title.slice(0, 80)}`,
             link: `/dashboard/messages/${existing.id}`,
           });
         } catch {}
@@ -142,7 +162,7 @@ export async function POST(req: NextRequest) {
     buyerId: viewerId,
     buyerName: name,
     buyerPhone: phone,
-    firstMessage: { senderId: viewerId, senderLabel: name, body: plain, bodyHtml: toSafeHtml(plain) },
+    firstMessage: { senderId: viewerId, senderLabel: name, body: messageBody, bodyHtml: toSafeHtml(messageBody) },
   });
   if (sellerId && sellerId !== viewerId) {
     try {
@@ -151,12 +171,12 @@ export async function POST(req: NextRequest) {
         userId: sellerId,
         type: "message",
         title: `New enquiry from ${name}`,
-        body: `“${toExcerpt(plain, 90)}” — ${title.slice(0, 80)}`,
+        body: `“${toExcerpt(messageBody, 90)}” — ${title.slice(0, 80)}`,
         link: `/dashboard/messages/${convo.id}`,
       });
     } catch {}
   }
-  notifyLater({ channel: "sms", to: phone, message: `Chap: chat opened with ${seller} — "${toExcerpt(plain, 80)}"` });
+  notifyLater({ channel: "sms", to: phone, message: `Chap: chat opened with ${seller} — "${toExcerpt(messageBody, 80)}"` });
   return NextResponse.json({ ok: true, id: convo.id });
 }
 
@@ -165,7 +185,28 @@ export async function GET() {
   const user = await currentUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Sign in to chat." }, { status: 401 });
   const store = getStore();
-  const items = await store.listConversations({ userId: user.id, phone: user.phone, sellerName: user.name });
+  let items = await store.listConversations({ userId: user.id, phone: user.phone, sellerName: user.name });
+  // Consolidate any duplicate buyer–seller threads created before chat reuse
+  // was marketplace-wide. Messages are moved into the most recently active
+  // thread, so history stays in one conversation.
+  const groups = new Map<string, typeof items>();
+  for (const c of items) {
+    const buyerKey = c.buyerId ?? c.buyerPhone ?? "unknown";
+    const sellerKey = c.sellerId ?? (c.sellerName ?? "unknown").toLowerCase();
+    const key = `${buyerKey}::${sellerKey}`;
+    const group = groups.get(key) ?? [];
+    group.push(c);
+    groups.set(key, group);
+  }
+  let mergedAny = false;
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    group.sort((a, b) => +new Date(b.lastAt ?? 0) - +new Date(a.lastAt ?? 0));
+    const [keep, ...dupes] = group;
+    await store.mergeConversations(keep.id, dupes.map((d) => d.id)).catch(() => {});
+    mergedAny = true;
+  }
+  if (mergedAny) items = await store.listConversations({ userId: user.id, phone: user.phone, sellerName: user.name });
   // Heal legacy threads stored as "Seller" before shop-chat naming existed.
   const { resolveThreadSeller } = await import("@/lib/chat-access");
   for (const c of items) {

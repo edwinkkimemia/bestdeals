@@ -424,8 +424,12 @@ export interface Store {
   markConversationRead(conversationId: string, viewerId: string): Promise<void>;
   /** Link guest chats started with this phone to the signed-in account. Returns chats claimed. */
   claimGuestConversations(userId: string, phone: string): Promise<number>;
-  /** Find an existing thread for the same buyer + seller + listing (WhatsApp-style: no dupes). */
-  findConversationMatch(m: { buyerIds: string[]; sellerId?: string; sellerName: string; listingId: string }): Promise<ConversationRecord | null>;
+  /** Find the latest existing thread for the same buyer + seller (listing is context, not identity). */
+  findConversationMatch(m: { buyerIds: string[]; sellerId?: string; sellerName: string; listingId?: string }): Promise<ConversationRecord | null>;
+  /** Retarget a reused thread to the latest listing/product context. */
+  updateConversationContext(id: string, patch: { listingId?: string; listingTitle?: string; sellerId?: string }): Promise<void>;
+  /** Consolidate duplicate buyer–seller threads into one (messages preserved). */
+  mergeConversations(keepId: string, mergeIds: string[]): Promise<void>;
   // notifications (Jiji-style bell + /dashboard/notifications feed)
   createNotification(d: { userId: string; type: string; title: string; body: string; link?: string }): Promise<AppNotificationRecord>;
   listNotifications(userId: string, opts?: { unreadOnly?: boolean; limit?: number }): Promise<AppNotificationRecord[]>;
@@ -1167,14 +1171,39 @@ class DemoStore implements Store {
     }
     return n;
   }
-  async findConversationMatch(m: { buyerIds: string[]; sellerId?: string; sellerName: string; listingId: string }) {
-    const hit = [...this.conversations.values()].find(
+  async findConversationMatch(m: { buyerIds: string[]; sellerId?: string; sellerName: string; listingId?: string }) {
+    // One buyer–seller thread: a new listing continues the same conversation.
+    const hits = [...this.conversations.values()].filter(
       (c) =>
-        c.listingId === m.listingId &&
         m.buyerIds.includes(c.buyerId ?? "") &&
         ((m.sellerId != null && c.sellerId != null && m.sellerId === c.sellerId) || c.sellerName === m.sellerName)
     );
-    return hit ?? null;
+    const lastAt = (c: ConversationRecord) => {
+      const messages = this.messages.get(c.id) ?? [];
+      return +new Date(messages[messages.length - 1]?.createdAt ?? c.createdAt);
+    };
+    return hits.sort((a, b) => lastAt(b) - lastAt(a))[0] ?? null;
+  }
+  async updateConversationContext(id: string, patch: { listingId?: string; listingTitle?: string; sellerId?: string }) {
+    const c = this.conversations.get(id);
+    if (!c) return;
+    if (patch.listingId !== undefined) c.listingId = patch.listingId;
+    if (patch.listingTitle !== undefined) c.listingTitle = patch.listingTitle;
+    if (patch.sellerId !== undefined) c.sellerId = patch.sellerId;
+  }
+  async mergeConversations(keepId: string, mergeIds: string[]) {
+    if (!this.conversations.has(keepId)) return;
+    const merged = [...(this.messages.get(keepId) ?? [])];
+    for (const id of mergeIds) {
+      if (id === keepId) continue;
+      for (const message of this.messages.get(id) ?? []) {
+        merged.push({ ...message, conversationId: keepId });
+      }
+      this.messages.delete(id);
+      this.conversations.delete(id);
+    }
+    merged.sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
+    this.messages.set(keepId, merged);
   }
 
   notifications: AppNotificationRecord[] = [];
@@ -2500,11 +2529,46 @@ class PrismaStore implements Store {
       } catch {}
     }
     const seen = new Set<string>();
-    const all = [...convos, ...owned].filter((c: { id: string }) => (seen.has(c.id) ? false : (seen.add(c.id), true)));
-    return all.map((c: { id: string; listingId: string | null; createdAt: Date; messages: { body: string; createdAt: Date; senderId: string; readAt: Date | null }[] }) => {
+    type Row = {
+      id: string; listingId: string | null; buyerId: string; sellerId: string; createdAt: Date;
+      messages: { body: string; createdAt: Date; senderId: string; readAt: Date | null }[];
+    };
+    const all = [...convos, ...owned].filter((c: { id: string }) => (seen.has(c.id) ? false : (seen.add(c.id), true))) as Row[];
+    const listingIds = [...new Set(all.map((c) => c.listingId).filter((id): id is string => !!id && id !== "general" && !id.startsWith("shop:")))];
+    const shopSlugs = [...new Set(all.map((c) => c.listingId?.startsWith("shop:") ? c.listingId.slice(5) : "").filter(Boolean))];
+    const [listingRows, shopRows] = await Promise.all([
+      listingIds.length
+        ? this.p.listing.findMany({ where: { id: { in: listingIds } }, select: { id: true, title: true, sellerName: true } }).catch(() => [])
+        : Promise.resolve([]),
+      shopSlugs.length
+        ? this.p.shop.findMany({ where: { slug: { in: shopSlugs } }, select: { slug: true, name: true } }).catch(() => [])
+        : Promise.resolve([]),
+    ]);
+    const listingMap = new Map((listingRows as { id: string; title: string; sellerName: string | null }[]).map((l) => [l.id, l]));
+    const shopMap = new Map((shopRows as { slug: string; name: string }[]).map((s) => [s.slug, s]));
+    return all.map((c) => {
       const last = c.messages[0];
+      const lid = c.listingId ?? undefined;
+      let listingTitle: string | undefined;
+      let sellerName: string | undefined;
+      if (lid === "general") {
+        listingTitle = "Direct message";
+      } else if (lid?.startsWith("shop:")) {
+        const shop = shopMap.get(lid.slice(5));
+        if (shop) {
+          listingTitle = `Shop enquiry: ${shop.name}`;
+          sellerName = shop.name;
+        }
+      } else if (lid) {
+        const listing = listingMap.get(lid);
+        if (listing) {
+          listingTitle = listing.title;
+          sellerName = listing.sellerName ?? undefined;
+        }
+      }
       return {
-        id: c.id, listingId: c.listingId ?? undefined, createdAt: c.createdAt.toISOString(),
+        id: c.id, listingId: lid, buyerId: c.buyerId, sellerId: c.sellerId,
+        sellerName, listingTitle, createdAt: c.createdAt.toISOString(),
         lastMessage: last?.body.slice(0, 120), lastAt: last?.createdAt.toISOString() ?? c.createdAt.toISOString(),
         unread: c.messages.filter((m) => m.senderId !== viewer && !m.readAt).length,
       };
@@ -2541,17 +2605,36 @@ class PrismaStore implements Store {
     });
     return r.count;
   }
-  async findConversationMatch(m: { buyerIds: string[]; sellerId?: string; sellerName: string; listingId: string }) {
+  async findConversationMatch(m: { buyerIds: string[]; sellerId?: string; sellerName: string; listingId?: string }) {
     const ors: Record<string, string>[] = [];
     if (m.sellerId) ors.push({ sellerId: m.sellerId });
     ors.push({ sellerId: `seller:${m.sellerName}` });
-    const hit = await this.p.conversation.findFirst({
-      where: { listingId: m.listingId, buyerId: { in: m.buyerIds }, OR: ors },
-      orderBy: { createdAt: "desc" },
-    }).catch(() => null);
-    if (!hit) return null;
-    const h = hit as { id: string; listingId: string | null; buyerId: string; sellerId: string; createdAt: Date };
+    const hits = await this.p.conversation.findMany({
+      where: { buyerId: { in: m.buyerIds }, OR: ors },
+      include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } },
+      take: 50,
+    }).catch(() => []);
+    if (hits.length === 0) return null;
+    const lastAt = (c: { createdAt: Date; messages?: { createdAt: Date }[] }) =>
+      +(c.messages?.[0]?.createdAt ?? c.createdAt);
+    hits.sort((a, b) => lastAt(b) - lastAt(a));
+    const h = hits[0] as { id: string; listingId: string | null; buyerId: string; sellerId: string; createdAt: Date };
     return { id: h.id, listingId: h.listingId ?? undefined, buyerId: h.buyerId, sellerId: h.sellerId, sellerName: m.sellerName, createdAt: h.createdAt.toISOString() };
+  }
+  async updateConversationContext(id: string, patch: { listingId?: string; listingTitle?: string; sellerId?: string }) {
+    const data: { listingId?: string; sellerId?: string } = {};
+    if (patch.listingId !== undefined) data.listingId = patch.listingId;
+    if (patch.sellerId !== undefined) data.sellerId = patch.sellerId;
+    if (Object.keys(data).length === 0) return;
+    await this.p.conversation.update({ where: { id }, data }).catch(() => null);
+  }
+  async mergeConversations(keepId: string, mergeIds: string[]) {
+    const ids = mergeIds.filter((id) => id && id !== keepId);
+    if (ids.length === 0) return;
+    await this.p.$transaction([
+      this.p.message.updateMany({ where: { conversationId: { in: ids } }, data: { conversationId: keepId } }),
+      this.p.conversation.deleteMany({ where: { id: { in: ids } } }),
+    ]).catch(() => null);
   }
 
   private mapNotification(r: {

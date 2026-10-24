@@ -127,12 +127,9 @@ describe("chat ownership (sender lockout regression)", () => {
     const match = await store.findConversationMatch({
       buyerIds: [buyer], sellerId: undefined, sellerName: "Seller Sam", listingId: "p1",
     });
-    assert.equal(match?.id, first.id, "same triple matches");
-    assert.equal(
-      await store.findConversationMatch({ buyerIds: [buyer], sellerName: "Seller Sam", listingId: "p2" }),
-      null,
-      "different listing is a new thread"
-    );
+    assert.equal(match?.id, first.id, "same buyer + seller matches");
+    const otherListing = await store.findConversationMatch({ buyerIds: [buyer], sellerName: "Seller Sam", listingId: "p2" });
+    assert.equal(otherListing?.id, first.id, "a different product continues the same buyer–seller thread");
     assert.equal(
       await store.findConversationMatch({ buyerIds: ["phone:0799999999"], sellerName: "Seller Sam", listingId: "p1" }),
       null,
@@ -143,6 +140,30 @@ describe("chat ownership (sender lockout regression)", () => {
       buyerIds: [buyer], sellerId: "u_seller1", sellerName: "Seller Sam", listingId: "p1",
     });
     assert.equal(linked?.id, first.id, "name fallback bridges pre-link threads");
+  });
+  it("retargets a reused thread and consolidates duplicate buyer–seller chats", async () => {
+    const store = freshDemoStore();
+    const buyer = "phone:0710000302";
+    const first = await store.createConversation({
+      listingId: "p1", listingTitle: "Phone", sellerName: "Seller Sam",
+      buyerId: buyer, buyerName: "Guest", buyerPhone: "0710000302",
+      firstMessage: { senderId: buyer, senderLabel: "Guest", body: "About the phone", bodyHtml: "About the phone" },
+    });
+    const duplicate = await store.createConversation({
+      listingId: "p2", listingTitle: "Laptop", sellerName: "Seller Sam",
+      buyerId: buyer, buyerName: "Guest", buyerPhone: "0710000302",
+      firstMessage: { senderId: buyer, senderLabel: "Guest", body: "About the laptop", bodyHtml: "About the laptop" },
+    });
+    await store.updateConversationContext(first.id, {
+      listingId: "p2", listingTitle: "Laptop", sellerId: "u_seller_sam",
+    });
+    await store.mergeConversations(first.id, [duplicate.id]);
+    const merged = await store.getConversation(first.id);
+    assert.equal(merged?.listingId, "p2");
+    assert.equal(merged?.sellerId, "u_seller_sam");
+    assert.equal(merged?.listingTitle, "Laptop");
+    assert.equal((await store.listMessages(first.id)).length, 2, "both messages survive the merge");
+    assert.equal(await store.getConversation(duplicate.id), null, "duplicate thread is removed");
   });
   it("listing owner inbox survives renames (stale sellerName still delivered)", async () => {
     const store = freshDemoStore();

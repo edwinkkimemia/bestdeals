@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, Send } from "lucide-react";
 import { RICH_TEXT_HINT, toSafeHtml } from "@/lib/richtext";
 
@@ -9,18 +9,26 @@ export function ChatComposer({
   onSend,
   placeholder = "Write a message…",
   whatsapp = false,
+  initialText = "",
 }: {
   onSend: (text: string) => Promise<string | null>;
   placeholder?: string;
   /** WhatsApp look: pill input, round send button, Enter sends. */
   whatsapp?: boolean;
+  /** Product context can arrive after store listings resolve; only fill until the user types. */
+  initialText?: string;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
+  const touched = useRef(false);
   const [preview, setPreview] = useState(false);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const ref = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (!touched.current && initialText) setText(initialText);
+  }, [initialText]);
 
   const surround = (before: string, after = "") => {
     const el = ref.current;
@@ -109,7 +117,7 @@ export function ChatComposer({
               ref={ref}
               rows={1}
               value={text}
-              onChange={(e) => setText(e.target.value.slice(0, 2000))}
+              onChange={(e) => { touched.current = true; setText(e.target.value.slice(0, 2000)); }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -158,7 +166,7 @@ export function ChatComposer({
           ref={ref}
           rows={4}
           value={text}
-          onChange={(e) => setText(e.target.value.slice(0, 2000))}
+          onChange={(e) => { touched.current = true; setText(e.target.value.slice(0, 2000)); }}
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send();
           }}
