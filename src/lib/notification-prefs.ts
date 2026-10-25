@@ -21,7 +21,7 @@ export const NOTIFICATION_PREF_META: Record<
   order: { label: "Orders", description: "Order status, payment and delivery updates." },
   listing: { label: "Listings & moderation", description: "Approvals, rejections and listing updates." },
   verification: { label: "Verification", description: "Seller/ID verification decisions." },
-  alert: { label: "Search & wishlist alerts", description: "New matching ads and price drops." },
+  alert: { label: "Saved search alerts", description: "New matching ads and price drops from saved searches." },
   promotion: { label: "Promotions & boosts", description: "Boost receipts and promotional updates." },
   system: { label: "Account updates", description: "Important account and platform notices." },
 };

@@ -412,7 +412,7 @@ export function Header({ user, categories = CATEGORIES, initialCounty }: { user?
               </div>
             )}
           </div>
-          <Link href={user ? "/dashboard/saved-searches?tab=wishlist" : "/wishlist"} className="relative hidden rounded-lg p-1.5 hover:bg-sand-100 sm:inline-flex sm:p-2" aria-label={wishCount > 0 ? `Wishlist, ${wishCount} saved` : "Wishlist"}>
+          <Link href={user ? "/dashboard/saved-searches" : "/wishlist"} className="relative hidden rounded-lg p-1.5 hover:bg-sand-100 sm:inline-flex sm:p-2" aria-label={wishCount > 0 ? `Saved searches, ${wishCount} saved` : "Saved searches"}>
             <Heart className="h-5 w-5" />
             {wishCount > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1 text-[11px] font-bold text-white">{wishCount > 99 ? "99+" : wishCount}</span>}
           </Link>
@@ -509,7 +509,7 @@ export function Header({ user, categories = CATEGORIES, initialCounty }: { user?
               {user && <Link href={user.role === "ADMIN" ? "/admin" : "/dashboard"} onClick={() => setOpen(false)} className="btn-secondary">My dashboard</Link>}
               {user && <Link href="/dashboard/notifications" onClick={() => setOpen(false)} className="btn-secondary">Notifications</Link>}
               <Link href="/cart" onClick={() => setOpen(false)} className="btn-secondary">Cart ({count})</Link>
-              <Link href={user ? "/dashboard/saved-searches?tab=wishlist" : "/wishlist"} onClick={() => setOpen(false)} className="btn-secondary">Wishlist ({wishCount})</Link>
+              <Link href={user ? "/dashboard/saved-searches" : "/wishlist"} onClick={() => setOpen(false)} className="btn-secondary">Saved ({wishCount})</Link>
             </div>
 
             <div className="mt-4 border-t border-neutral-200 pt-4">

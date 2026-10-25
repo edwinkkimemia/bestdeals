@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getListing } from "@/data/catalog";
 import { getWishlist } from "@/components/ui/wishlist-button";
 import { ListingCard } from "@/components/ui/listing-card";
@@ -19,8 +20,30 @@ function storeHref(s: StoreItem): string {
 }
 
 export default function WishlistPage() {
+  const router = useRouter();
   const [ids, setIds] = useState<string[]>([]);
   const [storeItems, setStoreItems] = useState<StoreItem[]>([]);
+  useEffect(() => {
+    // Signed-in users have one Saved searches page. Sync guest hearts first,
+    // then send them to the unified dashboard view.
+    let live = true;
+    (async () => {
+      const me = await fetch("/api/auth/me", { cache: "no-store" }).catch(() => null);
+      if (!me?.ok || !live) return;
+      const local = getWishlist();
+      if (local.length > 0) {
+        await fetch("/api/wishlist", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: local, merge: true }),
+        }).catch(() => {});
+      }
+      router.replace("/dashboard/saved-searches");
+    })();
+    return () => {
+      live = false;
+    };
+  }, [router]);
   useEffect(() => {
     const sync = () => setIds(getWishlist());
     sync();
@@ -71,15 +94,15 @@ export default function WishlistPage() {
 
   return (
     <div className="container-bd py-8">
-      <h1 className="section-title">Wishlist ({total})</h1>
+      <h1 className="section-title">Saved searches ({total})</h1>
       <p className="mt-1 text-sm text-ink-500">
-        Saved hearts sync across devices when signed in — price drops on these ring the bell 🔔 in Notifications.{" "}
-        <Link href="/dashboard/saved-searches?tab=wishlist" className="link-bd">Open in Saved →</Link>
+        Products you save become searches for similar items — price drops and new matches ring the bell 🔔 in Notifications.{" "}
+        <Link href="/dashboard/saved-searches" className="link-bd">Open saved searches →</Link>
       </p>
       {total === 0 ? (
         <div className="card mt-4 p-8 text-center">
-          <p className="font-bold">Nothing saved yet</p>
-          <p className="text-sm text-ink-500">Tap the heart on any listing to save it here.</p>
+          <p className="font-bold">No saved searches yet</p>
+          <p className="text-sm text-ink-500">Tap the heart on any listing to save a search for similar items.</p>
           <Link href="/browse" className="btn-primary mt-4">Discover products</Link>
         </div>
       ) : (

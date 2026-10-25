@@ -22,7 +22,7 @@ export function WishlistButton({ id, title, className }: { id: string; title?: s
   return (
     <button
       type="button"
-      aria-label={active ? `Remove ${title ?? "item"} from wishlist` : `Save ${title ?? "item"} to wishlist`}
+      aria-label={active ? `Remove ${title ?? "item"} from saved searches` : `Save ${title ?? "item"} to saved searches`}
       aria-pressed={active}
       onClick={(e) => {
         e.preventDefault();

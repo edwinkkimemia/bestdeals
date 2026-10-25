@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/dashboard", label: "Overview", Icon: LayoutDashboard, exact: true },
   { href: "/dashboard/notifications", label: "Notifications", Icon: Bell },
-  { href: "/dashboard/saved-searches", label: "Saved", Icon: Bookmark },
+  { href: "/dashboard/saved-searches", label: "Saved searches", Icon: Bookmark },
   { href: "/dashboard/listings", label: "My listings", Icon: Package },
   { href: "/dashboard/messages", label: "Messages", Icon: MessageCircle },
   { href: "/dashboard/analytics", label: "Analytics", Icon: BarChart3 },

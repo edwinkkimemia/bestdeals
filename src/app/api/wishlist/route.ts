@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
+import { ensureItemSearches, removeItemSearch } from "@/lib/saved-item-searches";
 
 function key(userId: string): string {
   return `wishlist:${userId}`;
@@ -22,17 +23,19 @@ export async function POST(req: NextRequest) {
   const user = await currentUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
-  const ids = Array.isArray(body.ids) ? body.ids : body.listingId ? [body.listingId] : [];
-  const clean = [...new Set(ids.map((x: unknown) => String(x)).filter(Boolean))].slice(0, 500);
+  const rawIds: unknown[] = Array.isArray(body.ids) ? body.ids : body.listingId ? [body.listingId] : [];
+  const clean: string[] = [...new Set(rawIds.map((x) => String(x)).filter(Boolean))].slice(0, 500);
   if (body.merge) {
     const cur = await read(user.id);
     const merged = [...new Set([...cur, ...clean])].slice(0, 500);
     await getStore().setSetting(key(user.id), merged).catch(() => {});
+    await ensureItemSearches(user.id, clean).catch(() => {});
     return NextResponse.json({ ok: true, items: merged });
   }
   const cur = await read(user.id);
   const merged = [...new Set([...cur, ...clean])].slice(0, 500);
   await getStore().setSetting(key(user.id), merged).catch(() => {});
+  await ensureItemSearches(user.id, clean).catch(() => {});
   return NextResponse.json({ ok: true, items: merged });
 }
 
@@ -43,5 +46,6 @@ export async function DELETE(req: NextRequest) {
   const cur = await read(user.id);
   const next = cur.filter((x) => x !== String(id));
   await getStore().setSetting(key(user.id), next).catch(() => {});
+  await removeItemSearch(user.id, String(id)).catch(() => {});
   return NextResponse.json({ ok: true, items: next });
 }
