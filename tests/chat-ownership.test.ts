@@ -141,6 +141,22 @@ describe("chat ownership (sender lockout regression)", () => {
     });
     assert.equal(linked?.id, first.id, "name fallback bridges pre-link threads");
   });
+  it("reuses one thread when the other participant messages back", async () => {
+    const store = freshDemoStore();
+    const a = await store.createUser({ name: "Alice", email: "alice-chat@x.co.ke", phone: "0710000401", role: "SELLER", verified: true, passwordHash: "h" });
+    const b = await store.createUser({ name: "Bob", email: "bob-chat@x.co.ke", phone: "0710000402", role: "SELLER", verified: true, passwordHash: "h" });
+    const first = await store.createConversation({
+      listingId: "p1", listingTitle: "Alice product", sellerName: a.name,
+      sellerId: a.id, buyerId: b.id, buyerName: b.name, buyerPhone: b.phone,
+      firstMessage: { senderId: b.id, senderLabel: b.name, body: "Hi Alice", bodyHtml: "Hi Alice" },
+    });
+    // Bob is the seller in the first thread; Alice messaging Bob back must not
+    // create a mirror-image duplicate.
+    const back = await store.findConversationMatch({
+      buyerIds: [a.id], sellerId: b.id, sellerName: b.name, listingId: "p2",
+    });
+    assert.equal(back?.id, first.id);
+  });
   it("retargets a reused thread and consolidates duplicate buyer–seller chats", async () => {
     const store = freshDemoStore();
     const buyer = "phone:0710000302";

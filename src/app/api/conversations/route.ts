@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
     : plain;
 
   const viewerId = user.id;
+  const viewerIds = [viewerId, `phone:${user.phone}`, `seller:${user.name}`];
   // Direct target (seller profile "Message seller") wins over name matching.
   let sellerId: string | undefined;
   let directName: string | undefined;
@@ -120,19 +121,27 @@ export async function POST(req: NextRequest) {
   // existing conversation instead of starting another one.
   try {
     const existing = await store.findConversationMatch({
-      buyerIds: [viewerId, `phone:${user.phone}`],
+      buyerIds: viewerIds,
       sellerId,
       sellerName: directName ?? seller,
       listingId: d.listingId,
     });
     if (existing) {
+      // The thread may have started from the other person's side. Preserve its
+      // buyer/seller orientation instead of overwriting sellerId with the
+      // current target (which would make both parties the same account).
+      const reversed =
+        !!sellerId &&
+        !!existing.sellerId &&
+        existing.buyerId === sellerId &&
+        viewerIds.includes(existing.sellerId);
       if (d.listingId !== "general") {
         await store.updateConversationContext(existing.id, {
           listingId: d.listingId,
           listingTitle: title,
-          ...(sellerId ? { sellerId } : {}),
+          ...(sellerId && !reversed ? { sellerId } : {}),
         }).catch(() => {});
-      } else if (!existing.sellerId && sellerId) {
+      } else if (!existing.sellerId && sellerId && !reversed) {
         await store.updateConversationContext(existing.id, { sellerId }).catch(() => {});
       }
       await store.addMessage({
@@ -191,9 +200,11 @@ export async function GET() {
   // thread, so history stays in one conversation.
   const groups = new Map<string, typeof items>();
   for (const c of items) {
-    const buyerKey = c.buyerId ?? c.buyerPhone ?? "unknown";
-    const sellerKey = c.sellerId ?? (c.sellerName ?? "unknown").toLowerCase();
-    const key = `${buyerKey}::${sellerKey}`;
+    const partyA = c.buyerId ?? (c.buyerPhone ? `phone:${c.buyerPhone}` : "unknown");
+    const partyB = c.sellerId ?? `name:${(c.sellerName ?? "unknown").toLowerCase()}`;
+    // Pair key is order-independent: A→B and B→A are the same conversation.
+    const [first, second] = [partyA, partyB].sort();
+    const key = `${first}::${second}`;
     const group = groups.get(key) ?? [];
     group.push(c);
     groups.set(key, group);

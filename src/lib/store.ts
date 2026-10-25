@@ -1173,11 +1173,21 @@ class DemoStore implements Store {
   }
   async findConversationMatch(m: { buyerIds: string[]; sellerId?: string; sellerName: string; listingId?: string }) {
     // One buyer–seller thread: a new listing continues the same conversation.
-    const hits = [...this.conversations.values()].filter(
-      (c) =>
-        m.buyerIds.includes(c.buyerId ?? "") &&
-        ((m.sellerId != null && c.sellerId != null && m.sellerId === c.sellerId) || c.sellerName === m.sellerName)
-    );
+    // Match in either direction so two people messaging each other from their
+    // own shop/listing pages don't create two mirror-image chats.
+    const viewerIds = new Set(m.buyerIds);
+    const hits = [...this.conversations.values()].filter((c) => {
+      const normal =
+        !!c.buyerId &&
+        viewerIds.has(c.buyerId) &&
+        ((m.sellerId != null && c.sellerId != null && m.sellerId === c.sellerId) || c.sellerName === m.sellerName);
+      const reverse =
+        !!m.sellerId &&
+        !!c.sellerId &&
+        c.buyerId === m.sellerId &&
+        viewerIds.has(c.sellerId);
+      return normal || reverse;
+    });
     const lastAt = (c: ConversationRecord) => {
       const messages = this.messages.get(c.id) ?? [];
       return +new Date(messages[messages.length - 1]?.createdAt ?? c.createdAt);
@@ -2611,11 +2621,14 @@ class PrismaStore implements Store {
     return r.count;
   }
   async findConversationMatch(m: { buyerIds: string[]; sellerId?: string; sellerName: string; listingId?: string }) {
-    const ors: Record<string, string>[] = [];
-    if (m.sellerId) ors.push({ sellerId: m.sellerId });
-    ors.push({ sellerId: `seller:${m.sellerName}` });
+    // Match the same buyer–seller pair in either direction. The old one-way
+    // lookup created duplicate threads when both accounts messaged each other.
+    const ors: { buyerId?: string | { in: string[] }; sellerId?: string | { in: string[] } }[] = [];
+    if (m.sellerId) ors.push({ buyerId: { in: m.buyerIds }, sellerId: m.sellerId });
+    ors.push({ buyerId: { in: m.buyerIds }, sellerId: `seller:${m.sellerName}` });
+    if (m.sellerId) ors.push({ sellerId: { in: m.buyerIds }, buyerId: m.sellerId });
     const hits = await this.p.conversation.findMany({
-      where: { buyerId: { in: m.buyerIds }, OR: ors },
+      where: { OR: ors },
       include: { messages: { orderBy: { createdAt: "desc" }, take: 1 } },
       take: 50,
     }).catch(() => []);
