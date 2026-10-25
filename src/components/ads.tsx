@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
-import Script from "next/script";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -13,11 +12,7 @@ import {
 } from "@/lib/ads";
 import { getAnalyticsConsent, setConsent } from "@/lib/consent";
 
-/**
- * AdSense loader. Runs only after an explicit consent choice — no Google
- * request fires pre-choice. "Essential only" loads it non-personalized.
- */
-export function AdScript() {
+function useAdsConsent(): AdsConsent | null {
   const [mode, setMode] = useState<AdsConsent | null>(null);
   useEffect(() => {
     const sync = () => setMode(getAdsConsent());
@@ -25,40 +20,44 @@ export function AdScript() {
     window.addEventListener("chap:ads-consent", sync);
     return () => window.removeEventListener("chap:ads-consent", sync);
   }, []);
+  return mode;
+}
+
+/**
+ * Site-wide AdSense loader. The script is present on every page for account
+ * verification and auto-ads; units stay non-personalized until the visitor
+ * chooses "Accept all" in the consent banner.
+ */
+export function AdScript() {
+  const mode = useAdsConsent();
   useEffect(() => {
-    if (!mode || !adsEnabled()) return;
+    if (!adsEnabled()) return;
     try {
       const w = window as unknown as { adsbygoogle?: unknown[] & { requestNonPersonalizedAds?: number } };
       w.adsbygoogle = w.adsbygoogle || [];
-      if (mode === "non-personalized") w.adsbygoogle.requestNonPersonalizedAds = 1;
+      w.adsbygoogle.requestNonPersonalizedAds = mode === "personalized" ? 0 : 1;
     } catch {}
   }, [mode]);
-  if (!adsEnabled() || !mode) return null;
-  return (
-    <Script
-      src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
-      strategy="lazyOnload"
-      crossOrigin="anonymous"
-    />
-  );
+  return null;
 }
 
 /** Single responsive display unit. Renders nothing without a slot id. */
 export function AdSlot({ slot, className }: { slot: string; className?: string }) {
   const pathname = usePathname();
+  const mode = useAdsConsent();
   const [ready, setReady] = useState(false);
   useEffect(() => {
     setReady(true);
   }, []);
   useEffect(() => {
-    if (!ready || !slot || !adsEnabled()) return;
+    if (!ready || !slot || !mode || !adsEnabled()) return;
     try {
       const w = window as unknown as { adsbygoogle?: unknown[] };
       w.adsbygoogle = w.adsbygoogle || [];
       w.adsbygoogle.push({});
     } catch {}
-  }, [ready, slot]);
-  if (!slot || !adsAllowedOn(pathname)) return null;
+  }, [ready, slot, mode]);
+  if (!slot || !mode || !adsAllowedOn(pathname)) return null;
   // Reserved space pre-hydration to avoid layout shift.
   if (!ready) return <div aria-hidden className={`min-h-24 bg-sand-50 ${className ?? ""}`} />;
   return (
@@ -79,7 +78,8 @@ export function AdSlot({ slot, className }: { slot: string; className?: string }
 /** Sponsored tile that sits inside listing grids (sized like a card). */
 export function InFeedAd({ slot }: { slot: string }) {
   const pathname = usePathname();
-  if (!slot || !adsAllowedOn(pathname)) return null;
+  const mode = useAdsConsent();
+  if (!slot || !mode || !adsAllowedOn(pathname)) return null;
   return (
     <div className="card flex min-h-48 flex-col overflow-hidden" aria-label="Advertisement">
       <p className="px-2.5 pt-2 text-[10px] font-semibold uppercase tracking-wide text-ink-400">Sponsored</p>
@@ -93,7 +93,8 @@ export function InFeedAd({ slot }: { slot: string }) {
 /** Full-width unit for article/detail flows. */
 export function InArticleAd({ slot }: { slot: string }) {
   const pathname = usePathname();
-  if (!slot || !adsAllowedOn(pathname)) return null;
+  const mode = useAdsConsent();
+  if (!slot || !mode || !adsAllowedOn(pathname)) return null;
   return (
     <div className="my-2" aria-label="Advertisement">
       <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-ink-400">Sponsored</p>
@@ -105,6 +106,7 @@ export function InArticleAd({ slot }: { slot: string }) {
 /** Dismissible mobile anchor (sits above the bottom nav). Desktop: bottom bar. */
 export function AnchorAd({ slot }: { slot: string }) {
   const pathname = usePathname();
+  const mode = useAdsConsent();
   const [dismissed, setDismissed] = useState(false);
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -113,7 +115,7 @@ export function AnchorAd({ slot }: { slot: string }) {
       if (sessionStorage.getItem("chap_ads_anchor_x") === "1") setDismissed(true);
     } catch {}
   }, []);
-  if (!ready || dismissed || !slot || !adsAllowedOn(pathname)) return null;
+  if (!ready || dismissed || !slot || !mode || !adsAllowedOn(pathname)) return null;
   return (
     <div className="fixed inset-x-0 bottom-16 z-40 border-t border-neutral-200 bg-white/95 shadow-card backdrop-blur md:bottom-0" aria-label="Advertisement">
       <button

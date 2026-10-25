@@ -4,7 +4,7 @@ import "./globals.css";
 import { Chrome } from "@/components/layout/chrome";
 import { Footer } from "@/components/layout/footer";
 import { AdScript, AnchorAd, ConsentBanner } from "@/components/ads";
-import { AD_SLOTS } from "@/lib/ads";
+import { AD_SLOTS, ADSENSE_CLIENT_ID, adsEnabled } from "@/lib/ads";
 import { CartProvider } from "@/components/cart-provider";
 import { currentUser } from "@/lib/auth";
 import { storeRead } from "@/lib/store";
@@ -30,6 +30,7 @@ export const metadata: Metadata = {
     "Discover great deals, shop trusted businesses, buy and sell new or pre-owned items, and find services across Kenya.",
   icons: { icon: "/fav.png", apple: "/fav.png" },
   manifest: "/manifest.webmanifest",
+  other: { "google-adsense-account": "ca-pub-1165378217849279" },
   openGraph: {
     type: "website",
     locale: "en_KE",
@@ -69,6 +70,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en-KE">
       <body className={`${inter.variable} font-sans`}>
+        {adsEnabled() && (
+          <>
+            <script dangerouslySetInnerHTML={{ __html: "window.adsbygoogle=window.adsbygoogle||[];window.adsbygoogle.requestNonPersonalizedAds=1;" }} />
+            <script
+              async
+              src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
+              crossOrigin="anonymous"
+            />
+          </>
+        )}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd()) }} />
         <CartProvider>
           <Chrome

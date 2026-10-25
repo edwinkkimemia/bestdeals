@@ -1,11 +1,12 @@
 /**
- * Google AdSense wiring. Everything is inert until NEXT_PUBLIC_ADSENSE_ID is
- * set (components render nothing), so unapproved domains ship zero ad code.
- * Ads never render on transactional/account pages (checkout, cart, auth,
- * dashboard, admin, orders, wishlist, sell, pricing) — policy + conversion.
+ * Google AdSense wiring. The publisher ID has a safe production default so
+ * the loader is present on every page; display units still stay off account
+ * and transactional routes. Ads load non-personalized until the visitor makes
+ * a consent choice.
  */
 
-export const ADSENSE_CLIENT_ID = process.env.NEXT_PUBLIC_ADSENSE_ID || "";
+export const DEFAULT_ADSENSE_CLIENT_ID = "ca-pub-1165378217849279";
+export const ADSENSE_CLIENT_ID = (process.env.NEXT_PUBLIC_ADSENSE_ID || DEFAULT_ADSENSE_CLIENT_ID).trim();
 
 export function adsEnabled(): boolean {
   return ADSENSE_CLIENT_ID.startsWith("ca-pub-");
