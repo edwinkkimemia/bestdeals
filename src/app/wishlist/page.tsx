@@ -72,7 +72,10 @@ export default function WishlistPage() {
   return (
     <div className="container-bd py-8">
       <h1 className="section-title">Wishlist ({total})</h1>
-      <p className="mt-1 text-sm text-ink-500">Saved hearts sync across devices when signed in — price drops on these ring the bell 🔔 in Notifications.</p>
+      <p className="mt-1 text-sm text-ink-500">
+        Saved hearts sync across devices when signed in — price drops on these ring the bell 🔔 in Notifications.{" "}
+        <Link href="/dashboard/saved-searches?tab=wishlist" className="link-bd">Open in Saved →</Link>
+      </p>
       {total === 0 ? (
         <div className="card mt-4 p-8 text-center">
           <p className="font-bold">Nothing saved yet</p>
