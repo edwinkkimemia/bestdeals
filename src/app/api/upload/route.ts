@@ -32,6 +32,16 @@ export async function POST(req: NextRequest) {
   // shared storage (DB rows survive redeploys; per-instance /tmp did not).
   const user = await currentUser().catch(() => null);
   if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+
+  // Retry-safe photo uploads: the same form key returns the same URLs if a
+  // previous response was lost, instead of duplicating files.
+  const uploadKey = (req.headers.get("idempotency-key") ?? "").trim().slice(0, 100);
+  const idem = uploadKey ? `upload:idem:${user.id}:${uploadKey}` : "";
+  if (idem) {
+    const prior = (await getStore().getSetting(idem).catch(() => null)) as { urls?: string[] } | null;
+    if (prior?.urls?.length) return NextResponse.json({ ok: true, urls: prior.urls, duplicate: true });
+  }
+
   const form = await req.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: "No file." }, { status: 400 });
   const isPrivate = form.get("private") === "1";

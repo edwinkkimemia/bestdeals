@@ -37,18 +37,33 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const categories = await getCategories();
   const parsed = listingSchemaFor(categories).safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Check the form and try again." }, { status: 400 });
+    const issue = parsed.error.issues[0];
+    return NextResponse.json(
+      { error: issue?.message || "Check the form and try again.", field: issue?.path?.[0] ?? null },
+      { status: 400 }
+    );
   }
   const d = parsed.data;
   const categoryError = await categorySelectionError(d.categorySlug, d.subcategory);
-  if (categoryError) return NextResponse.json({ error: categoryError }, { status: 400 });
+  if (categoryError) {
+    return NextResponse.json(
+      { error: categoryError, field: categoryError.toLowerCase().includes("subcategory") ? "subcategory" : "categorySlug" },
+      { status: 400 }
+    );
+  }
   if (d.compareAt && d.compareAt <= d.price) {
-    return NextResponse.json({ error: "Previous price must be higher than the current price, or left empty." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Previous price must be higher than the current price, or left empty.", field: "compareAt" },
+      { status: 400 }
+    );
   }
   const banned = ["counterfeit", "stolen", "pyramid", "quick loan"];
   const hay = `${d.title} ${d.description}`.toLowerCase();
   if (banned.some((w) => hay.includes(w))) {
-    return NextResponse.json({ error: "This listing needs manual review due to a flagged term. Our team will check it." }, { status: 422 });
+    return NextResponse.json(
+      { error: "This listing needs manual review due to a flagged term. Our team will check it.", field: "description" },
+      { status: 422 }
+    );
   }
   // Sanitize image URLs — only https or server-uploaded paths (incl. serverless /api/files/).
   const images = normalizeListingImages(d.images);

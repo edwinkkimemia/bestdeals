@@ -329,6 +329,8 @@ export interface Store {
   countLiveListingsByOwner(): Promise<{ ownerId: string; count: number }[]>;
   listListingsByShop(shopSlug: string): Promise<ListingRecord[]>;
   setListingStatus(id: string, status: string, adminId?: string, reason?: string): Promise<void>;
+  /** Latest moderation reason (rejection/hide) for the seller-facing fix-and-resubmit banner. */
+  getLatestModerationReason(listingId: string): Promise<string | null>;
   setListingFeatured(id: string, featured: boolean): Promise<void>;
   updateListing(id: string, patch: Partial<Pick<ListingRecord, "title" | "description" | "type" | "price" | "compareAt" | "condition" | "txMethod" | "negotiable" | "stock" | "county" | "town" | "images" | "attributes" | "categorySlug" | "subcategory" | "shopSlug">>): Promise<ListingRecord | null>;
   deleteListing(id: string): Promise<void>;
@@ -458,6 +460,7 @@ class DemoStore implements Store {
   messages = new Map<string, MessageRecord[]>();
   promotions = new Map<string, PromotionRecord>();
   referrals = new Map<string, ReferralRecord>();
+  moderationReasons = new Map<string, string>();
 
   async findUserByEmail(email: string) {
     return [...this.users.values()].find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
@@ -605,9 +608,13 @@ class DemoStore implements Store {
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
       .map((l) => ({ ...l, featured: this.listingHasLivePromo(l.id) ? true : false, verified: this.ownerVerified(l.ownerId) }));
   }
-  async setListingStatus(id: string, status: string) {
+  async setListingStatus(id: string, status: string, _adminId?: string, reason?: string) {
     const l = this.listings.get(id);
     if (l) l.status = status;
+    if (reason) this.moderationReasons.set(id, reason);
+  }
+  async getLatestModerationReason(listingId: string) {
+    return this.moderationReasons.get(listingId) ?? null;
   }
   async setListingFeatured(id: string, featured: boolean) {
     const l = this.listings.get(id);
@@ -1700,6 +1707,14 @@ class PrismaStore implements Store {
       await this.p.moderationAction.create({ data: { listingId: id, adminId, action: status, reason: reason ?? status } });
       await this.p.auditLog.create({ data: { actorId: adminId, action: `listing.${status}`, entity: "Listing", entityId: id, reason: reason ?? null } });
     }
+  }
+  async getLatestModerationReason(listingId: string) {
+    const row = await this.p.moderationAction.findFirst({
+      where: { listingId, action: { in: ["rejected", "hidden"] } },
+      orderBy: { createdAt: "desc" },
+      select: { reason: true },
+    }).catch(() => null);
+    return row?.reason ?? null;
   }
   async setListingFeatured(id: string, featured: boolean) {
     await this.p.listing.update({ where: { id }, data: { featured } });

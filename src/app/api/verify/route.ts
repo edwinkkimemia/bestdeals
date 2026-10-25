@@ -108,6 +108,7 @@ export async function GET() {
       emailVerified: fresh?.emailVerified ?? false,
       sellerKind: fresh?.sellerKind ?? "individual",
       businessName: fresh?.businessName ?? undefined,
+      phone: fresh?.phone ?? user.phone,
     },
   });
 }

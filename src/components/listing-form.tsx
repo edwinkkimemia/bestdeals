@@ -14,6 +14,21 @@ import { WmImage } from "./ui/wm-image";
 
 const TYPES = ["product", "classified", "service"] as const;
 
+const FIELD_IDS: Record<string, string> = {
+  title: "l-title",
+  description: "l-desc",
+  listingType: "l-type",
+  transactionMethod: "l-tx",
+  categorySlug: "l-cat",
+  subcategory: "l-sub",
+  condition: "l-cond",
+  price: "l-price",
+  compareAt: "l-was",
+  stock: "l-stock",
+  county: "l-county",
+  town: "l-town",
+};
+
 type Initial = Partial<ListingInput> & { images?: string[] };
 
 /** Post-a-listing form. Create mode respects ?type=; edit mode PUTs to /api/listings/[id]. */
@@ -35,6 +50,9 @@ export function ListingForm({ listingId, initialValues, submitLabel, categories 
   const [urls, setUrls] = useState<string[]>(initialValues?.images ?? []);
   const [picked, setPicked] = useState<{ file: File; url: string }[]>([]);
   const [uploading, setUploading] = useState(false);
+  const uploadKey = useRef(
+    globalThis.crypto?.randomUUID?.() ?? `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
   const [linkText, setLinkText] = useState((initialValues?.images ?? []).join(", "));
   const schema = useMemo(() => listingSchemaFor(categories), [categories]);
   // URLs currently contributed by the links box, so typing there merges
@@ -42,6 +60,9 @@ export function ListingForm({ listingId, initialValues, submitLabel, categories 
   const linkUrls = useRef<string[]>(parseImageLinks((initialValues?.images ?? []).join(", ")));
 
   const setPickedFiles = (files: File[]) => {
+    // New file selection = new upload attempt; never reuse a previous key.
+    uploadKey.current =
+      globalThis.crypto?.randomUUID?.() ?? `upload-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     setPicked((prev) => {
       prev.forEach((p) => URL.revokeObjectURL(p.url));
       return files.map((file) => ({ file, url: URL.createObjectURL(file) }));
@@ -74,7 +95,7 @@ export function ListingForm({ listingId, initialValues, submitLabel, categories 
     setMsg(text);
   };
 
-  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, watch, setValue, setError, clearErrors, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       listingType: (initialValues?.listingType as never) ?? ((TYPES as readonly string[]).includes(typeParam ?? "") ? (typeParam as never) : ("classified" as never)),
@@ -106,13 +127,18 @@ export function ListingForm({ listingId, initialValues, submitLabel, categories 
         if (submitted) return;
         say("ok", "");
         setNotVerified(false);
+        clearErrors();
         let images = [...urls];
         if (picked.length > 0) {
           setUploading(true);
           try {
             const fd = new FormData();
             picked.forEach((p) => fd.append("files", p.file));
-            const up = await fetch("/api/upload", { method: "POST", body: fd });
+            const up = await fetch("/api/upload", {
+              method: "POST",
+              headers: { "Idempotency-Key": uploadKey.current },
+              body: fd,
+            });
             const uj = await up.json();
             if (!up.ok) {
               say("err", uj.error || "Image upload failed.");
@@ -135,6 +161,15 @@ export function ListingForm({ listingId, initialValues, submitLabel, categories 
         const j = await r.json().catch(() => ({}));
         if (!r.ok) {
           if (j.code === "NOT_VERIFIED" || r.status === 403) setNotVerified(true);
+          if (typeof j.field === "string") {
+            setError(j.field as never, { type: "server", message: j.error });
+            requestAnimationFrame(() => {
+              const id = FIELD_IDS[j.field as string];
+              const el = id ? document.getElementById(id) : null;
+              el?.scrollIntoView({ behavior: "smooth", block: "center" });
+              (el as HTMLElement | null)?.focus?.();
+            });
+          }
           say("err", j.error || "Failed");
           return;
         }
@@ -206,7 +241,7 @@ export function ListingForm({ listingId, initialValues, submitLabel, categories 
       )}
       <div className="grid gap-3 sm:grid-cols-3">
         <div><label className="label-bd" htmlFor="l-price">Price (KES)</label><input id="l-price" inputMode="numeric" className="input-bd" {...register("price")} />{errors.price && <p className="text-xs text-red-600">Enter a valid price</p>}</div>
-        <div><label className="label-bd" htmlFor="l-was">Previous price (optional)</label><input id="l-was" inputMode="numeric" className="input-bd" placeholder="Only if genuine" {...register("compareAt")} /><p className="text-xs text-ink-400">Shown only when valid & higher.</p></div>
+        <div><label className="label-bd" htmlFor="l-was">Previous price (optional)</label><input id="l-was" inputMode="numeric" className="input-bd" placeholder="Only if genuine" {...register("compareAt")} />{errors.compareAt ? <p className="text-xs text-red-600">{String(errors.compareAt.message)}</p> : <p className="text-xs text-ink-400">Shown only when valid & higher.</p>}</div>
         <div><label className="label-bd" htmlFor="l-stock">Stock</label><input id="l-stock" inputMode="numeric" className="input-bd" {...register("stock")} /></div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">

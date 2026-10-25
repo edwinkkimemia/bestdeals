@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { currentUser } from "@/lib/auth";
 import { getCategories } from "@/lib/categories";
 import { ListingForm } from "@/components/listing-form";
+import { SellerVerificationCard } from "@/components/seller-verification";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
 
 export const metadata = {
@@ -34,39 +35,31 @@ export default async function SellPage() {
     );
   }
 
+  const { getStore } = await import("@/lib/store");
+  const fresh = await getStore().findUserById(user.id).catch(() => null);
+  const verified = fresh?.verified ?? false;
+
   return (
     <div className="container-bd py-8">
       <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Sell" }]} />
       <div className="mt-4">
         <h1 className="section-title">Sell an item</h1>
-        <VerificationGate userId={user.id} />
-        <p className="mt-1 text-sm text-ink-500">Fields adapt to the category. Photos upload from your phone; listings go live after moderation.</p>
-        <Suspense fallback={<div className="card mt-4 p-8 text-center text-sm">Loading form…</div>}>
-          <ListingForm categories={categories} />
-        </Suspense>
+        {verified ? (
+          <>
+            <p className="mt-1 text-sm text-ink-500">Fields adapt to the category. Photos upload from your phone; listings go live after moderation.</p>
+            <Suspense fallback={<div className="card mt-4 p-8 text-center text-sm">Loading form…</div>}>
+              <ListingForm categories={categories} />
+            </Suspense>
+          </>
+        ) : (
+          <SellerVerificationCard initialKind={fresh?.sellerKind} initialPhone={fresh?.phone} />
+        )}
         <div className="mt-4 flex flex-wrap gap-2 text-sm">
           <Link href="/dashboard/listings" className="link-bd">My listings →</Link>
           <Link href="/sellers" className="link-bd">Seller guidelines →</Link>
+          <Link href="/dashboard/verify" className="link-bd">Verification centre →</Link>
         </div>
       </div>
-    </div>
-  );
-}
-
-async function VerificationGate({ userId }: { userId: string }) {
-  const { getStore } = await import("@/lib/store");
-  const fresh = await getStore().findUserById(userId).catch(() => null);
-  if (fresh?.verified) return null;
-  const business = fresh?.sellerKind === "business";
-  return (
-    <div className="card mt-4 border-amber-300 bg-amber-50 p-4 text-sm">
-      <p className="font-bold text-amber-900">Verify before you post</p>
-      <p className="mt-1 text-amber-800">
-        {business
-          ? "Businesses verify with a permit and owner ID before the first listing. It unlocks your verified-business ✓ badge."
-          : "Every seller is verified by our team (national ID + email + phone) before their first listing. It keeps buyers safe — and unlocks your ✓ badge."}
-      </p>
-      <Link href={business ? "/dashboard/verify?kind=business" : "/dashboard/verify"} className="btn-primary mt-3">Get verified</Link>
     </div>
   );
 }

@@ -47,6 +47,9 @@ export default async function ManageListing({
 
   const title = stored!.title;
   const meta = `${stored!.type} · ${formatKES(stored!.price)} · ${stored!.town}, ${stored!.county} · stock ${stored!.stock} · status: ${stored!.status}`;
+  const moderationReason = stored!.status === "rejected"
+    ? await getStore().getLatestModerationReason(stored!.id).catch(() => null)
+    : null;
   const publicPath = `/${stored!.type === "classified" ? "classifieds" : stored!.type === "service" ? "services" : "product"}/${stored!.slug}`;
 
   return (
@@ -68,7 +71,10 @@ export default async function ManageListing({
           <p className="mt-2 rounded-xl bg-amber-50 p-3 text-sm text-amber-800">In moderation queue — it goes live once approved. You can still edit details below (edits keep it in queue).</p>
         )}
         {stored!.status === "rejected" && (
-          <p className="mt-2 rounded-xl bg-red-50 p-3 text-sm text-red-700">Rejected by moderation. Fix the details below and save — it goes back for review automatically.</p>
+          <div className="mt-2 rounded-xl bg-red-50 p-3 text-sm text-red-700">
+            <p className="font-semibold">Rejected by moderation{moderationReason ? `: ${moderationReason}` : "."}</p>
+            <p className="mt-0.5">Fix the details below and save — it goes back for review automatically.</p>
+          </div>
         )}
         {stored!.status === "active" ? (
           <p className="mt-2 rounded-xl bg-green-50 p-3 text-sm text-green-800">
