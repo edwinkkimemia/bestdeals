@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
-import { normalizePlan, planChangeKind, pendingSellerPlanKey, PLAN_IDS, PLAN_LISTING_LIMITS, type PendingPlan } from "@/lib/plans";
+import { getSellerPlan, normalizePlan, planChangeKind, pendingSellerPlanKey, PLAN_IDS, PLAN_LISTING_LIMITS, type PendingPlan } from "@/lib/plans";
 import { SHOP_PLANS } from "@/data/catalog";
 import { initiateSTKPush } from "@/lib/payments";
 import { formatKES } from "@/lib/format";
@@ -236,11 +236,18 @@ export async function POST(req: NextRequest) {
   });
 }
 
-/** Current personal plan + pending checkout. */
+/** Effective plan (shop plan when the seller owns a storefront) + pending checkout. */
 export async function GET() {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
-  const fresh = await getStore().findUserById(user.id).catch(() => null);
-  const pending = (await getStore().getSetting(pendingSellerPlanKey(user.id)).catch(() => null)) as PendingPlan | null;
-  return NextResponse.json({ planId: normalizePlan(fresh?.planId), pending });
+  const [effective, pending] = await Promise.all([
+    getSellerPlan(user.id).catch(() => ({ planId: "free" as const, shopSlug: undefined, shopName: undefined })),
+    getStore().getSetting(pendingSellerPlanKey(user.id)).catch(() => null) as Promise<PendingPlan | null>,
+  ]);
+  return NextResponse.json({
+    planId: normalizePlan(effective.planId),
+    shopSlug: effective.shopSlug ?? null,
+    shopName: effective.shopName ?? null,
+    pending,
+  });
 }
