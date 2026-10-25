@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { formatKES } from "@/lib/format";
+import { PushEnablePrompt } from "@/components/push-enable-prompt";
 
 type Order = {
   id: string;
@@ -125,6 +126,8 @@ function OrderInner({ id }: { id: string }) {
         )}
         <p className="text-xs text-ink-400">Payment status changes only via verified server callbacks — never from browser state.</p>
       </div>
+
+      <PushEnablePrompt context="orders" className="mt-3" />
 
       {/* Dispute */}
       <div className="card mt-3 p-5">

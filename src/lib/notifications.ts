@@ -75,13 +75,16 @@ export async function notifyUser(input: {
     });
     if (created) {
       try {
-        const { sendPushToUser } = await import("./push");
-        await sendPushToUser(input.userId, {
-          title,
-          body,
-          url: input.link || "/dashboard/notifications",
-          tag: created.id,
-        });
+        const { pushEnabledFor } = await import("./notification-preferences");
+        if (await pushEnabledFor(input.userId, input.type)) {
+          const { sendPushToUser } = await import("./push");
+          await sendPushToUser(input.userId, {
+            title,
+            body,
+            url: input.link || "/dashboard/notifications",
+            tag: created.id,
+          });
+        }
       } catch {}
     }
     return created;

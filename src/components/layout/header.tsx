@@ -5,21 +5,22 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ChevronDown, ChevronRight, Heart, LogOut, MapPin, Menu, MessageCircle, Search, ShoppingCart, Store, User, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Heart, Loader2, LocateFixed, LogOut, MapPin, Menu, MessageCircle, Search, ShoppingCart, Store, User, X } from "lucide-react";
 import { useCart } from "../cart-provider";
 import { NotificationsBell } from "../notifications-bell";
 import { CategoryIcon } from "../category-icon";
 import { KENYA_COUNTIES, countySlug } from "@/lib/kenya";
+import { nearestCounty } from "@/lib/kenya-geo";
 import { CATEGORIES, POPULAR_SEARCHES, type Category } from "@/data/catalog";
 import { slugify } from "@/lib/utils";
 
-export function Header({ user, categories = CATEGORIES }: { user?: { name: string; role: string } | null; categories?: Category[] }) {
+export function Header({ user, categories = CATEGORIES, initialCounty }: { user?: { name: string; role: string } | null; categories?: Category[]; initialCounty?: string | null }) {
   const router = useRouter();
   const { count } = useCart();
   const [open, setOpen] = useState(false);
   const [openCat, setOpenCat] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [county, setCounty] = useState("all");
+  const [county, setCounty] = useState(initialCounty ?? "all");
   const [sugs, setSugs] = useState<string[]>([]);
   const [searchFocus, setSearchFocus] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -29,6 +30,8 @@ export function Header({ user, categories = CATEGORIES }: { user?: { name: strin
   const [locOpen, setLocOpen] = useState(false);
   const [locFilter, setLocFilter] = useState("");
   const [hoveredCounty, setHoveredCounty] = useState<string | null>(null);
+  const [geoBusy, setGeoBusy] = useState(false);
+  const [geoMsg, setGeoMsg] = useState("");
   const locRef = useRef<HTMLDivElement>(null);
 
   const signOut = async () => {
@@ -46,14 +49,51 @@ export function Header({ user, categories = CATEGORIES }: { user?: { name: strin
     return `/search?${p.toString()}`;
   };
 
-  const pickCounty = (next: string) => {
+  const pickCounty = async (next: string) => {
     setCounty(next);
     try {
       localStorage.setItem("bd_county", next);
     } catch {}
+    if (user) {
+      await fetch("/api/location", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ county: next }),
+      }).catch(() => {});
+    }
     setLocOpen(false);
     setLocFilter("");
+    setGeoMsg("");
     router.push(next === "all" ? "/location" : `/location/${countySlug(next)}`);
+  };
+
+  const useMyLocation = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setGeoMsg("Location isn't available in this browser. Pick a county manually.");
+      return;
+    }
+    setGeoBusy(true);
+    setGeoMsg("");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setGeoBusy(false);
+        const nearest = nearestCounty(position.coords.latitude, position.coords.longitude);
+        if (!nearest) {
+          setGeoMsg("We couldn't match that location to a Kenya county. Pick one manually.");
+          return;
+        }
+        void pickCounty(nearest);
+      },
+      (error) => {
+        setGeoBusy(false);
+        setGeoMsg(
+          error.code === 1
+            ? "Location permission was denied. Pick a county manually below."
+            : "Couldn't get your location. Pick a county manually below."
+        );
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
   };
 
   const locQuery = locFilter.trim().toLowerCase();
@@ -167,11 +207,31 @@ export function Header({ user, categories = CATEGORIES }: { user?: { name: strin
   }, [user]);
 
   useEffect(() => {
+    // Signed-in accounts use the server-saved county across devices. On a new
+    // device, sync a previously chosen local county up once.
+    if (initialCounty) {
+      const next = initialCounty === "All Kenya" ? "all" : initialCounty;
+      setCounty(next);
+      try {
+        localStorage.setItem("bd_county", next);
+      } catch {}
+      return;
+    }
+    let saved = "all";
     try {
-      const saved = localStorage.getItem("bd_county") || "all";
-      setCounty(saved === "All Kenya" ? "all" : saved);
+      saved = localStorage.getItem("bd_county") || "all";
+      saved = saved === "All Kenya" ? "all" : saved;
+      setCounty(saved);
     } catch {}
-  }, []);
+    if (user && saved !== "all") {
+      fetch("/api/location", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ county: saved }),
+      }).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialCounty, user?.name]);
 
   return (
     <>
@@ -266,6 +326,19 @@ export function Header({ user, categories = CATEGORIES }: { user?: { name: strin
             {locOpen && (
               <div className="absolute right-0 top-full z-50 mt-2 flex w-[26rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg" role="dialog" aria-label="Choose location">
                 <div className="w-1/2 border-r border-neutral-100">
+                  <div className="border-b border-neutral-100 p-2">
+                    <button
+                      type="button"
+                      onClick={useMyLocation}
+                      disabled={geoBusy}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-brand-600/30 bg-brand-50 px-2.5 py-1.5 text-xs font-semibold text-brand-700 hover:bg-brand-100 disabled:opacity-60"
+                    >
+                      {geoBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LocateFixed className="h-3.5 w-3.5" />}
+                      {geoBusy ? "Finding your county…" : "Use my location"}
+                    </button>
+                    {geoMsg && <p className="mt-1.5 text-[11px] text-red-700">{geoMsg}</p>}
+                    <p className="mt-1 text-[10px] text-ink-400">Only your county is saved — no GPS coordinates.</p>
+                  </div>
                   <div className="border-b border-neutral-100 p-2">
                     <input
                       autoFocus

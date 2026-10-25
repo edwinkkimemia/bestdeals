@@ -50,6 +50,12 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser().catch(() => null);
   const categories = await getCategories().catch(() => CATEGORIES);
+  const savedCounty = user
+    ? await storeRead(async (s) => {
+        const value = await s.getSetting(`location:${user.id}`).catch(() => null);
+        return typeof value === "string" ? value : null;
+      }, null)
+    : null;
   // Site-wide announcement bar (Admin → Settings). Silent when disabled/unset.
   const announcement = await storeRead(async (s) => {
     const [enabled, text] = await Promise.all([
@@ -70,6 +76,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             adminUser={user ? { name: user.name, email: user.email } : null}
             announcement={announcement}
             categories={categories}
+            initialCounty={savedCounty}
             footer={<Footer />}
           >
             {children}

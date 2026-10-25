@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, CheckCheck, ChevronLeft } from "lucide-react";
 import { ChatComposer } from "@/components/chat-composer";
+import { PushEnablePrompt } from "@/components/push-enable-prompt";
 
 type Msg = {
   id: string;
@@ -119,7 +120,9 @@ function ThreadInner({ id }: { id: string }) {
   let lastDay = "";
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-sand-50 shadow-card" style={{ height: "min(72dvh, 640px)" }}>
+    <div>
+      <PushEnablePrompt context="messages" className="mb-3" />
+      <div className="flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-sand-50 shadow-card" style={{ height: "min(72dvh, 640px)" }}>
       {/* Chat header */}
       <div className="flex shrink-0 items-center gap-2.5 bg-sand-50 px-3 py-2.5">
         <Link href="/dashboard/messages" aria-label="Back to inbox" className="rounded-full p-1.5 hover:bg-sand-100">
@@ -202,6 +205,7 @@ function ThreadInner({ id }: { id: string }) {
             placeholder="Message"
           />
         </div>
+      </div>
       </div>
     </div>
   );

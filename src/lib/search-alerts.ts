@@ -14,6 +14,8 @@ import { formatKES } from "./format";
 
 async function pushAlert(store: Store, userId: string, title: string, body: string, link: string) {
   try {
+    const { pushEnabledFor } = await import("./notification-preferences");
+    if (!(await pushEnabledFor(userId, "alert", store))) return;
     const { sendPushToUser } = await import("./push");
     await sendPushToUser(userId, { title, body, url: link }, store);
   } catch {}

@@ -1,149 +1,114 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { BellOff, BellRing, CheckCircle2, Loader2, Send, Smartphone } from "lucide-react";
+import {
+  disableBrowserPush,
+  enableBrowserPush,
+  getBrowserPushState,
+  sendTestBrowserPush,
+  type BrowserPushState,
+} from "@/lib/push-client";
+import {
+  DEFAULT_NOTIFICATION_PREFS,
+  NOTIFICATION_PREF_META,
+  NOTIFICATION_PREF_TYPES,
+  type NotificationPrefs,
+  type NotificationPrefType,
+} from "@/lib/notification-prefs";
 
-type PushState = "loading" | "unsupported" | "off" | "on" | "denied";
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(base64);
-  const output = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i += 1) output[i] = raw.charCodeAt(i);
-  return output;
-}
+type PushState = BrowserPushState | "loading";
 
 /**
- * Browser push enrolment for the signed-in account. Permission is only
- * requested after an explicit button press (never on page load).
+ * Browser push enrolment + per-type preferences for the signed-in account.
+ * Permission is only requested after an explicit button press.
  */
 export function PushNotificationsCard() {
   const [status, setStatus] = useState<PushState>("loading");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
+  const [prefs, setPrefs] = useState<NotificationPrefs>(DEFAULT_NOTIFICATION_PREFS);
+  const [prefsReady, setPrefsReady] = useState(false);
+  const [prefsBusy, setPrefsBusy] = useState<NotificationPrefType | null>(null);
+  const [prefsMsg, setPrefsMsg] = useState("");
+
+  const loadPrefs = useCallback(async () => {
+    try {
+      const r = await fetch("/api/push/preferences", { cache: "no-store" });
+      if (r.ok) {
+        const j = await r.json();
+        setPrefs({ ...DEFAULT_NOTIFICATION_PREFS, ...(j.prefs ?? {}) });
+      }
+    } catch {}
+    setPrefsReady(true);
+  }, []);
 
   useEffect(() => {
-    let live = true;
-    if (
-      typeof window === "undefined" ||
-      !("serviceWorker" in navigator) ||
-      !("PushManager" in window) ||
-      typeof Notification === "undefined"
-    ) {
-      setStatus("unsupported");
-      return;
-    }
-    (async () => {
-      try {
-        const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-        const sub = await reg.pushManager.getSubscription();
-        if (!live) return;
-        setStatus(Notification.permission === "denied" ? "denied" : sub ? "on" : "off");
-      } catch {
-        if (live) setStatus("off");
-      }
-    })();
-    return () => {
-      live = false;
-    };
-  }, []);
+    getBrowserPushState().then(setStatus).catch(() => setStatus("off"));
+    loadPrefs();
+  }, [loadPrefs]);
 
   const enable = async () => {
     setBusy(true);
     setMsg("");
     setErr("");
-    try {
-      if (!("serviceWorker" in navigator) || !("PushManager" in window) || typeof Notification === "undefined") {
-        setStatus("unsupported");
-        return;
-      }
-      const permission =
-        Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
-      if (permission !== "granted") {
-        if (permission === "denied") {
-          setStatus("denied");
-          setErr("Notifications are blocked. Allow them for chap.co.ke in your browser settings, then try again.");
-        } else {
-          setStatus("off");
-          setMsg("Notifications weren’t enabled. You can turn them on anytime.");
-        }
-        return;
-      }
-
-      const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-      await navigator.serviceWorker.ready;
-
-      const keyRes = await fetch("/api/push/public-key", { cache: "no-store" });
-      const keyJson = await keyRes.json().catch(() => ({}));
-      if (!keyRes.ok || !keyJson.publicKey) {
-        setErr(keyJson.error || "Push notifications are not configured yet.");
-        return;
-      }
-
-      const existing = await reg.pushManager.getSubscription();
-      const subscription =
-        existing ??
-        (await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(keyJson.publicKey) as BufferSource,
-        }));
-
-      const save = await fetch("/api/push/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subscription: subscription.toJSON() }),
-      });
-      const saved = await save.json().catch(() => ({}));
-      if (!save.ok) {
-        if (!existing) await subscription.unsubscribe().catch(() => {});
-        setErr(saved.error || "Could not enable push notifications.");
-        return;
-      }
-
-      setStatus("on");
-      setMsg("Push notifications are on for this device.");
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Could not enable push notifications.");
-    } finally {
-      setBusy(false);
+    const result = await enableBrowserPush();
+    setStatus(result.state);
+    if (result.ok) setMsg(result.message || "Push notifications are on for this device.");
+    else {
+      if (result.error) setErr(result.error);
+      if (result.message) setMsg(result.message);
     }
+    setBusy(false);
   };
 
   const disable = async () => {
     setBusy(true);
     setMsg("");
     setErr("");
-    try {
-      const reg = await navigator.serviceWorker.getRegistration();
-      const sub = await reg?.pushManager.getSubscription();
-      if (sub) {
-        await fetch("/api/push/subscribe", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ endpoint: sub.endpoint }),
-        }).catch(() => {});
-        await sub.unsubscribe().catch(() => {});
-      }
-      setStatus("off");
-      setMsg("Push notifications are off for this device.");
-    } finally {
-      setBusy(false);
-    }
+    const result = await disableBrowserPush();
+    setStatus(result.state);
+    if (result.ok) setMsg(result.message || "Push notifications are off for this device.");
+    else if (result.error) setErr(result.error);
+    setBusy(false);
   };
 
   const sendTest = async () => {
     setBusy(true);
     setMsg("");
     setErr("");
+    const result = await sendTestBrowserPush();
+    if (result.ok) setMsg(result.message || "Test notification sent.");
+    else if (result.error) setErr(result.error);
+    setBusy(false);
+  };
+
+  const togglePref = async (type: NotificationPrefType) => {
+    if (prefsBusy || !prefsReady) return;
+    const next = !prefs[type];
+    setPrefs((current) => ({ ...current, [type]: next }));
+    setPrefsBusy(type);
+    setPrefsMsg("");
     try {
-      const res = await fetch("/api/push/test", { method: "POST" });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) return setErr(json.error || "Could not send the test notification.");
-      setMsg(`Test notification sent to ${json.sent ?? 1} device${json.sent === 1 ? "" : "s"}.`);
+      const r = await fetch("/api/push/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prefs: { [type]: next } }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setPrefs((current) => ({ ...current, [type]: !next }));
+        setPrefsMsg(j.error || "Could not save that preference.");
+        return;
+      }
+      if (j.prefs) setPrefs({ ...DEFAULT_NOTIFICATION_PREFS, ...j.prefs });
+      setPrefsMsg("Preferences saved.");
+    } catch {
+      setPrefs((current) => ({ ...current, [type]: !next }));
+      setPrefsMsg("Could not save that preference.");
     } finally {
-      setBusy(false);
+      setPrefsBusy(null);
     }
   };
 
@@ -202,6 +167,40 @@ export function PushNotificationsCard() {
             </button>
           )}
           {active && <span className="flex items-center gap-1 text-xs text-green-700"><CheckCircle2 className="h-3.5 w-3.5" /> Device connected</span>}
+        </div>
+      )}
+
+      {status !== "unsupported" && prefsReady && (
+        <div className="mt-4 border-t border-neutral-100 pt-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-sm font-bold">What should trigger a push?</p>
+            <span className="text-[11px] text-ink-400">In-app notifications stay on for everything.</span>
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {NOTIFICATION_PREF_TYPES.map((type) => {
+              const meta = NOTIFICATION_PREF_META[type];
+              return (
+                <label
+                  key={type}
+                  className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-neutral-200 px-3 py-2.5 text-sm hover:bg-sand-50"
+                >
+                  <input
+                    type="checkbox"
+                    checked={prefs[type]}
+                    disabled={Boolean(prefsBusy)}
+                    onChange={() => togglePref(type)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600"
+                  />
+                  <span className="min-w-0">
+                    <span className="block font-semibold">{meta.label}</span>
+                    <span className="block text-xs text-ink-500">{meta.description}</span>
+                  </span>
+                  {prefsBusy === type && <Loader2 className="ml-auto mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-ink-400" />}
+                </label>
+              );
+            })}
+          </div>
+          {prefsMsg && <p role="status" className="mt-2 text-xs text-ink-500">{prefsMsg}</p>}
         </div>
       )}
 

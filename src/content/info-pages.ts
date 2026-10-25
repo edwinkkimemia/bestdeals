@@ -514,6 +514,8 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "Listings & shops: titles, photos, prices, locations, business details — to display the marketplace.",
               "Transactions: orders, suborders, payment references (never card numbers or M-Pesa PINs) — to fulfil, reconcile, and resolve disputes.",
               "Verification documents: ID/business photos — stored privately, visible only to moderators, never on public pages.",
+              "Location preference: your selected county, chosen manually or via an optional one-time device location check. Precise GPS coordinates are never stored.",
+              "Push notifications: a per-device browser subscription and your chosen alert categories — only after you explicitly enable them. Turn them off anytime.",
               "Technical: device, approximate area, and usage analytics — to fight fraud, improve search, and keep the site fast.",
             ],
           },

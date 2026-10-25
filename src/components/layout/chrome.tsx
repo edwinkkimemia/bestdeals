@@ -20,6 +20,7 @@ export function Chrome({
   adminUser,
   announcement,
   categories,
+  initialCounty,
   footer,
   children,
 }: {
@@ -27,6 +28,7 @@ export function Chrome({
   adminUser: AdminUser;
   announcement: string | null;
   categories: Category[];
+  initialCounty?: string | null;
   footer: React.ReactNode;
   children: React.ReactNode;
 }) {
@@ -45,7 +47,7 @@ export function Chrome({
   return (
     <>
       {announcement && <AnnouncementBar text={announcement} />}
-      <Header user={user} categories={categories} />
+      <Header user={user} categories={categories} initialCounty={initialCounty} />
       <main className="min-h-[60vh]">{children}</main>
       {footer}
       <BottomNav />
