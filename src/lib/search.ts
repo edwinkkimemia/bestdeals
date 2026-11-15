@@ -153,7 +153,7 @@ export function searchListings(p: SearchParams): {
   perPage: number;
 } {
   const items = staticMatches(p);
-  const perPage = Math.min(Math.max(p.perPage ?? 24, 1), 60);
+  const perPage = Math.min(Math.max(p.perPage ?? 60, 1), 120);
   const page = Math.max(p.page ?? 1, 1);
   const total = items.length;
   return {
@@ -471,7 +471,7 @@ export async function searchAll(
       const { withLiveVerification } = await import("./live-listings");
       items = await withLiveVerification(items);
     } catch {}
-    const perPage = Math.min(Math.max(p.perPage ?? 24, 1), 60);
+    const perPage = Math.min(Math.max(p.perPage ?? 60, 1), 120);
     const page = Math.max(p.page ?? 1, 1);
     return {
       items: items.slice((page - 1) * perPage, page * perPage),

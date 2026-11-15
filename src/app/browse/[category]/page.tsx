@@ -25,7 +25,7 @@ const getCategoryData = cache(async (slug: string) => {
   const { items, total } = await searchAll({
     category: category.slug,
     sort: "relevance",
-    perPage: 48,
+    perPage: 60,
   });
   return { category, items, total };
 });

@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
     type: (q.get("type") as SearchParams["type"]) ?? "all",
     sort: (q.get("sort") as SearchParams["sort"]) ?? "relevance",
     page: Math.max(1, Number(q.get("page") ?? "1") || 1),
-    perPage: Math.min(60, Math.max(1, Number(q.get("per") ?? "24") || 24)),
+    perPage: Math.min(120, Math.max(1, Number(q.get("per") ?? "60") || 60)),
   };
   const r = await searchAll(params);
   return NextResponse.json(r);

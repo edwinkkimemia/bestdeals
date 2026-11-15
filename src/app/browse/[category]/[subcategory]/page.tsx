@@ -30,7 +30,7 @@ const getSubcategoryData = cache(
       category: category.slug,
       subcategory,
       sort: "relevance",
-      perPage: 48,
+      perPage: 60,
     });
     return { category, subcategory, items, total };
   },

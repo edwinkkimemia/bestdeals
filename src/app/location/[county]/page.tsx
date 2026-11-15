@@ -116,7 +116,7 @@ export default async function CountyPage({
         description: `Products, classifieds and services listed in ${county.county}, Kenya.`,
         url,
         items: items
-          .slice(0, 48)
+          .slice(0, 60)
           .map((l) => ({ name: l.title, url: listingPath(l) })),
       }),
       breadcrumbJsonLd([
