@@ -3,7 +3,13 @@
  * embedded wordmark, so no browser, headless Chrome or external font service
  * is needed in serverless functions.
  */
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import {
+  PDFDocument,
+  StandardFonts,
+  rgb,
+  type PDFFont,
+  type PDFPage,
+} from "pdf-lib";
 import { CHAP_LOGO_PNG_BASE64 } from "./invoice-logo";
 import { invoiceDateLabel, type InvoiceView } from "./invoices";
 
@@ -46,7 +52,13 @@ function widthOf(text: string, font: PDFFont, size: number): number {
 function draw(
   page: PDFPage,
   text: string,
-  opts: { x: number; y: number; size: number; font: PDFFont; color?: ReturnType<typeof rgb> }
+  opts: {
+    x: number;
+    y: number;
+    size: number;
+    font: PDFFont;
+    color?: ReturnType<typeof rgb>;
+  },
 ): void {
   page.drawText(clean(text), {
     x: opts.x,
@@ -57,7 +69,12 @@ function draw(
   });
 }
 
-function wrap(text: string, font: PDFFont, size: number, maxWidth: number): string[] {
+function wrap(
+  text: string,
+  font: PDFFont,
+  size: number,
+  maxWidth: number,
+): string[] {
   const words = clean(text).split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let line = "";
@@ -86,9 +103,12 @@ function drawWrapped(
     maxWidth: number;
     lineHeight?: number;
     maxLines?: number;
-  }
+  },
 ): number {
-  const lines = wrap(text, opts.font, opts.size, opts.maxWidth).slice(0, opts.maxLines ?? 3);
+  const lines = wrap(text, opts.font, opts.size, opts.maxWidth).slice(
+    0,
+    opts.maxLines ?? 3,
+  );
   let y = opts.y;
   for (const line of lines) {
     draw(page, line, {
@@ -109,15 +129,22 @@ function drawStatusPill(
   status: InvoiceView["status"],
   x: number,
   y: number,
-  bold: PDFFont
+  bold: PDFFont,
 ): void {
-  const bg = status === "paid" ? GREEN_BG : status === "pending" ? AMBER_BG : RED_BG;
+  const bg =
+    status === "paid" ? GREEN_BG : status === "pending" ? AMBER_BG : RED_BG;
   const fg = status === "paid" ? GREEN : status === "pending" ? AMBER : ACCENT;
   const text = label.toUpperCase();
   const paddingX = 11;
   const w = widthOf(text, bold, 7.5) + paddingX * 2;
   page.drawRectangle({ x, y, width: w, height: 22, color: bg });
-  draw(page, text, { x: x + paddingX, y: y + 7.2, size: 7.5, font: bold, color: fg });
+  draw(page, text, {
+    x: x + paddingX,
+    y: y + 7.2,
+    size: 7.5,
+    font: bold,
+    color: fg,
+  });
 }
 
 function drawKeyValue(
@@ -128,7 +155,7 @@ function drawKeyValue(
   y: number,
   maxWidth: number,
   regular: PDFFont,
-  bold: PDFFont
+  bold: PDFFont,
 ): void {
   draw(page, label.toUpperCase(), { x, y, size: 7, font: bold, color: FAINT });
   drawWrapped(page, value, {
@@ -152,9 +179,15 @@ function drawSummaryRow(
   width: number,
   regular: PDFFont,
   bold: PDFFont,
-  strong = false
+  strong = false,
 ): void {
-  draw(page, label, { x, y, size: strong ? 9 : 8.5, font: strong ? bold : regular, color: strong ? INK : MUTED });
+  draw(page, label, {
+    x,
+    y,
+    size: strong ? 9 : 8.5,
+    font: strong ? bold : regular,
+    color: strong ? INK : MUTED,
+  });
   const valueWidth = widthOf(value, strong ? bold : regular, strong ? 10 : 8.5);
   draw(page, value, {
     x: x + width - valueWidth,
@@ -169,7 +202,9 @@ function drawSummaryRow(
  * Build and return an A4 invoice PDF. Callers can stream the Uint8Array
  * directly to the browser or base64-encode it as an email attachment.
  */
-export async function buildInvoicePdf(invoice: InvoiceView): Promise<Uint8Array> {
+export async function buildInvoicePdf(
+  invoice: InvoiceView,
+): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.setTitle(`Chap invoice ${invoice.number}`);
   pdf.setAuthor("chap.co.ke");
@@ -184,11 +219,40 @@ export async function buildInvoicePdf(invoice: InvoiceView): Promise<Uint8Array>
   const right = PAGE_WIDTH - MARGIN;
 
   // Header: crisp white space, brand rule and the embedded wordmark.
-  page.drawRectangle({ x: 0, y: PAGE_HEIGHT - 7, width: PAGE_WIDTH, height: 7, color: BRAND });
-  page.drawRectangle({ x: PAGE_WIDTH - 148, y: PAGE_HEIGHT - 7, width: 148, height: 7, color: ACCENT });
-  page.drawImage(logo, { x: MARGIN, y: PAGE_HEIGHT - 89, width: 168, height: 42 });
-  draw(page, "Kenya's marketplace for everything", { x: MARGIN, y: PAGE_HEIGHT - 108, size: 8, font: regular, color: MUTED });
-  draw(page, "chap.co.ke  |  support@chap.co.ke", { x: MARGIN, y: PAGE_HEIGHT - 121, size: 8, font: regular, color: MUTED });
+  page.drawRectangle({
+    x: 0,
+    y: PAGE_HEIGHT - 7,
+    width: PAGE_WIDTH,
+    height: 7,
+    color: BRAND,
+  });
+  page.drawRectangle({
+    x: PAGE_WIDTH - 148,
+    y: PAGE_HEIGHT - 7,
+    width: 148,
+    height: 7,
+    color: ACCENT,
+  });
+  page.drawImage(logo, {
+    x: MARGIN,
+    y: PAGE_HEIGHT - 89,
+    width: 168,
+    height: 42,
+  });
+  draw(page, "Kenya's marketplace for everything", {
+    x: MARGIN,
+    y: PAGE_HEIGHT - 108,
+    size: 8,
+    font: regular,
+    color: MUTED,
+  });
+  draw(page, "chap.co.ke | support@chap.co.ke", {
+    x: MARGIN,
+    y: PAGE_HEIGHT - 121,
+    size: 8,
+    font: regular,
+    color: MUTED,
+  });
 
   const title = "INVOICE";
   draw(page, title, {
@@ -198,9 +262,21 @@ export async function buildInvoicePdf(invoice: InvoiceView): Promise<Uint8Array>
     font: bold,
     color: BRAND,
   });
-  const pillLabel = invoice.status === "paid" ? "Paid" : invoice.status === "void" ? "Void" : "Unpaid";
+  const pillLabel =
+    invoice.status === "paid"
+      ? "Paid"
+      : invoice.status === "void"
+        ? "Void"
+        : "Unpaid";
   const pillWidth = widthOf(pillLabel.toUpperCase(), bold, 7.5) + 22;
-  drawStatusPill(page, pillLabel, invoice.status, right - pillWidth, PAGE_HEIGHT - 99, bold);
+  drawStatusPill(
+    page,
+    pillLabel,
+    invoice.status,
+    right - pillWidth,
+    PAGE_HEIGHT - 99,
+    bold,
+  );
 
   // Billing parties and invoice metadata.
   page.drawLine({
@@ -209,46 +285,100 @@ export async function buildInvoicePdf(invoice: InvoiceView): Promise<Uint8Array>
     thickness: 0.8,
     color: BORDER,
   });
-  draw(page, "BILLED TO", { x: MARGIN, y: PAGE_HEIGHT - 160, size: 7.2, font: bold, color: BRAND });
-  let billY = PAGE_HEIGHT - 179;
-  billY = drawWrapped(page, invoice.customer.name, {
+  draw(page, "BILLED TO", {
     x: MARGIN,
-    y: billY,
-    size: 12.5,
+    y: PAGE_HEIGHT - 160,
+    size: 7.2,
     font: bold,
-    color: INK,
-    maxWidth: 260,
-    lineHeight: 15,
-    maxLines: 2,
-  }) - 2;
-  if (invoice.customer.businessName && invoice.customer.businessName !== invoice.customer.name) {
-    draw(page, invoice.customer.businessName, { x: MARGIN, y: billY, size: 8.4, font: regular, color: MUTED });
+    color: BRAND,
+  });
+  let billY = PAGE_HEIGHT - 179;
+  billY =
+    drawWrapped(page, invoice.customer.name, {
+      x: MARGIN,
+      y: billY,
+      size: 12.5,
+      font: bold,
+      color: INK,
+      maxWidth: 260,
+      lineHeight: 15,
+      maxLines: 2,
+    }) - 2;
+  if (
+    invoice.customer.businessName &&
+    invoice.customer.businessName !== invoice.customer.name
+  ) {
+    draw(page, invoice.customer.businessName, {
+      x: MARGIN,
+      y: billY,
+      size: 8.4,
+      font: regular,
+      color: MUTED,
+    });
     billY -= 13;
   }
   if (invoice.customer.email) {
-    draw(page, invoice.customer.email, { x: MARGIN, y: billY, size: 8.4, font: regular, color: MUTED });
+    draw(page, invoice.customer.email, {
+      x: MARGIN,
+      y: billY,
+      size: 8.4,
+      font: regular,
+      color: MUTED,
+    });
     billY -= 13;
   }
   if (invoice.customer.phone) {
-    draw(page, invoice.customer.phone, { x: MARGIN, y: billY, size: 8.4, font: regular, color: MUTED });
+    draw(page, invoice.customer.phone, {
+      x: MARGIN,
+      y: billY,
+      size: 8.4,
+      font: regular,
+      color: MUTED,
+    });
     billY -= 13;
   }
   if (invoice.shop) {
-    draw(page, `Shop: ${invoice.shop.name}`, { x: MARGIN, y: billY, size: 8.4, font: regular, color: MUTED });
+    draw(page, `Shop: ${invoice.shop.name}`, {
+      x: MARGIN,
+      y: billY,
+      size: 8.4,
+      font: regular,
+      color: MUTED,
+    });
   }
 
   const metaX = 366;
-  drawKeyValue(page, "Invoice no.", invoice.number, metaX, PAGE_HEIGHT - 160, right - metaX, regular, bold);
-  drawKeyValue(page, "Issued", invoiceDateLabel(invoice.issuedAt), metaX, PAGE_HEIGHT - 199, right - metaX, regular, bold);
+  drawKeyValue(
+    page,
+    "Invoice no.",
+    invoice.number,
+    metaX,
+    PAGE_HEIGHT - 160,
+    right - metaX,
+    regular,
+    bold,
+  );
+  drawKeyValue(
+    page,
+    "Issued",
+    invoiceDateLabel(invoice.issuedAt),
+    metaX,
+    PAGE_HEIGHT - 199,
+    right - metaX,
+    regular,
+    bold,
+  );
   drawKeyValue(
     page,
     invoice.status === "paid" ? "Paid" : "Due",
-    invoiceDateLabel(invoice.status === "paid" ? invoice.paidAt : invoice.dueAt),
+    invoiceDateLabel(
+      invoice.status === "paid" ? invoice.paidAt : invoice.dueAt,
+    ),
     metaX,
     PAGE_HEIGHT - 238,
     right - metaX,
     regular,
-    bold
+    bold,
   );
 
   page.drawLine({
@@ -260,17 +390,50 @@ export async function buildInvoicePdf(invoice: InvoiceView): Promise<Uint8Array>
 
   // Line-item table.
   const tableTop = PAGE_HEIGHT - 308;
-  page.drawRectangle({ x: MARGIN, y: tableTop, width: right - MARGIN, height: 25, color: BRAND });
-  draw(page, "DESCRIPTION", { x: MARGIN + 12, y: tableTop + 8.5, size: 7.2, font: bold, color: WHITE });
-  draw(page, "QTY", { x: 406, y: tableTop + 8.5, size: 7.2, font: bold, color: WHITE });
-  draw(page, "AMOUNT", { x: right - 54, y: tableTop + 8.5, size: 7.2, font: bold, color: WHITE });
+  page.drawRectangle({
+    x: MARGIN,
+    y: tableTop,
+    width: right - MARGIN,
+    height: 25,
+    color: BRAND,
+  });
+  draw(page, "DESCRIPTION", {
+    x: MARGIN + 12,
+    y: tableTop + 8.5,
+    size: 7.2,
+    font: bold,
+    color: WHITE,
+  });
+  draw(page, "QTY", {
+    x: 406,
+    y: tableTop + 8.5,
+    size: 7.2,
+    font: bold,
+    color: WHITE,
+  });
+  draw(page, "AMOUNT", {
+    x: right - 54,
+    y: tableTop + 8.5,
+    size: 7.2,
+    font: bold,
+    color: WHITE,
+  });
 
   let rowY = tableTop - 24;
   for (const item of invoice.lineItems) {
     const descriptionLines = wrap(item.description, bold, 9.5, 318);
     const detailLines = item.detail ? wrap(item.detail, regular, 8.1, 318) : [];
-    const rowHeight = Math.max(47, 19 + descriptionLines.length * 12 + detailLines.length * 11);
-    draw(page, "1", { x: 410, y: rowY, size: 8.5, font: regular, color: MUTED });
+    const rowHeight = Math.max(
+      47,
+      19 + descriptionLines.length * 12 + detailLines.length * 11,
+    );
+    draw(page, "1", {
+      x: 410,
+      y: rowY,
+      size: 8.5,
+      font: regular,
+      color: MUTED,
+    });
     const amount = money(item.amount);
     draw(page, amount, {
       x: right - widthOf(amount, bold, 9.2),
@@ -281,11 +444,23 @@ export async function buildInvoicePdf(invoice: InvoiceView): Promise<Uint8Array>
     });
     let lineY = rowY;
     for (const line of descriptionLines.slice(0, 3)) {
-      draw(page, line, { x: MARGIN + 12, y: lineY, size: 9.5, font: bold, color: INK });
+      draw(page, line, {
+        x: MARGIN + 12,
+        y: lineY,
+        size: 9.5,
+        font: bold,
+        color: INK,
+      });
       lineY -= 12;
     }
     for (const line of detailLines.slice(0, 3)) {
-      draw(page, line, { x: MARGIN + 12, y: lineY, size: 8.1, font: regular, color: MUTED });
+      draw(page, line, {
+        x: MARGIN + 12,
+        y: lineY,
+        size: 8.1,
+        font: regular,
+        color: MUTED,
+      });
       lineY -= 11;
     }
     rowY -= rowHeight;
@@ -305,18 +480,60 @@ export async function buildInvoicePdf(invoice: InvoiceView): Promise<Uint8Array>
   const balance = invoice.status === "pending" ? invoice.amount : 0;
   const tallyColor = invoice.status === "pending" ? AMBER : GREEN;
 
-  page.drawRectangle({ x: panelX, y: summaryTop - 154, width: panelW, height: 154, color: PANEL });
-  draw(page, "SUMMARY", { x: panelX + 15, y: summaryTop - 23, size: 7, font: bold, color: FAINT });
-  drawSummaryRow(page, "Subtotal", money(invoice.amount), panelX + 15, summaryTop - 43, panelW - 30, regular, bold);
-  drawSummaryRow(page, "Tax", "Included", panelX + 15, summaryTop - 59, panelW - 30, regular, bold);
+  page.drawRectangle({
+    x: panelX,
+    y: summaryTop - 154,
+    width: panelW,
+    height: 154,
+    color: PANEL,
+  });
+  draw(page, "SUMMARY", {
+    x: panelX + 15,
+    y: summaryTop - 23,
+    size: 7,
+    font: bold,
+    color: FAINT,
+  });
+  drawSummaryRow(
+    page,
+    "Subtotal",
+    money(invoice.amount),
+    panelX + 15,
+    summaryTop - 43,
+    panelW - 30,
+    regular,
+    bold,
+  );
+  drawSummaryRow(
+    page,
+    "Tax",
+    "Included",
+    panelX + 15,
+    summaryTop - 59,
+    panelW - 30,
+    regular,
+    bold,
+  );
   page.drawLine({
     start: { x: panelX + 15, y: summaryTop - 71 },
     end: { x: right - 15, y: summaryTop - 71 },
     thickness: 0.7,
     color: BORDER,
   });
-  page.drawRectangle({ x: panelX + 15, y: summaryTop - 98, width: panelW - 30, height: 28, color: BRAND });
-  draw(page, "TOTAL", { x: panelX + 25, y: summaryTop - 88.5, size: 7.2, font: bold, color: WHITE });
+  page.drawRectangle({
+    x: panelX + 15,
+    y: summaryTop - 98,
+    width: panelW - 30,
+    height: 28,
+    color: BRAND,
+  });
+  draw(page, "TOTAL", {
+    x: panelX + 25,
+    y: summaryTop - 88.5,
+    size: 7.2,
+    font: bold,
+    color: WHITE,
+  });
   const totalMoney = money(invoice.amount);
   draw(page, totalMoney, {
     x: right - 25 - widthOf(totalMoney, bold, 12),
@@ -333,9 +550,15 @@ export async function buildInvoicePdf(invoice: InvoiceView): Promise<Uint8Array>
     summaryTop - 116,
     panelW - 30,
     regular,
-    bold
+    bold,
   );
-  draw(page, "Balance due", { x: panelX + 15, y: summaryTop - 134, size: 8.5, font: bold, color: INK });
+  draw(page, "Balance due", {
+    x: panelX + 15,
+    y: summaryTop - 134,
+    size: 8.5,
+    font: bold,
+    color: INK,
+  });
   draw(page, money(balance), {
     x: right - 15 - widthOf(money(balance), bold, 10),
     y: summaryTop - 134,
@@ -344,12 +567,48 @@ export async function buildInvoicePdf(invoice: InvoiceView): Promise<Uint8Array>
     color: tallyColor,
   });
 
-  page.drawRectangle({ x: MARGIN, y: summaryTop - 154, width: 263, height: 154, color: PANEL });
-  draw(page, "PAYMENT DETAILS", { x: MARGIN + 15, y: summaryTop - 23, size: 7, font: bold, color: FAINT });
-  draw(page, "Method", { x: MARGIN + 15, y: summaryTop - 44, size: 8.1, font: regular, color: MUTED });
-  draw(page, invoice.methodLabel, { x: MARGIN + 89, y: summaryTop - 44, size: 8.6, font: bold, color: INK });
-  draw(page, "Reference", { x: MARGIN + 15, y: summaryTop - 62, size: 8.1, font: regular, color: MUTED });
-  draw(page, invoice.reference || "Not issued", { x: MARGIN + 89, y: summaryTop - 62, size: 8.6, font: regular, color: INK });
+  page.drawRectangle({
+    x: MARGIN,
+    y: summaryTop - 154,
+    width: 263,
+    height: 154,
+    color: PANEL,
+  });
+  draw(page, "PAYMENT DETAILS", {
+    x: MARGIN + 15,
+    y: summaryTop - 23,
+    size: 7,
+    font: bold,
+    color: FAINT,
+  });
+  draw(page, "Method", {
+    x: MARGIN + 15,
+    y: summaryTop - 44,
+    size: 8.1,
+    font: regular,
+    color: MUTED,
+  });
+  draw(page, invoice.methodLabel, {
+    x: MARGIN + 89,
+    y: summaryTop - 44,
+    size: 8.6,
+    font: bold,
+    color: INK,
+  });
+  draw(page, "Reference", {
+    x: MARGIN + 15,
+    y: summaryTop - 62,
+    size: 8.1,
+    font: regular,
+    color: MUTED,
+  });
+  draw(page, invoice.reference || "Not issued", {
+    x: MARGIN + 89,
+    y: summaryTop - 62,
+    size: 8.6,
+    font: regular,
+    color: INK,
+  });
   draw(page, paid ? "Paid on" : "Due on", {
     x: MARGIN + 15,
     y: summaryTop - 80,
@@ -365,18 +624,33 @@ export async function buildInvoicePdf(invoice: InvoiceView): Promise<Uint8Array>
     color: INK,
   });
   const statusLine =
-    invoice.status === "paid" ? "Paid in full" : invoice.status === "void" ? "Voided" : "Awaiting payment";
+    invoice.status === "paid"
+      ? "Paid in full"
+      : invoice.status === "void"
+        ? "Voided"
+        : "Awaiting payment";
   draw(page, statusLine, {
     x: MARGIN + 15,
     y: summaryTop - 112,
     size: 8.8,
     font: bold,
-    color: invoice.status === "paid" ? GREEN : invoice.status === "void" ? ACCENT : AMBER,
+    color:
+      invoice.status === "paid"
+        ? GREEN
+        : invoice.status === "void"
+          ? ACCENT
+          : AMBER,
   });
 
   // Notes.
   const notesY = summaryTop - 184;
-  draw(page, "NOTES", { x: MARGIN, y: notesY, size: 7, font: bold, color: FAINT });
+  draw(page, "NOTES", {
+    x: MARGIN,
+    y: notesY,
+    size: 7,
+    font: bold,
+    color: FAINT,
+  });
   const note =
     invoice.status === "paid"
       ? "Payment received in full. Thank you for choosing Chap."
@@ -405,21 +679,37 @@ export async function buildInvoicePdf(invoice: InvoiceView): Promise<Uint8Array>
       maxWidth: 500,
       lineHeight: 10.5,
       maxLines: 2,
-    }
+    },
   );
 
   // A compact support card balances the lower third and gives the recipient a
   // clear next step without adding another page.
-  page.drawRectangle({ x: MARGIN, y: 112, width: right - MARGIN, height: 58, color: rgb(238 / 255, 243 / 255, 255 / 255) });
-  page.drawRectangle({ x: MARGIN, y: 112, width: 4, height: 58, color: BRAND });
-  draw(page, "Need help with billing?", { x: MARGIN + 16, y: 148, size: 9, font: bold, color: BRAND });
-  draw(page, "Email support@chap.co.ke or open Dashboard -> Invoices for all receipts.", {
-    x: MARGIN + 16,
-    y: 133,
-    size: 7.8,
-    font: regular,
-    color: MUTED,
+  page.drawRectangle({
+    x: MARGIN,
+    y: 112,
+    width: right - MARGIN,
+    height: 58,
+    color: rgb(238 / 255, 243 / 255, 255 / 255),
   });
+  page.drawRectangle({ x: MARGIN, y: 112, width: 4, height: 58, color: BRAND });
+  draw(page, "Need help with billing?", {
+    x: MARGIN + 16,
+    y: 148,
+    size: 9,
+    font: bold,
+    color: BRAND,
+  });
+  draw(
+    page,
+    "Email support@chap.co.ke or open Dashboard -> Invoices for all receipts.",
+    {
+      x: MARGIN + 16,
+      y: 133,
+      size: 7.8,
+      font: regular,
+      color: MUTED,
+    },
+  );
   draw(page, "Keep this PDF for your records.", {
     x: right - 15 - widthOf("Keep this PDF for your records.", regular, 7.8),
     y: 140,
@@ -429,8 +719,13 @@ export async function buildInvoicePdf(invoice: InvoiceView): Promise<Uint8Array>
   });
 
   // Footer.
-  page.drawLine({ start: { x: MARGIN, y: 68 }, end: { x: right, y: 68 }, thickness: 0.7, color: BORDER });
-  draw(page, "chap.co.ke  |  Kenya's marketplace for everything", {
+  page.drawLine({
+    start: { x: MARGIN, y: 68 },
+    end: { x: right, y: 68 },
+    thickness: 0.7,
+    color: BORDER,
+  });
+  draw(page, "chap.co.ke | Kenya's marketplace for everything", {
     x: MARGIN,
     y: 51,
     size: 7.5,

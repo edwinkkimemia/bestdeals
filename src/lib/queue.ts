@@ -2,7 +2,12 @@
  * Keeps request handlers fast — notifications, expiry sweeps and price-alert
  * checks are enqueued here instead of awaited inline.
  */
-type Job = { name: string; payload: Record<string, unknown>; runAt: number; tries: number };
+type Job = {
+  name: string;
+  payload: Record<string, unknown>;
+  runAt: number;
+  tries: number;
+};
 
 const mem: Job[] = [];
 let draining = false;
@@ -11,8 +16,17 @@ export function isQueueConfigured(): boolean {
   return Boolean(process.env.REDIS_URL);
 }
 
-export async function enqueue(name: string, payload: Record<string, unknown> = {}, delayMs = 0): Promise<void> {
-  mem.push({ name, payload, runAt: Date.now() + Math.max(0, delayMs), tries: 0 });
+export async function enqueue(
+  name: string,
+  payload: Record<string, unknown> = {},
+  delayMs = 0,
+): Promise<void> {
+  mem.push({
+    name,
+    payload,
+    runAt: Date.now() + Math.max(0, delayMs),
+    tries: 0,
+  });
   void drain().catch(() => {});
 }
 
@@ -32,7 +46,8 @@ async function drain(): Promise<void> {
         await runJob(job);
       } catch {
         job.tries += 1;
-        if (job.tries < 3) mem.push({ ...job, runAt: Date.now() + job.tries * 5000 });
+        if (job.tries < 3)
+          mem.push({ ...job, runAt: Date.now() + job.tries * 5000 });
       }
     }
   } finally {
@@ -44,12 +59,21 @@ async function runJob(job: Job): Promise<void> {
   // Notify jobs resolve lazily so this module never imports notify at load.
   if (job.name === "notify") {
     const { sendNotification } = await import("./notify");
-    await sendNotification(job.payload as { channel: "email" | "sms" | "whatsapp"; to: string; message: string; subject?: string });
+    await sendNotification(
+      job.payload as {
+        channel: "email" | "sms" | "whatsapp";
+        to: string;
+        message: string;
+        subject?: string;
+      },
+    );
     return;
   }
   if (job.name === "sweep-promos") {
     const { getStore } = await import("./store");
-    await getStore().sweepExpiredPromotions().catch(() => {});
+    await getStore()
+      .sweepExpiredPromotions()
+      .catch(() => {});
     return;
   }
   // Unknown jobs are dropped (forward-compat with future BullMQ workers).

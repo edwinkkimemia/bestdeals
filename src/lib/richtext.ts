@@ -26,7 +26,7 @@ function inline(src: string): string {
   // Links: [label](https://…) — http(s) only, rel + target hardened.
   s = s.replace(
     /\[([^\[\]\n]{1,80})\]\((https?:\/\/[^\s)]{1,300})\)/g,
-    '<a href="$2" target="_blank" rel="nofollow noopener ugc">$1</a>'
+    '<a href="$2" target="_blank" rel="nofollow noopener ugc">$1</a>',
   );
   s = s.replace(/\*\*([^*\n]{1,200})\*\*/g, "<strong>$1</strong>");
   s = s.replace(/(^|[\s(])\*([^*\n]{1,200})\*/g, "$1<em>$2</em>");
@@ -36,7 +36,9 @@ function inline(src: string): string {
 
 /** Markdown subset → sanitized HTML. Always safe to inject. */
 export function toSafeHtml(input: string, maxLen = MAX): string {
-  const lines = String(input ?? "").slice(0, maxLen).split("\n");
+  const lines = String(input ?? "")
+    .slice(0, maxLen)
+    .split("\n");
   const out: string[] = [];
   let listType: "ul" | "ol" | null = null;
   let listItems: string[] = [];
@@ -44,7 +46,9 @@ export function toSafeHtml(input: string, maxLen = MAX): string {
 
   const flushList = () => {
     if (listType && listItems.length) {
-      out.push(`<${listType}>${listItems.map((li) => `<li>${li}</li>`).join("")}</${listType}>`);
+      out.push(
+        `<${listType}>${listItems.map((li) => `<li>${li}</li>`).join("")}</${listType}>`,
+      );
     }
     listType = null;
     listItems = [];
@@ -52,7 +56,9 @@ export function toSafeHtml(input: string, maxLen = MAX): string {
 
   const flushQuote = () => {
     if (quote.length) {
-      out.push(`<blockquote>${quote.map((line) => `<p>${line}</p>`).join("")}</blockquote>`);
+      out.push(
+        `<blockquote>${quote.map((line) => `<p>${line}</p>`).join("")}</blockquote>`,
+      );
     }
     quote = [];
   };
@@ -120,4 +126,5 @@ export function toExcerpt(input: string, len = 120): string {
   return plain.length > len ? `${plain.slice(0, len - 1)}…` : plain;
 }
 
-export const RICH_TEXT_HINT = "**bold** · *italic* · `code` · [link](https://…) · - list";
+export const RICH_TEXT_HINT =
+  "**bold** · *italic* · `code` · [link](https://…) · - list";

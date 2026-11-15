@@ -11,8 +11,14 @@ import { LISTINGS } from "../src/data/catalog.ts";
 describe("seller and shop search", () => {
   it("finds a shop by name and does not duplicate its owner as a seller", async () => {
     const { shops, sellers } = await searchEntities({ q: "FonZone" });
-    assert.ok(shops.some((s) => s.slug === "fon-zone-nairobi"), "FonZone shop should match");
-    assert.ok(!sellers.some((s) => s.name === "FonZone Nairobi"), "shop owner should stay in the shops tab");
+    assert.ok(
+      shops.some((s) => s.slug === "fon-zone-nairobi"),
+      "FonZone shop should match",
+    );
+    assert.ok(
+      !sellers.some((s) => s.name === "FonZone Nairobi"),
+      "shop owner should stay in the shops tab",
+    );
   });
 
   it("finds individual sellers by name", async () => {
@@ -39,7 +45,10 @@ describe("seller and shop search", () => {
 
   it("matches shops by the products in their catalogue", async () => {
     const { shops } = await searchEntities({ q: "Samsung" });
-    assert.ok(shops.some((s) => s.slug === "fon-zone-nairobi"), "FonZone sells Samsung phones");
+    assert.ok(
+      shops.some((s) => s.slug === "fon-zone-nairobi"),
+      "FonZone sells Samsung phones",
+    );
   });
 
   it("includes seller and shop names in autocomplete suggestions", () => {
@@ -58,7 +67,10 @@ describe("seller and shop search", () => {
     void id;
     void slug;
     void createdAt;
-    const live = await store.createListing({ ...rest, title: "FonZone Live Search Test" });
+    const live = await store.createListing({
+      ...rest,
+      title: "FonZone Live Search Test",
+    });
     await store.setListingStatus(live.id, "active");
 
     const one = await searchAll({ q: "FonZone", page: 1, perPage: 1 });

@@ -8,8 +8,12 @@ describe("seller bio + cover", () => {
   it("round-trips bio and coverUrl through updateUser", async () => {
     const store = freshDemoStore();
     const u = await store.createUser({
-      name: "Bio Seller", email: "bio-seller@x.co.ke", phone: "0712345678",
-      role: "SELLER", verified: true, passwordHash: "h",
+      name: "Bio Seller",
+      email: "bio-seller@x.co.ke",
+      phone: "0712345678",
+      role: "SELLER",
+      verified: true,
+      passwordHash: "h",
     });
     const updated = await store.updateUser(u.id, {
       bio: "Genuine phones in Nairobi CBD.",
@@ -25,8 +29,12 @@ describe("seller bio + cover", () => {
   it("resolveSellerProfile exposes bio and coverUrl", async () => {
     const store = getStore();
     const u = await store.createUser({
-      name: "Cover Seller Unique", email: "cover-seller-u@x.co.ke", phone: "0712345678",
-      role: "SELLER", verified: true, passwordHash: "h",
+      name: "Cover Seller Unique",
+      email: "cover-seller-u@x.co.ke",
+      phone: "0712345678",
+      role: "SELLER",
+      verified: true,
+      passwordHash: "h",
     });
     await store.updateUser(u.id, {
       bio: "Cover seller bio here.",
@@ -45,8 +53,12 @@ describe("personal seller plans", () => {
   it("uses the shop plan as the seller's one plan when a shop exists", async () => {
     const store = getStore();
     const u = await store.createUser({
-      name: "Plan Seller Unique", email: "plan-seller-u@x.co.ke", phone: "0712345678",
-      role: "SELLER", verified: true, passwordHash: "h",
+      name: "Plan Seller Unique",
+      email: "plan-seller-u@x.co.ke",
+      phone: "0712345678",
+      role: "SELLER",
+      verified: true,
+      passwordHash: "h",
     });
     // No plan anywhere → free.
     assert.equal((await getSellerPlan(u.id)).planId, "free");
@@ -58,12 +70,20 @@ describe("personal seller plans", () => {
     // Opening a shop moves the paid personal plan to the storefront.
     if (!(await store.getShopBySlug("plan-test-shop-u"))) {
       await store.createShop({
-        slug: "plan-test-shop-u", name: "Plan Test Shop", description: "d",
-        businessCategory: "Retail", county: "Nairobi", town: "CBD",
-        phone: "0712345678", ownerId: u.id,
+        slug: "plan-test-shop-u",
+        name: "Plan Test Shop",
+        description: "d",
+        businessCategory: "Retail",
+        county: "Nairobi",
+        town: "CBD",
+        phone: "0712345678",
+        ownerId: u.id,
       });
     }
-    assert.equal((await store.getShopBySlug("plan-test-shop-u"))?.planId, "silver");
+    assert.equal(
+      (await store.getShopBySlug("plan-test-shop-u"))?.planId,
+      "silver",
+    );
     assert.equal((await store.findUserById(u.id))?.planId, "free");
     assert.equal((await getSellerPlan(u.id)).planId, "silver");
 
@@ -72,7 +92,10 @@ describe("personal seller plans", () => {
     await store.setUserPlan(u.id, "gold");
     const effective = await getSellerPlan(u.id);
     assert.equal(effective.planId, "gold");
-    assert.equal((await store.getShopBySlug("plan-test-shop-u"))?.planId, "gold");
+    assert.equal(
+      (await store.getShopBySlug("plan-test-shop-u"))?.planId,
+      "gold",
+    );
     assert.equal((await store.findUserById(u.id))?.planId, "free");
     // New listings still attach to the owned shop when one exists.
     assert.equal(effective.shopSlug, "plan-test-shop-u");

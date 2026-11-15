@@ -25,8 +25,13 @@ export async function GET() {
     redis: isRedisConfigured() ? "configured" : "memory",
     // db-fallback is durable only with a shared database — without
     // DATABASE_URL the staged bytes are per-instance memory like /tmp.
-    uploads: isS3Configured() ? "s3" : isServerlessUploads() ? "db-fallback" : "local",
-    uploadsDurable: isS3Configured() || !isServerlessUploads() || isDbConfigured(),
+    uploads: isS3Configured()
+      ? "s3"
+      : isServerlessUploads()
+        ? "db-fallback"
+        : "local",
+    uploadsDurable:
+      isS3Configured() || !isServerlessUploads() || isDbConfigured(),
     authSecret: isStrongSecret() ? "strong" : "dev-default",
   });
 }

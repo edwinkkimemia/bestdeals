@@ -35,7 +35,10 @@ export function productJsonLd(input: {
   const url = absoluteUrl(input.url);
   const images = input.image.filter(Boolean).map(absoluteUrl);
   const availability =
-    input.availability ?? (input.stock === 0 ? "https://schema.org/OutOfStock" : "https://schema.org/InStock");
+    input.availability ??
+    (input.stock === 0
+      ? "https://schema.org/OutOfStock"
+      : "https://schema.org/InStock");
   return {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -47,7 +50,9 @@ export function productJsonLd(input: {
     ...(input.brand ? { brand: { "@type": "Brand", name: input.brand } } : {}),
     ...(input.category ? { category: input.category } : {}),
     ...(input.condition && CONDITION_SCHEMA[input.condition]
-      ? { itemCondition: `https://schema.org/${CONDITION_SCHEMA[input.condition]}` }
+      ? {
+          itemCondition: `https://schema.org/${CONDITION_SCHEMA[input.condition]}`,
+        }
       : {}),
     offers: {
       "@type": "Offer",
@@ -100,7 +105,9 @@ export function serviceJsonLd(input: {
                   seller: {
                     "@type": "Organization",
                     name: input.providerName,
-                    ...(input.providerUrl ? { url: absoluteUrl(input.providerUrl) } : {}),
+                    ...(input.providerUrl
+                      ? { url: absoluteUrl(input.providerUrl) }
+                      : {}),
                   },
                 }
               : {}),
@@ -112,14 +119,18 @@ export function serviceJsonLd(input: {
           provider: {
             "@type": "LocalBusiness",
             name: input.providerName,
-            ...(input.providerUrl ? { url: absoluteUrl(input.providerUrl) } : {}),
+            ...(input.providerUrl
+              ? { url: absoluteUrl(input.providerUrl) }
+              : {}),
           },
         }
       : {}),
   };
 }
 
-export function breadcrumbJsonLd(items: { name: string; url: string }[]): Record<string, unknown> {
+export function breadcrumbJsonLd(
+  items: { name: string; url: string }[],
+): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -174,7 +185,9 @@ export function localBusinessJsonLd(input: {
   sameAs?: string[];
 }): Record<string, unknown> {
   const url = absoluteUrl(input.url);
-  const sameAs = [input.website, ...(input.sameAs ?? [])].filter(Boolean).map((u) => absoluteUrl(String(u)));
+  const sameAs = [input.website, ...(input.sameAs ?? [])]
+    .filter(Boolean)
+    .map((u) => absoluteUrl(String(u)));
   return {
     "@context": "https://schema.org",
     "@type": "Store",
@@ -260,7 +273,9 @@ export function articleJsonLd(input: {
   };
 }
 
-export function faqJsonLd(faqs: { q: string; a: string }[]): Record<string, unknown> {
+export function faqJsonLd(
+  faqs: { q: string; a: string }[],
+): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "FAQPage",

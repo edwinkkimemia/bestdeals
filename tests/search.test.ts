@@ -1,7 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { resolveCounty, countyMatches, townsFor } from "../src/lib/kenya.ts";
-import { searchListings, searchAll, suggestions, shuffleFeaturedFirst, dominantIntent } from "../src/lib/search.ts";
+import {
+  searchListings,
+  searchAll,
+  suggestions,
+  shuffleFeaturedFirst,
+  dominantIntent,
+} from "../src/lib/search.ts";
 import { CATEGORIES } from "../src/data/catalog.ts";
 import { getStore } from "../src/lib/store.ts";
 import { signupSchema } from "../src/lib/validators.ts";
@@ -50,12 +56,24 @@ describe("location-filtering", () => {
     assert.ok(r.items.every((l) => l.county === "Uasin Gishu"));
   });
   it("filters listings by town within a county", () => {
-    const r = searchListings({ county: "Uasin Gishu", town: "Eldoret", perPage: 60 });
+    const r = searchListings({
+      county: "Uasin Gishu",
+      town: "Eldoret",
+      perPage: 60,
+    });
     assert.ok(r.total > 0, "seed should hold Eldoret listings");
     assert.ok(r.items.every((l) => l.town === "Eldoret"));
-    const lower = searchListings({ county: "Uasin Gishu", town: "eldoret", perPage: 60 });
+    const lower = searchListings({
+      county: "Uasin Gishu",
+      town: "eldoret",
+      perPage: 60,
+    });
     assert.equal(lower.total, r.total);
-    const none = searchListings({ county: "Uasin Gishu", town: "Thika", perPage: 60 });
+    const none = searchListings({
+      county: "Uasin Gishu",
+      town: "Thika",
+      perPage: 60,
+    });
     assert.equal(none.total, 0);
   });
   it("matches free-text town queries against listing towns", () => {
@@ -68,7 +86,9 @@ describe("location-filtering", () => {
     const day = searchListings({ postedWithinHours: 24, perPage: 100 });
     assert.ok(day.total <= all.total);
     const now = Date.now();
-    assert.ok(day.items.every((l) => now - +new Date(l.createdAt) <= 24 * 3600_000));
+    assert.ok(
+      day.items.every((l) => now - +new Date(l.createdAt) <= 24 * 3600_000),
+    );
     const month = searchListings({ postedWithinHours: 720, perPage: 100 });
     assert.ok(month.total >= day.total);
   });
@@ -79,18 +99,30 @@ describe("dominant-cluster tiering", () => {
     assert.equal(dominantIntent([]), null);
     assert.equal(
       dominantIntent([{ l: { categorySlug: "x", subcategory: "Y" }, s: 5 }]),
-      null
+      null,
     );
   });
 
   it("finds the majority category and subcategory", () => {
     const intent = dominantIntent([
-      { l: { categorySlug: "phones-tablets", subcategory: "Smartphones" }, s: 9 },
-      { l: { categorySlug: "phones-tablets", subcategory: "Smartphones" }, s: 7 },
-      { l: { categorySlug: "phones-tablets", subcategory: "Accessories" }, s: 6 },
+      {
+        l: { categorySlug: "phones-tablets", subcategory: "Smartphones" },
+        s: 9,
+      },
+      {
+        l: { categorySlug: "phones-tablets", subcategory: "Smartphones" },
+        s: 7,
+      },
+      {
+        l: { categorySlug: "phones-tablets", subcategory: "Accessories" },
+        s: 6,
+      },
       { l: { categorySlug: "home-furniture", subcategory: "Furniture" }, s: 8 },
     ]);
-    assert.deepEqual(intent, { categorySlug: "phones-tablets", subcategory: "Smartphones" });
+    assert.deepEqual(intent, {
+      categorySlug: "phones-tablets",
+      subcategory: "Smartphones",
+    });
   });
 
   it("leads free-text results with the query's own cluster", () => {
@@ -107,7 +139,11 @@ describe("dominant-cluster tiering", () => {
   });
 
   it("leaves price/newest sorts untouched", () => {
-    const a = searchListings({ q: "cement", sort: "price_asc", perPage: 60 }).items;
+    const a = searchListings({
+      q: "cement",
+      sort: "price_asc",
+      perPage: 60,
+    }).items;
     for (let i = 1; i < a.length; i++) assert.ok(a[i].price >= a[i - 1].price);
   });
 
@@ -115,11 +151,18 @@ describe("dominant-cluster tiering", () => {
     const { items } = searchListings({ q: "2 bedroom Mtwapa", perPage: 60 });
     assert.ok(items.length > 0);
     assert.match(items[0].title, /Mtwapa/i);
-    assert.ok(items.every((l) => l.categorySlug !== "phones-tablets"), "a '2' in 128GB is not a match");
+    assert.ok(
+      items.every((l) => l.categorySlug !== "phones-tablets"),
+      "a '2' in 128GB is not a match",
+    );
   });
 
   it("includes the Mtwapa rental in the Mtwapa town filter", () => {
-    const { items } = searchListings({ county: "Kilifi", town: "Mtwapa", perPage: 60 });
+    const { items } = searchListings({
+      county: "Kilifi",
+      town: "Mtwapa",
+      perPage: 60,
+    });
     assert.ok(items.some((l) => l.slug === "2-bedroom-kilifi-rent"));
   });
 });
@@ -147,7 +190,11 @@ describe("live keyword ranking", () => {
       county: "Kilifi",
       town: "Mtwapa",
       images: ["https://x.co/i.jpg"],
-      attributes: { propertyType: "2 Bedroom", bedrooms: "2", bathrooms: "1" } as Record<string, string>,
+      attributes: {
+        propertyType: "2 Bedroom",
+        bedrooms: "2",
+        bathrooms: "1",
+      } as Record<string, string>,
       ownerId: user.id,
       sellerName: user.name,
       categorySlug: "property",
@@ -186,7 +233,7 @@ describe("live keyword ranking", () => {
       assert.ok(exactIndex >= 0, "exact live listing must be found");
       assert.ok(
         featuredIndex === -1 || exactIndex < featuredIndex,
-        "a featured listing matching only '2' must not lead an exact Mtwapa result"
+        "a featured listing matching only '2' must not lead an exact Mtwapa result",
       );
     } finally {
       await store.deleteListing(exact.id);
@@ -201,7 +248,10 @@ describe("instant-suggestions", () => {
     assert.ok(one.length > 0, "single char should already suggest");
     assert.ok(one.length <= 7);
     const samsung = suggestions("sams");
-    assert.ok(samsung[0].toLowerCase().startsWith("sams"), `prefix first, got: ${samsung[0]}`);
+    assert.ok(
+      samsung[0].toLowerCase().startsWith("sams"),
+      `prefix first, got: ${samsung[0]}`,
+    );
   });
 });
 
@@ -223,14 +273,32 @@ describe("search-by-seller-and-shop", () => {
 
 describe("seller-kind-signup", () => {
   it("defaults to individual, accepts business", () => {
-    const base = { name: "Jane Doe", email: "j@x.co.ke", phone: "0712345678", password: "password1", acceptTerms: true as const };
+    const base = {
+      name: "Jane Doe",
+      email: "j@x.co.ke",
+      phone: "0712345678",
+      password: "password1",
+      acceptTerms: true as const,
+    };
     assert.equal(signupSchema.parse({ ...base }).sellerKind, "individual");
-    assert.equal(signupSchema.parse({ ...base, sellerKind: "business" }).sellerKind, "business");
+    assert.equal(
+      signupSchema.parse({ ...base, sellerKind: "business" }).sellerKind,
+      "business",
+    );
   });
   it("accepts an optional business display name", () => {
-    const base = { name: "Jane Doe", email: "j@x.co.ke", phone: "0712345678", password: "password1", acceptTerms: true as const };
+    const base = {
+      name: "Jane Doe",
+      email: "j@x.co.ke",
+      phone: "0712345678",
+      password: "password1",
+      acceptTerms: true as const,
+    };
     assert.equal(signupSchema.parse({ ...base }).businessName, "");
-    assert.equal(signupSchema.parse({ ...base, businessName: "Acme Ltd" }).businessName, "Acme Ltd");
+    assert.equal(
+      signupSchema.parse({ ...base, businessName: "Acme Ltd" }).businessName,
+      "Acme Ltd",
+    );
   });
 });
 
@@ -253,38 +321,85 @@ describe("subcategories", () => {
     }
   });
   it("filters listings by subcategory, case-insensitively", () => {
-    const phones = searchListings({ category: "phones-tablets", subcategory: "Smartphones", perPage: 60 });
+    const phones = searchListings({
+      category: "phones-tablets",
+      subcategory: "Smartphones",
+      perPage: 60,
+    });
     assert.ok(phones.total > 0);
-    assert.ok(phones.items.every((l) => (l.subcategory ?? "").toLowerCase() === "smartphones"));
-    const lower = searchListings({ category: "phones-tablets", subcategory: "smartphones", perPage: 60 });
+    assert.ok(
+      phones.items.every(
+        (l) => (l.subcategory ?? "").toLowerCase() === "smartphones",
+      ),
+    );
+    const lower = searchListings({
+      category: "phones-tablets",
+      subcategory: "smartphones",
+      perPage: 60,
+    });
     assert.equal(lower.total, phones.total);
-    const cars = searchListings({ category: "automotive", subcategory: "Cars", perPage: 60 });
+    const cars = searchListings({
+      category: "automotive",
+      subcategory: "Cars",
+      perPage: 60,
+    });
     assert.ok(cars.items.every((l) => l.subcategory === "Cars"));
   });
   it("validates the seller subcategory against its category", () => {
-    assert.equal(listingSchema.parse({ ...listing, subcategory: "Smartphones" }).subcategory, "Smartphones");
-    assert.equal(listingSchema.parse({ ...listing, subcategory: "" }).subcategory, "");
-    assert.throws(() => listingSchema.parse({ ...listing, subcategory: "Bananas" }), /subcategory/i);
-    assert.throws(() => listingSchema.parse({ ...listing, subcategory: "Cars" }), /subcategory/i);
+    assert.equal(
+      listingSchema.parse({ ...listing, subcategory: "Smartphones" })
+        .subcategory,
+      "Smartphones",
+    );
+    assert.equal(
+      listingSchema.parse({ ...listing, subcategory: "" }).subcategory,
+      "",
+    );
+    assert.throws(
+      () => listingSchema.parse({ ...listing, subcategory: "Bananas" }),
+      /subcategory/i,
+    );
+    assert.throws(
+      () => listingSchema.parse({ ...listing, subcategory: "Cars" }),
+      /subcategory/i,
+    );
   });
 });
 
 describe("shuffle-featured-first", () => {
   const mk = (n: number, featured: boolean) =>
-    Array.from({ length: n }, (_, i) => ({ id: `${featured ? "f" : "p"}${i}`, featured }));
+    Array.from({ length: n }, (_, i) => ({
+      id: `${featured ? "f" : "p"}${i}`,
+      featured,
+    }));
   it("leads with featured, keeps every item, ignores the stored order", () => {
     const items = [...mk(12, false), ...mk(3, true)];
     const out = shuffleFeaturedFirst(items);
     assert.equal(out.length, items.length);
-    assert.deepEqual(new Set(out.map((l) => l.id)), new Set(items.map((l) => l.id)));
-    assert.ok(out.slice(0, 3).every((l) => l.featured), "first three must be the featured ones");
+    assert.deepEqual(
+      new Set(out.map((l) => l.id)),
+      new Set(items.map((l) => l.id)),
+    );
+    assert.ok(
+      out.slice(0, 3).every((l) => l.featured),
+      "first three must be the featured ones",
+    );
     assert.ok(out.slice(3).every((l) => !l.featured));
   });
   it("mixes order across calls and never mutates the input", () => {
     const items = mk(20, false);
     const before = items.map((l) => l.id).join(",");
-    const seen = new Set([shuffleFeaturedFirst(items).map((l) => l.id).join(",")]);
-    for (let i = 0; i < 10; i++) seen.add(shuffleFeaturedFirst(items).map((l) => l.id).join(","));
+    const seen = new Set([
+      shuffleFeaturedFirst(items)
+        .map((l) => l.id)
+        .join(","),
+    ]);
+    for (let i = 0; i < 10; i++)
+      seen.add(
+        shuffleFeaturedFirst(items)
+          .map((l) => l.id)
+          .join(","),
+      );
     assert.ok(seen.size > 1, "repeated shuffles should vary");
     assert.equal(items.map((l) => l.id).join(","), before);
   });

@@ -9,19 +9,34 @@ import { StaticInfo } from "@/components/static-info";
 
 export const metadata = {
   title: "Business Shops",
-  description: "Branded Kenyan storefronts with catalogues, delivery info, wholesale enquiries and verified reviews.",
-  keywords: ["Kenyan shops", "online shops Nairobi", "verified businesses Kenya", "wholesale Kenya", "chap.co.ke"],
+  description:
+    "Branded Kenyan storefronts with catalogues, delivery info, wholesale enquiries and verified reviews.",
+  keywords: [
+    "Kenyan shops",
+    "online shops Nairobi",
+    "verified businesses Kenya",
+    "wholesale Kenya",
+    "chap.co.ke",
+  ],
   alternates: { canonical: "https://chap.co.ke/shops" },
   openGraph: {
     type: "website",
     title: "Business shops on Chap",
-    description: "Branded Kenyan storefronts with catalogues, delivery info and verified reviews.",
+    description:
+      "Branded Kenyan storefronts with catalogues, delivery info and verified reviews.",
     url: "https://chap.co.ke/shops",
     siteName: "chap.co.ke",
     locale: "en_KE",
-    images: [{ url: "/chaplogo.png", width: 1147, height: 287, alt: "chap.co.ke" }],
+    images: [
+      { url: "/chaplogo.png", width: 1147, height: 287, alt: "chap.co.ke" },
+    ],
   },
-  twitter: { card: "summary_large_image", title: "Business shops on Chap", description: "Shop verified Kenyan businesses.", images: ["/chaplogo.png"] },
+  twitter: {
+    card: "summary_large_image",
+    title: "Business shops on Chap",
+    description: "Shop verified Kenyan businesses.",
+    images: ["/chaplogo.png"],
+  },
 };
 
 // New shops open daily — a static prerender would freeze this index at build time.
@@ -37,44 +52,93 @@ export default async function ShopsIndex() {
       // catalogue copy — otherwise featured cards disagree with admin.
       shop: mergeShopDisplay(
         {
-          slug: s.slug, name: s.name, description: s.description,
-          businessCategory: s.businessCategory, county: s.county, town: s.town,
-          phone: s.phone, logo: s.logo, cover: s.cover, verified: s.verified,
-          deliveryInfo: s.deliveryInfo, hours: s.hours, planId: "free",
+          slug: s.slug,
+          name: s.name,
+          description: s.description,
+          businessCategory: s.businessCategory,
+          county: s.county,
+          town: s.town,
+          phone: s.phone,
+          logo: s.logo,
+          cover: s.cover,
+          verified: s.verified,
+          deliveryInfo: s.deliveryInfo,
+          hours: s.hours,
+          planId: "free",
         },
-        twins.get(s.slug) ?? null
+        twins.get(s.slug) ?? null,
       ),
-      rating: ratingLabel(await storeRead((st) => st.listApprovedReviewsForShop(s.slug), [])),
-    }))
+      rating: ratingLabel(
+        await storeRead((st) => st.listApprovedReviewsForShop(s.slug), []),
+      ),
+    })),
   );
   return (
     <div className="container-bd py-8">
-      <PageBreadcrumb trail={[{ href: "/", label: "Home" }, { label: "Business Shops" }]} />
+      <PageBreadcrumb
+        trail={[{ href: "/", label: "Home" }, { label: "Business Shops" }]}
+      />
       <h1 className="section-title mt-2">Business shops</h1>
-      <p className="max-w-2xl text-sm text-ink-500">Branded storefronts with full catalogues, delivery info, bulk-buyer enquiries and moderated reviews — each shop lives at its own chap.co.ke address.</p>
+      <p className="max-w-2xl text-sm text-ink-500">
+        Branded storefronts with full catalogues, delivery info, bulk-buyer
+        enquiries and moderated reviews — each shop lives at its own chap.co.ke
+        address.
+      </p>
 
       <StaticInfo
         className="mt-4"
         items={[
-          { title: "✓ means checked", description: "Verified shops passed ID or business-permit review; plan badges show Silver or Gold." },
-          { title: "Catalogue + bulk", description: "Browse the full range or send one bulk enquiry for wholesale quotes." },
-          { title: "Reviews you can trust", description: "Only moderated reviews show; paid or delivered orders earn verified badges." },
+          {
+            title: "✓ means checked",
+            description:
+              "Verified shops passed ID or business-permit review; plan badges show Silver or Gold.",
+          },
+          {
+            title: "Catalogue + bulk",
+            description:
+              "Browse the full range or send one bulk enquiry for wholesale quotes.",
+          },
+          {
+            title: "Reviews you can trust",
+            description:
+              "Only moderated reviews show; paid or delivered orders earn verified badges.",
+          },
         ]}
       />
 
       <h2 className="mb-2 mt-6 font-bold">Featured shops ({SHOPS.length})</h2>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {withRatings.map(({ shop: s, rating }) => (
-            <Link key={s.slug} href={`/shops/${s.slug}`} className="card overflow-hidden hover:shadow-lg">
-              <div aria-hidden className="h-28 w-full bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800">
-                {s.cover && (
-                  <SafeImage src={s.cover} alt={`${s.name} cover`} loading="lazy" className="h-28 w-full object-cover" />
+        {withRatings.map(({ shop: s, rating }) => (
+          <Link
+            key={s.slug}
+            href={`/shops/${s.slug}`}
+            className="card overflow-hidden"
+          >
+            <div aria-hidden className="h-28 w-full bg-ink-900">
+              {s.cover && (
+                <SafeImage
+                  src={s.cover}
+                  alt={`${s.name} cover`}
+                  loading="lazy"
+                  className="h-28 w-full object-cover"
+                />
+              )}
+            </div>
+            <div className="p-4">
+              <p className="flex flex-wrap items-center gap-1.5 font-bold">
+                {s.name} <PlanCheckmark plan={s.planId} size="sm" />{" "}
+                {s.verified ? (
+                  <Badge tone="green">✓ Verified</Badge>
+                ) : (
+                  <Badge>Unverified</Badge>
                 )}
-              </div>
-              <div className="p-4">
-                <p className="flex flex-wrap items-center gap-1.5 font-bold">{s.name} <PlanCheckmark plan={s.planId} size="sm" /> {s.verified ? <Badge tone="green">✓ Verified</Badge> : <Badge>Unverified</Badge>}</p>
-                <p className="text-xs text-ink-500">{s.businessCategory} · {s.town}, {s.county} · {rating}</p>
-              <p className="clamp-2 mt-1 text-sm text-ink-500">{s.description}</p>
+              </p>
+              <p className="text-xs text-ink-500">
+                {s.businessCategory} · {s.town}, {s.county} · {rating}
+              </p>
+              <p className="clamp-2 mt-1 text-sm text-ink-500">
+                {s.description}
+              </p>
             </div>
           </Link>
         ))}
@@ -82,27 +146,54 @@ export default async function ShopsIndex() {
 
       {community.length > 0 && (
         <>
-          <h2 className="mb-2 mt-8 font-bold">New from the community ({community.length})</h2>
+          <h2 className="mb-2 mt-8 font-bold">
+            New from the community ({community.length})
+          </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {community.map((s) => (
-              <Link key={s.slug} href={`/shops/${s.slug}`} className="card overflow-hidden hover:border-brand-600">
-                <div aria-hidden className="h-28 w-full bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800">
+              <Link
+                key={s.slug}
+                href={`/shops/${s.slug}`}
+                className="card overflow-hidden hover:border-brand-600"
+              >
+                <div aria-hidden className="h-28 w-full bg-ink-900">
                   {s.coverUrl && (
-                    <SafeImage src={s.coverUrl} alt={`${s.name} cover`} loading="lazy" className="h-28 w-full object-cover" />
+                    <SafeImage
+                      src={s.coverUrl}
+                      alt={`${s.name} cover`}
+                      loading="lazy"
+                      className="h-28 w-full object-cover"
+                    />
                   )}
                 </div>
                 <div className="flex items-start gap-2.5 p-4">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-600 font-black text-white">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded bg-brand-600 font-black text-white">
                     {s.logoUrl ? (
-                      <SafeImage src={s.logoUrl} alt="" className="h-full w-full object-cover" fallback={s.name.charAt(0).toUpperCase()} />
+                      <SafeImage
+                        src={s.logoUrl}
+                        alt=""
+                        className="h-full w-full object-cover"
+                        fallback={s.name.charAt(0).toUpperCase()}
+                      />
                     ) : (
                       s.name.charAt(0).toUpperCase()
                     )}
                   </span>
                   <span className="min-w-0">
-                    <span className="flex flex-wrap items-center gap-1.5 font-bold">{s.name} <PlanCheckmark plan={s.planId} size="sm" /> {s.verified ? <Badge tone="green">✓ Verified</Badge> : <Badge>New</Badge>}</span>
-                    <span className="block text-xs text-ink-500">{s.businessCategory} · {s.town}, {s.county}</span>
-                    <span className="clamp-2 mt-1 block text-sm text-ink-500">{s.description}</span>
+                    <span className="flex flex-wrap items-center gap-1.5 font-bold">
+                      {s.name} <PlanCheckmark plan={s.planId} size="sm" />{" "}
+                      {s.verified ? (
+                        <Badge tone="green">✓ Verified</Badge>
+                      ) : (
+                        <Badge>New</Badge>
+                      )}
+                    </span>
+                    <span className="block text-xs text-ink-500">
+                      {s.businessCategory} · {s.town}, {s.county}
+                    </span>
+                    <span className="clamp-2 mt-1 block text-sm text-ink-500">
+                      {s.description}
+                    </span>
                   </span>
                 </div>
               </Link>
@@ -112,11 +203,24 @@ export default async function ShopsIndex() {
       )}
 
       <div className="card mt-8 bg-brand-700 p-6 text-white">
-        <h2 className="text-xl font-bold">Run a business? Open your shop free</h2>
-        <p className="mt-1 max-w-2xl text-sm opacity-90">Free storefronts forever: your brand, your catalogue, your chap.co.ke address. Upgrade to Silver or Gold when bulk tools and promotions pay for themselves.</p>
+        <h2 className="text-xl font-bold">
+          Run a business? Open your shop free
+        </h2>
+        <p className="mt-1 max-w-2xl text-sm opacity-90">
+          Free storefronts forever: your brand, your catalogue, your chap.co.ke
+          address. Upgrade to Silver or Gold when bulk tools and promotions pay
+          for themselves.
+        </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Link href="/dashboard/shop" className="btn-accent">Open my shop</Link>
-          <Link href="/pricing" className="rounded-xl border border-white/40 px-5 py-2.5 text-sm font-semibold hover:bg-white/10">Compare plans</Link>
+          <Link href="/dashboard/shop" className="btn-accent">
+            Open my shop
+          </Link>
+          <Link
+            href="/pricing"
+            className="rounded border border-white/40 px-5 py-2.5 text-sm font-semibold hover:bg-white/10"
+          >
+            Compare plans
+          </Link>
         </div>
       </div>
     </div>

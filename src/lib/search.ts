@@ -65,7 +65,8 @@ function textScore(l: Listing, tokens: string[]): number {
   // Seller/shop names are part of a listing's searchable identity — typing a
   // shop name should find its products, not just its storefront profile.
   const title = l.title.toLowerCase();
-  const hay = `${l.title} ${l.description} ${l.subcategory ?? ""} ${Object.values(l.attributes).join(" ")} ${l.town} ${l.county} ${l.sellerName} ${shopWords}`.toLowerCase();
+  const hay =
+    `${l.title} ${l.description} ${l.subcategory ?? ""} ${Object.values(l.attributes).join(" ")} ${l.town} ${l.county} ${l.sellerName} ${shopWords}`.toLowerCase();
   let s = 0;
   let matchedWord = false;
   for (const t of tokens) {
@@ -100,28 +101,46 @@ function staticMatches(p: SearchParams): Listing[] {
   const sub = (p.subcategory ?? "").trim().toLowerCase();
   const town = (p.town ?? "").trim().toLowerCase();
   let items = LISTINGS.filter((l) => {
-    if (p.category && p.category !== "all" && l.categorySlug !== p.category) return false;
-    if (sub && sub !== "all" && (l.subcategory ?? "").trim().toLowerCase() !== sub) return false;
+    if (p.category && p.category !== "all" && l.categorySlug !== p.category)
+      return false;
+    if (
+      sub &&
+      sub !== "all" &&
+      (l.subcategory ?? "").trim().toLowerCase() !== sub
+    )
+      return false;
     if (p.type && p.type !== "all" && l.listingType !== p.type) return false;
-    if (p.seller && p.seller !== "all" && l.sellerType !== p.seller) return false;
-    if (p.condition && p.condition !== "all" && l.condition !== p.condition) return false;
+    if (p.seller && p.seller !== "all" && l.sellerType !== p.seller)
+      return false;
+    if (p.condition && p.condition !== "all" && l.condition !== p.condition)
+      return false;
     // Case-insensitive; towns resolve to their county ("Eldoret" → "Uasin Gishu").
     if (!countyMatches(l.county, p.county ?? "all")) return false;
-    if (town && town !== "all" && l.town.trim().toLowerCase() !== town) return false;
+    if (town && town !== "all" && l.town.trim().toLowerCase() !== town)
+      return false;
     if (p.min != null && l.price < p.min) return false;
     if (p.max != null && l.price > p.max) return false;
     if (p.postedWithinHours != null && p.postedWithinHours > 0) {
       const t = +new Date(l.createdAt);
-      if (!Number.isFinite(t) || Date.now() - t > p.postedWithinHours * 3600_000) return false;
+      if (
+        !Number.isFinite(t) ||
+        Date.now() - t > p.postedWithinHours * 3600_000
+      )
+        return false;
     }
     if (tokens.length > 0 && score(l, tokens) <= 0) return false;
     return true;
   });
 
   const sort = p.sort ?? "relevance";
-  if (sort === "price_asc") items = [...items].sort((a, b) => a.price - b.price);
-  else if (sort === "price_desc") items = [...items].sort((a, b) => b.price - a.price);
-  else if (sort === "newest") items = [...items].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  if (sort === "price_asc")
+    items = [...items].sort((a, b) => a.price - b.price);
+  else if (sort === "price_desc")
+    items = [...items].sort((a, b) => b.price - a.price);
+  else if (sort === "newest")
+    items = [...items].sort(
+      (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
+    );
   else items = relevanceRanked(items, tokens, (l) => score(l, tokens));
   return items;
 }
@@ -137,7 +156,12 @@ export function searchListings(p: SearchParams): {
   const perPage = Math.min(Math.max(p.perPage ?? 24, 1), 60);
   const page = Math.max(p.page ?? 1, 1);
   const total = items.length;
-  return { items: items.slice((page - 1) * perPage, page * perPage), total, page, perPage };
+  return {
+    items: items.slice((page - 1) * perPage, page * perPage),
+    total,
+    page,
+    perPage,
+  };
 }
 
 /**
@@ -163,8 +187,11 @@ function titleHit(l: Pick<Listing, "title">, tokens: string[]): boolean {
 }
 
 export function dominantIntent(
-  scored: { l: Pick<Listing, "categorySlug" | "subcategory" | "title">; s: number }[],
-  tokens: string[] = []
+  scored: {
+    l: Pick<Listing, "categorySlug" | "subcategory" | "title">;
+    s: number;
+  }[],
+  tokens: string[] = [],
 ): {
   categorySlug: string;
   subcategory?: string;
@@ -174,10 +201,12 @@ export function dominantIntent(
   // Intent comes from genuine title matches only: featured/verified bonuses
   // (+2.5 with zero text match) can otherwise elect a spurious majority and
   // bury the true best hit beneath it.
-  const strong = tokens.length > 0 ? hits.filter((x) => titleHit(x.l, tokens)) : hits;
+  const strong =
+    tokens.length > 0 ? hits.filter((x) => titleHit(x.l, tokens)) : hits;
   if (strong.length < 2) return null;
   const catCount = new Map<string, number>();
-  for (const h of strong) catCount.set(h.l.categorySlug, (catCount.get(h.l.categorySlug) ?? 0) + 1);
+  for (const h of strong)
+    catCount.set(h.l.categorySlug, (catCount.get(h.l.categorySlug) ?? 0) + 1);
   let topCat = "";
   let topN = 0;
   for (const [c, n] of catCount) {
@@ -202,23 +231,30 @@ export function dominantIntent(
       topSub = s;
     }
   }
-  return { categorySlug: topCat, ...(topS >= 2 && topSub ? { subcategory: topSub } : {}) };
+  return {
+    categorySlug: topCat,
+    ...(topS >= 2 && topSub ? { subcategory: topSub } : {}),
+  };
 }
 
 /** Relevance order with dominant-cluster tiering (stable within tiers). */
-function relevanceRanked<T extends Pick<Listing, "categorySlug" | "subcategory" | "title">>(
-  items: T[],
-  tokens: string[],
-  textScore: (l: T) => number
-): T[] {
+function relevanceRanked<
+  T extends Pick<Listing, "categorySlug" | "subcategory" | "title">,
+>(items: T[], tokens: string[], textScore: (l: T) => number): T[] {
   const scored = items.map((l) => ({ l, s: textScore(l) }));
   const intent = tokens.length > 0 ? dominantIntent(scored, tokens) : null;
-  scored.sort((a, b) => (intent ? relatedTier(a.l, intent) - relatedTier(b.l, intent) : 0) || b.s - a.s);
+  scored.sort(
+    (a, b) =>
+      (intent ? relatedTier(a.l, intent) - relatedTier(b.l, intent) : 0) ||
+      b.s - a.s,
+  );
   return scored.map((x) => x.l);
 }
 
 /** Per-request shuffle for rails: Featured/promoted items always lead, everything else mixes freshly on every refresh. */
-export function shuffleFeaturedFirst<T extends { featured?: boolean }>(items: T[]): T[] {
+export function shuffleFeaturedFirst<T extends { featured?: boolean }>(
+  items: T[],
+): T[] {
   const feat = items.filter((l) => l.featured);
   const rest = items.filter((l) => !l.featured);
   shuffleInPlace(feat);
@@ -229,7 +265,9 @@ export function shuffleFeaturedFirst<T extends { featured?: boolean }>(items: T[
 /** Deterministic browse ranking: TOP pins → Featured → newest.
  * Stable across refreshes (no Math.random) so pagination doesn't reshuffle.
  */
-export function rankDeterministic<T extends { featured?: boolean; topPinned?: boolean; createdAt?: string }>(items: T[]): T[] {
+export function rankDeterministic<
+  T extends { featured?: boolean; topPinned?: boolean; createdAt?: string },
+>(items: T[]): T[] {
   return [...items].sort((a, b) => {
     const ta = a.topPinned ? 1 : 0;
     const tb = b.topPinned ? 1 : 0;
@@ -246,7 +284,9 @@ export function rankDeterministic<T extends { featured?: boolean; topPinned?: bo
 /** Paid TOP pins lead, but free "featured" badges must not override textual
  * relevance. Used for keyword searches, where the exact match belongs first.
  */
-export function pinTopResults<T extends { topPinned?: boolean }>(items: T[]): T[] {
+export function pinTopResults<T extends { topPinned?: boolean }>(
+  items: T[],
+): T[] {
   const top: T[] = [];
   const rest: T[] = [];
   for (const item of items) (item.topPinned ? top : rest).push(item);
@@ -279,20 +319,38 @@ export function suggestions(q: string, limit = 7): string[] {
   const t = q.trim().toLowerCase();
   if (t.length < 1) return [];
   const titles = LISTINGS.map((l) => l.title);
-  const cats = ["Phones & Tablets", "Automotive", "Property", "Fashion", "Laptops", "Services"];
+  const cats = [
+    "Phones & Tablets",
+    "Automotive",
+    "Property",
+    "Fashion",
+    "Laptops",
+    "Services",
+  ];
   // Seller and shop names are searchable entities too — surface them in the
   // header autocomplete so a name search lands on the right profile.
-  const people = [...LISTINGS.map((l) => l.sellerName), ...SHOPS.map((s) => s.name)];
-  const hits = [...new Set([...titles, ...cats, ...people])].filter((s) => s.toLowerCase().includes(t));
+  const people = [
+    ...LISTINGS.map((l) => l.sellerName),
+    ...SHOPS.map((s) => s.name),
+  ];
+  const hits = [...new Set([...titles, ...cats, ...people])].filter((s) =>
+    s.toLowerCase().includes(t),
+  );
   // Prefix matches first so early keystrokes already feel relevant.
-  hits.sort((a, b) => Number(!a.toLowerCase().startsWith(t)) - Number(!b.toLowerCase().startsWith(t)));
+  hits.sort(
+    (a, b) =>
+      Number(!a.toLowerCase().startsWith(t)) -
+      Number(!b.toLowerCase().startsWith(t)),
+  );
   return hits.slice(0, limit);
 }
 
 /** Async search merging static catalogue + live store listings (active only).
  * Store listings are converted to the catalogue Listing shape so existing UI works.
  */
-export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; total: number; page: number; perPage: number }> {
+export async function searchAll(
+  p: SearchParams,
+): Promise<{ items: Listing[]; total: number; page: number; perPage: number }> {
   const base = searchListings(p);
   try {
     const { getStore } = await import("./store");
@@ -315,7 +373,8 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
         compareAt: s.compareAt,
         condition: (s.condition as Listing["condition"]) || "used_good",
         listingType: (s.type as Listing["listingType"]) || "product",
-        transactionMethod: (s.txMethod as Listing["transactionMethod"]) || "buy_online",
+        transactionMethod:
+          (s.txMethod as Listing["transactionMethod"]) || "buy_online",
         county: s.county,
         town: s.town,
         negotiable: s.negotiable,
@@ -323,7 +382,9 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
         images: s.images && s.images.length > 0 ? s.images : ["/chaplogo.png"],
         sellerName: s.sellerName,
         ownerId: s.ownerId,
-        sellerType: (s.shopSlug ? "business" : "individual") as Listing["sellerType"],
+        sellerType: (s.shopSlug
+          ? "business"
+          : "individual") as Listing["sellerType"],
         shopSlug: s.shopSlug,
         verified: s.verified ?? true,
         featured: s.featured,
@@ -331,18 +392,32 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
         attributes: s.attributes || {},
       }))
       .filter((l) => {
-        if (p.category && p.category !== "all" && l.categorySlug !== p.category) return false;
-        if (sub && sub !== "all" && (l.subcategory ?? "").trim().toLowerCase() !== sub) return false;
-        if (p.type && p.type !== "all" && l.listingType !== p.type) return false;
-        if (p.seller && p.seller !== "all" && l.sellerType !== p.seller) return false;
-        if (p.condition && p.condition !== "all" && l.condition !== p.condition) return false;
+        if (p.category && p.category !== "all" && l.categorySlug !== p.category)
+          return false;
+        if (
+          sub &&
+          sub !== "all" &&
+          (l.subcategory ?? "").trim().toLowerCase() !== sub
+        )
+          return false;
+        if (p.type && p.type !== "all" && l.listingType !== p.type)
+          return false;
+        if (p.seller && p.seller !== "all" && l.sellerType !== p.seller)
+          return false;
+        if (p.condition && p.condition !== "all" && l.condition !== p.condition)
+          return false;
         if (!countyMatches(l.county, p.county ?? "all")) return false;
-        if (town && town !== "all" && l.town.trim().toLowerCase() !== town) return false;
+        if (town && town !== "all" && l.town.trim().toLowerCase() !== town)
+          return false;
         if (p.min != null && l.price < p.min) return false;
         if (p.max != null && l.price > p.max) return false;
         if (p.postedWithinHours != null && p.postedWithinHours > 0) {
           const t = +new Date(l.createdAt);
-          if (!Number.isFinite(t) || Date.now() - t > p.postedWithinHours * 3600_000) return false;
+          if (
+            !Number.isFinite(t) ||
+            Date.now() - t > p.postedWithinHours * 3600_000
+          )
+            return false;
         }
         if (tokens.length > 0 && score(l, tokens) <= 0) return false;
         return true;
@@ -352,12 +427,19 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
     // so a seeded live twin never appears twice beside its catalogue copy.
     const staticItems = staticMatches(p);
     const seen = new Set(staticItems.flatMap((l) => [l.id, `slug:${l.slug}`]));
-    const extra = mapped.filter((l) => !seen.has(l.id) && !seen.has(`slug:${l.slug}`));
+    const extra = mapped.filter(
+      (l) => !seen.has(l.id) && !seen.has(`slug:${l.slug}`),
+    );
     const sort = p.sort ?? "relevance";
     let items = [...staticItems, ...extra];
-    if (sort === "price_asc") items = [...items].sort((a, b) => a.price - b.price);
-    else if (sort === "price_desc") items = [...items].sort((a, b) => b.price - a.price);
-    else if (sort === "newest") items = [...items].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    if (sort === "price_asc")
+      items = [...items].sort((a, b) => a.price - b.price);
+    else if (sort === "price_desc")
+      items = [...items].sort((a, b) => b.price - a.price);
+    else if (sort === "newest")
+      items = [...items].sort(
+        (a, b) => +new Date(b.createdAt) - +new Date(a.createdAt),
+      );
     else {
       // Same dominant-cluster tiering as the static path (recency breaks ties).
       const scored = items.map((l) => ({ l, s: score(l, tokens) }));
@@ -366,7 +448,7 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
         (a, b) =>
           (intent ? relatedTier(a.l, intent) - relatedTier(b.l, intent) : 0) ||
           b.s - a.s ||
-          +new Date(b.l.createdAt) - +new Date(a.l.createdAt)
+          +new Date(b.l.createdAt) - +new Date(a.l.createdAt),
       );
       items = scored.map((x) => x.l);
     }
@@ -374,9 +456,16 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
     // pin may jump the queue: promoting every "featured" listing re-buried
     // exact matches beneath unrelated boosted products. Browse-style searches
     // (no query) still lead with featured inventory.
-    const kinds = await store.livePromoKinds(items.map((l) => l.id)).catch(() => new Map<string, string>());
-    const pinned = items.map((l) => ({ ...l, topPinned: kinds.get(l.id) === "top" }));
-    items = (p.q?.trim() ? pinTopResults(pinned) : rankDeterministic(pinned)) as typeof items;
+    const kinds = await store
+      .livePromoKinds(items.map((l) => l.id))
+      .catch(() => new Map<string, string>());
+    const pinned = items.map((l) => ({
+      ...l,
+      topPinned: kinds.get(l.id) === "top",
+    }));
+    items = (
+      p.q?.trim() ? pinTopResults(pinned) : rankDeterministic(pinned)
+    ) as typeof items;
     // Badges follow the live user record, not the catalogue flag.
     try {
       const { withLiveVerification } = await import("./live-listings");
@@ -384,7 +473,12 @@ export async function searchAll(p: SearchParams): Promise<{ items: Listing[]; to
     } catch {}
     const perPage = Math.min(Math.max(p.perPage ?? 24, 1), 60);
     const page = Math.max(p.page ?? 1, 1);
-    return { items: items.slice((page - 1) * perPage, page * perPage), total: items.length, page, perPage };
+    return {
+      items: items.slice((page - 1) * perPage, page * perPage),
+      total: items.length,
+      page,
+      perPage,
+    };
   } catch {
     return base;
   }
@@ -405,11 +499,17 @@ export async function suggestionsAll(q: string, limit = 7): Promise<string[]> {
     ]);
     const extra = [
       ...live.map((l) => l.title),
-      ...users.flatMap((u) => [u.name, u.businessName].filter(Boolean) as string[]),
+      ...users.flatMap(
+        (u) => [u.name, u.businessName].filter(Boolean) as string[],
+      ),
       ...shops.map((s) => s.name),
     ].filter((s) => s.toLowerCase().includes(t));
     const hits = [...new Set([...base, ...extra])];
-    hits.sort((a, b) => Number(!a.toLowerCase().startsWith(t)) - Number(!b.toLowerCase().startsWith(t)));
+    hits.sort(
+      (a, b) =>
+        Number(!a.toLowerCase().startsWith(t)) -
+        Number(!b.toLowerCase().startsWith(t)),
+    );
     return hits.slice(0, limit);
   } catch {
     return base;

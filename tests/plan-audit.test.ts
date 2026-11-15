@@ -27,7 +27,7 @@ describe("auditPlanRows", () => {
         { ownerId: "u1", count: 3 },
         { ownerId: "u2", count: 40 },
         { ownerId: "u3", count: 12 },
-      ]
+      ],
     );
     const [small, big, owner] = rows;
     assert.equal(small.needsUpgrade, false);
@@ -38,14 +38,32 @@ describe("auditPlanRows", () => {
     // Shop owner: effective silver (shop), expected silver → fits.
     assert.equal(owner.effectivePlan, "silver");
     assert.equal(owner.needsUpgrade, false);
-    assert.deepEqual(owner.target, { kind: "shop", slug: "big-shop", name: "Big Shop" });
+    assert.deepEqual(owner.target, {
+      kind: "shop",
+      slug: "big-shop",
+      name: "Big Shop",
+    });
   });
 
   it("uses the shop plan, not a dormant personal plan, for shop owners", () => {
     const [row] = auditPlanRows(
-      [{ id: "u4", name: "Shop Gold Personal", email: "gp@x.ke", planId: "gold" }],
-      [{ slug: "silver-shop", name: "Silver Shop", ownerId: "u4", planId: "silver" }],
-      [{ ownerId: "u4", count: 10 }]
+      [
+        {
+          id: "u4",
+          name: "Shop Gold Personal",
+          email: "gp@x.ke",
+          planId: "gold",
+        },
+      ],
+      [
+        {
+          slug: "silver-shop",
+          name: "Silver Shop",
+          ownerId: "u4",
+          planId: "silver",
+        },
+      ],
+      [{ ownerId: "u4", count: 10 }],
     );
     assert.equal(row.effectivePlan, "silver");
     assert.equal(row.needsUpgrade, false);
@@ -55,7 +73,7 @@ describe("auditPlanRows", () => {
     const [row] = auditPlanRows(
       [{ id: "u9", name: "Quiet Gold", email: "q@x.ke", planId: "gold" }],
       [],
-      [{ ownerId: "u9", count: 2 }]
+      [{ ownerId: "u9", count: 2 }],
     );
     assert.equal(row.effectivePlan, "gold");
     assert.equal(row.expectedPlan, "free");
@@ -67,20 +85,37 @@ describe("countLiveListingsByOwner", () => {
   it("counts live slots per owner, skipping rejected/sold/expired", async () => {
     const store = freshDemoStore();
     const u = await store.createUser({
-      name: "Counter", email: "counter@x.ke", phone: "0712345678",
-      role: "SELLER", verified: true, passwordHash: "h",
+      name: "Counter",
+      email: "counter@x.ke",
+      phone: "0712345678",
+      role: "SELLER",
+      verified: true,
+      passwordHash: "h",
     });
     const mk = (status: string) =>
-      store.createListing({
-        title: `Counter ${status} item`, description: "01234567890123456789",
-        type: "product", price: 100, compareAt: null, condition: "new",
-        txMethod: "buy_online", negotiable: false, stock: 1,
-        county: "Nairobi", town: "CBD", images: [], attributes: {},
-        ownerId: u.id, sellerName: u.name, categorySlug: "other",
-      }).then(async (l) => {
-        await store.setListingStatus(l.id, status);
-        return l;
-      });
+      store
+        .createListing({
+          title: `Counter ${status} item`,
+          description: "01234567890123456789",
+          type: "product",
+          price: 100,
+          compareAt: null,
+          condition: "new",
+          txMethod: "buy_online",
+          negotiable: false,
+          stock: 1,
+          county: "Nairobi",
+          town: "CBD",
+          images: [],
+          attributes: {},
+          ownerId: u.id,
+          sellerName: u.name,
+          categorySlug: "other",
+        })
+        .then(async (l) => {
+          await store.setListingStatus(l.id, status);
+          return l;
+        });
     await mk("active");
     await mk("pending");
     await mk("rejected");

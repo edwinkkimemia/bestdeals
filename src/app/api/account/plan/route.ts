@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
-import { getSellerPlan, normalizePlan, planChangeKind, pendingSellerPlanKey, PLAN_IDS, PLAN_LISTING_LIMITS, type PendingPlan } from "@/lib/plans";
+import {
+  getSellerPlan,
+  normalizePlan,
+  planChangeKind,
+  pendingSellerPlanKey,
+  PLAN_IDS,
+  PLAN_LISTING_LIMITS,
+  type PendingPlan,
+} from "@/lib/plans";
 import { SHOP_PLANS } from "@/data/catalog";
 import { initiateSTKPush } from "@/lib/payments";
 import { formatKES } from "@/lib/format";
@@ -17,7 +25,11 @@ import { sendInvoiceEmailById } from "@/lib/invoice-email";
 const readInvoices = readInvoiceLedger;
 const writeInvoices = writeInvoiceLedger;
 
-async function markInvoice(invoiceId: string, status: "paid" | "pending", providerRef?: string): Promise<void> {
+async function markInvoice(
+  invoiceId: string,
+  status: "paid" | "pending",
+  providerRef?: string,
+): Promise<void> {
   await updateInvoiceRecord(invoiceId, {
     status,
     ...(providerRef ? { providerRef } : {}),
@@ -33,7 +45,9 @@ async function sweepOverLimit(ownerId: string, cap: number): Promise<number> {
   const live = await countLiveListings(ownerId).catch(() => 0);
   if (live <= cap) return 0;
   const mine = await store.listListingsByOwner(ownerId).catch(() => []);
-  const actives = mine.filter((l) => l.status === "active").sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
+  const actives = mine
+    .filter((l) => l.status === "active")
+    .sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
   let hidden = 0;
   for (const l of actives.slice(0, live - cap)) {
     await store.setListingStatus(l.id, "hidden").catch(() => {});
@@ -51,7 +65,8 @@ async function sweepOverLimit(ownerId: string, cap: number): Promise<number> {
  */
 export async function POST(req: NextRequest) {
   const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const { planId, phone, cancel, confirm, clearPending, userId } = body as {
     planId?: unknown;
@@ -63,14 +78,18 @@ export async function POST(req: NextRequest) {
   };
   const plan = normalizePlan(planId);
   const def = SHOP_PLANS.find((p) => p.id === plan);
-  if (!def) return NextResponse.json({ error: "Unknown plan." }, { status: 400 });
+  if (!def)
+    return NextResponse.json({ error: "Unknown plan." }, { status: 400 });
 
   // Admins may confirm (or manage) another seller's pending checkout.
   const targetId =
-    user.role === "ADMIN" && typeof userId === "string" && userId.trim() ? userId.trim() : user.id;
+    user.role === "ADMIN" && typeof userId === "string" && userId.trim()
+      ? userId.trim()
+      : user.id;
   const store = getStore();
   const target = await store.findUserById(targetId).catch(() => null);
-  if (!target) return NextResponse.json({ error: "Account not found." }, { status: 404 });
+  if (!target)
+    return NextResponse.json({ error: "Account not found." }, { status: 404 });
   if (targetId !== user.id && user.role !== "ADMIN") {
     return NextResponse.json({ error: "Not your account." }, { status: 403 });
   }
@@ -81,9 +100,16 @@ export async function POST(req: NextRequest) {
 
   // Admin payment confirmation for a pending upgrade.
   if (confirm) {
-    if (user.role !== "ADMIN") return NextResponse.json({ error: "Admin only." }, { status: 403 });
-    const pending = (await store.getSetting(key).catch(() => null)) as PendingPlan | null;
-    if (!pending) return NextResponse.json({ error: "No pending plan payment for this seller." }, { status: 404 });
+    if (user.role !== "ADMIN")
+      return NextResponse.json({ error: "Admin only." }, { status: 403 });
+    const pending = (await store
+      .getSetting(key)
+      .catch(() => null)) as PendingPlan | null;
+    if (!pending)
+      return NextResponse.json(
+        { error: "No pending plan payment for this seller." },
+        { status: 404 },
+      );
     // If the seller opened a shop while the personal checkout was pending,
     // land the paid plan on that shop so they still have exactly one plan.
     if (shop) {
@@ -102,10 +128,24 @@ export async function POST(req: NextRequest) {
         description: `${def?.name ?? pending.planId} shop plan - monthly subscription`,
       }).catch(() => null);
     }
-    await sendInvoiceEmailById(pending.invoiceId, { reason: "paid", origin: req.nextUrl.origin }).catch(() => null);
+    await sendInvoiceEmailById(pending.invoiceId, {
+      reason: "paid",
+      origin: req.nextUrl.origin,
+    }).catch(() => null);
     const { logAudit } = await import("@/lib/audit");
-    await logAudit({ actorId: user.id, actorEmail: user.email, action: "plan.confirm", entity: "user", entityId: targetId, reason: pending.planId }).catch(() => {});
-    return NextResponse.json({ ok: true, planId: pending.planId, confirmed: true });
+    await logAudit({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: "plan.confirm",
+      entity: "user",
+      entityId: targetId,
+      reason: pending.planId,
+    }).catch(() => {});
+    return NextResponse.json({
+      ok: true,
+      planId: pending.planId,
+      confirmed: true,
+    });
   }
 
   if (clearPending) {
@@ -116,11 +156,12 @@ export async function POST(req: NextRequest) {
   if (shop) {
     return NextResponse.json(
       {
-        error: "You have a shop, so your shop plan is your only plan. Manage it on Plan & billing.",
+        error:
+          "You have a shop, so your shop plan is your only plan. Manage it on Plan & billing.",
         code: "SHOP_PLAN",
         shopSlug: shop.slug,
       },
-      { status: 409 }
+      { status: 409 },
     );
   }
 
@@ -129,21 +170,42 @@ export async function POST(req: NextRequest) {
     await store.setUserPlan(targetId, "free").catch(() => {});
     await sweepOverLimit(targetId, PLAN_LISTING_LIMITS.free).catch(() => {});
     const { logAudit } = await import("@/lib/audit");
-    await logAudit({ actorId: user.id, actorEmail: user.email, action: "plan.cancel", entity: "user", entityId: targetId }).catch(() => {});
+    await logAudit({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: "plan.cancel",
+      entity: "user",
+      entityId: targetId,
+    }).catch(() => {});
     return NextResponse.json({ ok: true, planId: "free", cancelled: true });
   }
 
   const kind = planChangeKind(current, plan);
   if (kind === "same") {
     await store.setSetting(key, null).catch(() => {});
-    return NextResponse.json({ ok: true, planId: plan, unchanged: true, plans: PLAN_IDS });
+    return NextResponse.json({
+      ok: true,
+      planId: plan,
+      unchanged: true,
+      plans: PLAN_IDS,
+    });
   }
   if (kind === "downgrade") {
     await store.setSetting(key, null).catch(() => {});
     await store.setUserPlan(targetId, plan);
-    const hidden = await sweepOverLimit(targetId, PLAN_LISTING_LIMITS[plan]).catch(() => 0);
+    const hidden = await sweepOverLimit(
+      targetId,
+      PLAN_LISTING_LIMITS[plan],
+    ).catch(() => 0);
     const { logAudit } = await import("@/lib/audit");
-    await logAudit({ actorId: user.id, actorEmail: user.email, action: "plan.downgrade", entity: "user", entityId: targetId, reason: `${current}->${plan}` }).catch(() => {});
+    await logAudit({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: "plan.downgrade",
+      entity: "user",
+      entityId: targetId,
+      reason: `${current}->${plan}`,
+    }).catch(() => {});
     return NextResponse.json({
       ok: true,
       planId: plan,
@@ -172,20 +234,34 @@ export async function POST(req: NextRequest) {
     description: `${def.name} seller plan - monthly subscription`,
   };
   const saveSellerInvoice = async (inv: PlanInvoice) => {
-    await writeInvoices([{ ...inv, userId: targetId, ownerId: targetId } as PlanInvoice, ...(await readInvoices())]);
+    await writeInvoices([
+      { ...inv, userId: targetId, ownerId: targetId } as PlanInvoice,
+      ...(await readInvoices()),
+    ]);
   };
   if (bal >= def.monthly && def.monthly > 0) {
-    const spent = await debitWallet(user.id, def.monthly, "plan", `${def.name} seller plan`);
+    const spent = await debitWallet(
+      user.id,
+      def.monthly,
+      "plan",
+      `${def.name} seller plan`,
+    );
     if (spent.ok) {
       await store.setSetting(key, null).catch(() => {});
       await store.setUserPlan(targetId, plan);
       await saveSellerInvoice({ ...invoice, method: "wallet" });
-      await sendInvoiceEmailById(invoice.id, { reason: "paid", origin: req.nextUrl.origin }).catch(() => null);
+      await sendInvoiceEmailById(invoice.id, {
+        reason: "paid",
+        origin: req.nextUrl.origin,
+      }).catch(() => null);
       return NextResponse.json({
         ok: true,
         planId: plan,
         invoice,
-        payment: { status: "paid", message: `Paid from wallet (${spent.balance} KES left).` },
+        payment: {
+          status: "paid",
+          message: `Paid from wallet (${spent.balance} KES left).`,
+        },
         summary: `${def.name} seller plan active ✓ — ${formatKES(def.monthly)}/mo paid from wallet.`,
       });
     }
@@ -196,14 +272,23 @@ export async function POST(req: NextRequest) {
   const fresh = await store.findUserById(user.id).catch(() => null);
   const payPhone = String(phone ?? fresh?.phone ?? user.phone ?? "").trim();
   if (!/^(\+254|0)[17]\d{8}$/.test(payPhone)) {
-    return NextResponse.json({ error: "Enter a valid M-Pesa phone (07…) to pay for the plan." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Enter a valid M-Pesa phone (07…) to pay for the plan." },
+      { status: 400 },
+    );
   }
-  const existing = (await store.getSetting(key).catch(() => null)) as PendingPlan | null;
-  const invoiceId = existing && existing.planId === plan ? existing.invoiceId : invoice.id;
+  const existing = (await store
+    .getSetting(key)
+    .catch(() => null)) as PendingPlan | null;
+  const invoiceId =
+    existing && existing.planId === plan ? existing.invoiceId : invoice.id;
   if (!existing || existing.planId !== plan) {
     await saveSellerInvoice({ ...invoice, method: "mpesa", status: "pending" });
   }
-  await sendInvoiceEmailById(invoiceId, { reason: "created", origin: req.nextUrl.origin }).catch(() => null);
+  await sendInvoiceEmailById(invoiceId, {
+    reason: "created",
+    origin: req.nextUrl.origin,
+  }).catch(() => null);
   const payment = await initiateSTKPush({
     orderId: `sellerplan-${targetId.slice(0, 8)}-${plan}`,
     amount: def.monthly,
@@ -221,7 +306,12 @@ export async function POST(req: NextRequest) {
   };
   await store.setSetting(key, pending).catch(() => {});
   if (payment.status === "processing" && payment.providerRef) {
-    await store.setSetting(`mpesa_link:${payment.providerRef}`, { planUser: targetId, planId: plan }).catch(() => {});
+    await store
+      .setSetting(`mpesa_link:${payment.providerRef}`, {
+        planUser: targetId,
+        planId: plan,
+      })
+      .catch(() => {});
     await markInvoice(invoiceId, "pending", payment.providerRef);
   }
   return NextResponse.json({
@@ -230,7 +320,11 @@ export async function POST(req: NextRequest) {
     pendingPlan: plan,
     pending: true,
     plans: PLAN_IDS,
-    payment: { status: payment.status, message: payment.message, providerRef: payment.providerRef },
+    payment: {
+      status: payment.status,
+      message: payment.message,
+      providerRef: payment.providerRef,
+    },
     summary: `${def.name} seller plan (${formatKES(def.monthly)}/mo) reserved — still on ${current} until payment confirms. ${payment.message}`,
     invoice: { ...invoice, method: "mpesa", status: "pending" as const },
   });
@@ -239,10 +333,17 @@ export async function POST(req: NextRequest) {
 /** Effective plan (shop plan when the seller owns a storefront) + pending checkout. */
 export async function GET() {
   const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Sign in required." }, { status: 401 });
   const [effective, pending] = await Promise.all([
-    getSellerPlan(user.id).catch(() => ({ planId: "free" as const, shopSlug: undefined, shopName: undefined })),
-    getStore().getSetting(pendingSellerPlanKey(user.id)).catch(() => null) as Promise<PendingPlan | null>,
+    getSellerPlan(user.id).catch(() => ({
+      planId: "free" as const,
+      shopSlug: undefined,
+      shopName: undefined,
+    })),
+    getStore()
+      .getSetting(pendingSellerPlanKey(user.id))
+      .catch(() => null) as Promise<PendingPlan | null>,
   ]);
   return NextResponse.json({
     planId: normalizePlan(effective.planId),

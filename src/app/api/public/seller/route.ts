@@ -13,23 +13,34 @@ import {
  */
 export async function GET(req: NextRequest) {
   const slug = (req.nextUrl.searchParams.get("slug") || "").trim();
-  if (!slug) return NextResponse.json({ error: "Seller is required." }, { status: 400 });
+  if (!slug)
+    return NextResponse.json({ error: "Seller is required." }, { status: 400 });
   const profile = await resolveSellerProfile(slug).catch(() => null);
-  if (!profile) return NextResponse.json({ error: "Seller not found." }, { status: 404 });
+  if (!profile)
+    return NextResponse.json({ error: "Seller not found." }, { status: 404 });
 
   const items = await getSellerListings(profile).catch(() => []);
   const [live, shops, reviews] = await Promise.all([
     withLiveVerification(items),
     profile.userId
-      ? storeRead((s) => s.listShopsByOwner(profile.userId as string), []).catch(() => [])
+      ? storeRead(
+          (s) => s.listShopsByOwner(profile.userId as string),
+          [],
+        ).catch(() => [])
       : Promise.resolve([]),
     storeRead(async (s) => {
-      const byName = await s.listApprovedReviewsForSeller(profile.name).catch(() => []);
+      const byName = await s
+        .listApprovedReviewsForSeller(profile.name)
+        .catch(() => []);
       const byBusiness = profile.businessName
-        ? await s.listApprovedReviewsForSeller(profile.businessName).catch(() => [])
+        ? await s
+            .listApprovedReviewsForSeller(profile.businessName)
+            .catch(() => [])
         : [];
       const seen = new Set<string>();
-      return [...byName, ...byBusiness].filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true)));
+      return [...byName, ...byBusiness].filter((r) =>
+        seen.has(r.id) ? false : (seen.add(r.id), true),
+      );
     }, []).catch(() => []),
   ]);
 

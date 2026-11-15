@@ -7,21 +7,41 @@
 const MAX_HTML = 100_000;
 
 const ALLOWED = new Set([
-  "p", "br", "h2", "h3", "h4",
-  "strong", "em", "u", "s",
-  "blockquote", "ul", "ol", "li",
-  "a", "code", "pre", "hr", "img",
+  "p",
+  "br",
+  "h2",
+  "h3",
+  "h4",
+  "strong",
+  "em",
+  "u",
+  "s",
+  "blockquote",
+  "ul",
+  "ol",
+  "li",
+  "a",
+  "code",
+  "pre",
+  "hr",
+  "img",
 ]);
 
 const isPublicImage = (u: string) =>
-  u.startsWith("https://") || u.startsWith("/uploads/") || u.startsWith("/api/files/");
+  u.startsWith("https://") ||
+  u.startsWith("/uploads/") ||
+  u.startsWith("/api/files/");
 
 function escapeText(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function escapeAttr(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 function sanitizeAttrs(tag: string, raw: string): string {
@@ -31,18 +51,24 @@ function sanitizeAttrs(tag: string, raw: string): string {
   while ((m = re.exec(raw))) {
     const name = m[1].toLowerCase();
     const val = m[2] ?? m[3] ?? m[4] ?? "";
-    if (name.startsWith("on") || name === "style" || name === "srcset") continue;
+    if (name.startsWith("on") || name === "style" || name === "srcset")
+      continue;
     if (tag === "a" && name === "href") {
       const href = val.trim();
-      if (/^(https?:\/\/|mailto:)/i.test(href)) out.push(`href="${escapeAttr(href)}"`);
+      if (/^(https?:\/\/|mailto:)/i.test(href))
+        out.push(`href="${escapeAttr(href)}"`);
       continue;
     }
-    if (tag === "a" && (name === "target" || name === "rel" || name === "title")) {
+    if (
+      tag === "a" &&
+      (name === "target" || name === "rel" || name === "title")
+    ) {
       out.push(`${name}="${escapeAttr(val)}"`);
       continue;
     }
     if (tag === "img" && name === "src") {
-      if (isPublicImage(val.trim())) out.push(`src="${escapeAttr(val.trim())}"`);
+      if (isPublicImage(val.trim()))
+        out.push(`src="${escapeAttr(val.trim())}"`);
       continue;
     }
     if (tag === "img" && name === "alt") {
@@ -50,7 +76,8 @@ function sanitizeAttrs(tag: string, raw: string): string {
       continue;
     }
   }
-  if (tag === "a" && !/rel=/.test(out.join(" "))) out.push('rel="nofollow noopener"');
+  if (tag === "a" && !/rel=/.test(out.join(" ")))
+    out.push('rel="nofollow noopener"');
   return out.length ? ` ${out.join(" ")}` : "";
 }
 

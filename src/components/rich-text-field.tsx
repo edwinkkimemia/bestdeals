@@ -64,7 +64,13 @@ export function RichTextField({
     });
   };
 
-  const run = (transform: (value: string, start: number, end: number) => RichEditResult | null) => {
+  const run = (
+    transform: (
+      value: string,
+      start: number,
+      end: number,
+    ) => RichEditResult | null,
+  ) => {
     const el = ref.current;
     if (!el) return;
     const result = transform(el.value, el.selectionStart, el.selectionEnd);
@@ -72,11 +78,15 @@ export function RichTextField({
   };
 
   const wrap = (before: string, after = before, placeholder = "text") => {
-    run((text, start, end) => wrapSelection(text, start, end, before, after, placeholder, maxLength));
+    run((text, start, end) =>
+      wrapSelection(text, start, end, before, after, placeholder, maxLength),
+    );
   };
 
   const lineStyle = (style: LineStyle) => {
-    run((text, start, end) => toggleLineStyle(text, start, end, style, maxLength));
+    run((text, start, end) =>
+      toggleLineStyle(text, start, end, style, maxLength),
+    );
   };
 
   const linkify = () => {
@@ -86,9 +96,18 @@ export function RichTextField({
     const end = el.selectionEnd;
     const entered = window.prompt("Link URL (https://…)", "https://");
     if (entered === null) return;
-    const result = insertMarkdownLink(el.value, start, end, entered, "link text", maxLength);
+    const result = insertMarkdownLink(
+      el.value,
+      start,
+      end,
+      entered,
+      "link text",
+      maxLength,
+    );
     if (!result) {
-      window.alert("Enter a valid link starting with https:// (for example https://example.com).");
+      window.alert(
+        "Enter a valid link starting with https:// (for example https://example.com).",
+      );
       return;
     }
     applyResult(result);
@@ -110,7 +129,7 @@ export function RichTextField({
   };
 
   const toolButton =
-    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-ink-600 transition hover:bg-white hover:text-ink-900 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600";
+    "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded text-ink-600 transition hover:bg-white hover:text-ink-900 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600";
   const keepSelection = (event: MouseEvent) => event.preventDefault();
 
   return (
@@ -119,14 +138,20 @@ export function RichTextField({
         <label className="label-bd mb-0" htmlFor={id}>
           {label}
         </label>
-        <div className="inline-flex shrink-0 rounded-lg border border-neutral-200 bg-white p-0.5" role="group" aria-label="Description editor mode">
+        <div
+          className="inline-flex shrink-0 rounded border border-neutral-200 bg-white p-0.5"
+          role="group"
+          aria-label="Description editor mode"
+        >
           <button
             type="button"
             aria-pressed={mode === "write"}
             onClick={() => setMode("write")}
             className={cn(
               "inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition",
-              mode === "write" ? "bg-ink-900 text-white" : "text-ink-500 hover:bg-sand-50"
+              mode === "write"
+                ? "bg-ink-900 text-white"
+                : "text-ink-500 hover:bg-neutral-100",
             )}
           >
             <Pencil className="h-3.5 w-3.5" aria-hidden="true" /> Write
@@ -137,7 +162,9 @@ export function RichTextField({
             onClick={() => setMode("preview")}
             className={cn(
               "inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-semibold transition",
-              mode === "preview" ? "bg-ink-900 text-white" : "text-ink-500 hover:bg-sand-50"
+              mode === "preview"
+                ? "bg-ink-900 text-white"
+                : "text-ink-500 hover:bg-neutral-100",
             )}
           >
             <Eye className="h-3.5 w-3.5" aria-hidden="true" /> Preview
@@ -147,43 +174,102 @@ export function RichTextField({
 
       <div
         className={cn(
-          "mt-1.5 overflow-hidden rounded-xl border bg-white transition focus-within:ring-2",
+          "mt-1.5 overflow-hidden rounded border bg-white transition focus-within:ring-2",
           error
             ? "border-red-300 focus-within:border-red-500 focus-within:ring-red-500/15"
-            : "border-neutral-300 focus-within:border-brand-600 focus-within:ring-brand-600/20"
+            : "border-neutral-300 focus-within:border-brand-600 focus-within:ring-brand-600/20",
         )}
       >
         {mode === "write" && (
           <div
-            className="flex flex-wrap items-center gap-0.5 border-b border-neutral-200 bg-sand-50 p-1.5"
+            className="flex flex-wrap items-center gap-0.5 border-b border-neutral-200 bg-neutral-100 p-1.5"
             role="toolbar"
             aria-label="Description formatting"
             aria-controls={id}
           >
-            <button type="button" className={toolButton} title="Bold (Ctrl+B)" aria-label="Bold" aria-keyshortcuts="Control+B Meta+B" onMouseDown={keepSelection} onClick={() => wrap("**", "**", "bold text")}>
+            <button
+              type="button"
+              className={toolButton}
+              title="Bold (Ctrl+B)"
+              aria-label="Bold"
+              aria-keyshortcuts="Control+B Meta+B"
+              onMouseDown={keepSelection}
+              onClick={() => wrap("**", "**", "bold text")}
+            >
               <Bold className="h-4 w-4" aria-hidden="true" />
             </button>
-            <button type="button" className={toolButton} title="Italic (Ctrl+I)" aria-label="Italic" aria-keyshortcuts="Control+I Meta+I" onMouseDown={keepSelection} onClick={() => wrap("*", "*", "italic text")}>
+            <button
+              type="button"
+              className={toolButton}
+              title="Italic (Ctrl+I)"
+              aria-label="Italic"
+              aria-keyshortcuts="Control+I Meta+I"
+              onMouseDown={keepSelection}
+              onClick={() => wrap("*", "*", "italic text")}
+            >
               <Italic className="h-4 w-4" aria-hidden="true" />
             </button>
-            <button type="button" className={toolButton} title="Inline code" aria-label="Inline code" onMouseDown={keepSelection} onClick={() => wrap("`", "`", "code")}>
+            <button
+              type="button"
+              className={toolButton}
+              title="Inline code"
+              aria-label="Inline code"
+              onMouseDown={keepSelection}
+              onClick={() => wrap("`", "`", "code")}
+            >
               <Code2 className="h-4 w-4" aria-hidden="true" />
             </button>
             <span className="mx-1 h-4 w-px bg-neutral-300" aria-hidden="true" />
-            <button type="button" className={toolButton} title="Heading" aria-label="Heading" onMouseDown={keepSelection} onClick={() => lineStyle("h2")}>
+            <button
+              type="button"
+              className={toolButton}
+              title="Heading"
+              aria-label="Heading"
+              onMouseDown={keepSelection}
+              onClick={() => lineStyle("h2")}
+            >
               <Heading2 className="h-4 w-4" aria-hidden="true" />
             </button>
-            <button type="button" className={toolButton} title="Bulleted list" aria-label="Bulleted list" onMouseDown={keepSelection} onClick={() => lineStyle("bullet")}>
+            <button
+              type="button"
+              className={toolButton}
+              title="Bulleted list"
+              aria-label="Bulleted list"
+              onMouseDown={keepSelection}
+              onClick={() => lineStyle("bullet")}
+            >
               <List className="h-4 w-4" aria-hidden="true" />
             </button>
-            <button type="button" className={toolButton} title="Numbered list" aria-label="Numbered list" onMouseDown={keepSelection} onClick={() => lineStyle("number")}>
+            <button
+              type="button"
+              className={toolButton}
+              title="Numbered list"
+              aria-label="Numbered list"
+              onMouseDown={keepSelection}
+              onClick={() => lineStyle("number")}
+            >
               <ListOrdered className="h-4 w-4" aria-hidden="true" />
             </button>
-            <button type="button" className={toolButton} title="Quote" aria-label="Quote" onMouseDown={keepSelection} onClick={() => lineStyle("quote")}>
+            <button
+              type="button"
+              className={toolButton}
+              title="Quote"
+              aria-label="Quote"
+              onMouseDown={keepSelection}
+              onClick={() => lineStyle("quote")}
+            >
               <Quote className="h-4 w-4" aria-hidden="true" />
             </button>
             <span className="mx-1 h-4 w-px bg-neutral-300" aria-hidden="true" />
-            <button type="button" className={toolButton} title="Insert link (Ctrl+K)" aria-label="Insert link" aria-keyshortcuts="Control+K Meta+K" onMouseDown={keepSelection} onClick={linkify}>
+            <button
+              type="button"
+              className={toolButton}
+              title="Insert link (Ctrl+K)"
+              aria-label="Insert link"
+              aria-keyshortcuts="Control+K Meta+K"
+              onMouseDown={keepSelection}
+              onClick={linkify}
+            >
               <Link2 className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
@@ -195,7 +281,9 @@ export function RichTextField({
             id={id}
             rows={rows}
             value={value}
-            onChange={(event) => onChange(event.target.value.slice(0, maxLength))}
+            onChange={(event) =>
+              onChange(event.target.value.slice(0, maxLength))
+            }
             onKeyDown={onKeyDown}
             maxLength={maxLength}
             placeholder="Condition, what's included, pickup/delivery, reason for selling… (min 20 characters)"
@@ -206,25 +294,42 @@ export function RichTextField({
         ) : (
           <div className="rich-text min-h-36 p-3.5 text-sm leading-relaxed text-ink-700">
             {value.trim() ? (
-              <div dangerouslySetInnerHTML={{ __html: toSafeHtml(value, maxLength) }} />
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: toSafeHtml(value, maxLength),
+                }}
+              />
             ) : (
               <p className="text-ink-400">Nothing to preview yet.</p>
             )}
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-neutral-100 bg-sand-50/60 px-3 py-1.5 text-[11px] text-ink-400">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-neutral-100 bg-neutral-100 px-3 py-1.5 text-[11px] text-ink-400">
           <span id={`${id}-help`}>
-            {hint ?? "Use the toolbar or Markdown. Links must start with https://."}
+            {hint ??
+              "Use the toolbar or Markdown. Links must start with https://."}
           </span>
-          <span id={`${id}-count`} className={cn("tabular-nums", minMet && "font-semibold text-green-700")}>
-            {!minMet && minLength > 0 ? `${minLength - trimmedLength} more · ` : ""}
+          <span
+            id={`${id}-count`}
+            className={cn(
+              "tabular-nums",
+              minMet && "font-semibold text-green-700",
+            )}
+          >
+            {!minMet && minLength > 0
+              ? `${minLength - trimmedLength} more · `
+              : ""}
             {value.length}/{maxLength}
           </span>
         </div>
       </div>
       {error && (
-        <p id={`${id}-error`} role="alert" className="mt-1 text-xs text-red-600">
+        <p
+          id={`${id}-error`}
+          role="alert"
+          className="mt-1 text-xs text-red-600"
+        >
           {error}
         </p>
       )}

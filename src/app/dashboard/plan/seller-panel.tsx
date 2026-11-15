@@ -7,9 +7,24 @@ import { formatKES } from "@/lib/format";
 import type { PendingPlan } from "@/lib/plans";
 
 const PLAN_META = [
-  { id: "free", name: "Free", price: "Free forever", blurb: "5 live listings · 7-day analytics" },
-  { id: "silver", name: "Silver", price: `${formatKES(499)}/mo`, blurb: "30 live listings · 30-day analytics · promotions" },
-  { id: "gold", name: "Gold", price: `${formatKES(999)}/mo`, blurb: "Unlimited listings · bulk upload · 90-day analytics" },
+  {
+    id: "free",
+    name: "Free",
+    price: "Free forever",
+    blurb: "5 live listings · 7-day analytics",
+  },
+  {
+    id: "silver",
+    name: "Silver",
+    price: `${formatKES(499)}/mo`,
+    blurb: "30 live listings · 30-day analytics · promotions",
+  },
+  {
+    id: "gold",
+    name: "Gold",
+    price: `${formatKES(999)}/mo`,
+    blurb: "Unlimited listings · bulk upload · 90-day analytics",
+  },
 ];
 
 const planName = (id?: string) =>
@@ -22,7 +37,13 @@ const planName = (id?: string) =>
  * stay pending until payment confirms (wallet = instant, M-Pesa STK = on
  * callback, or admin confirm). Downgrades apply immediately.
  */
-export function SellerPlanPanel({ planId, highlightPlan }: { planId: string; highlightPlan?: string }) {
+export function SellerPlanPanel({
+  planId,
+  highlightPlan,
+}: {
+  planId: string;
+  highlightPlan?: string;
+}) {
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [msg, setMsg] = useState("");
@@ -34,7 +55,8 @@ export function SellerPlanPanel({ planId, highlightPlan }: { planId: string; hig
   const load = async () => {
     try {
       const r = await fetch("/api/account/plan");
-      if (r.ok) setPending(((await r.json()).pending ?? null) as PendingPlan | null);
+      if (r.ok)
+        setPending(((await r.json()).pending ?? null) as PendingPlan | null);
     } catch {}
     try {
       const r = await fetch("/api/wallet");
@@ -67,16 +89,19 @@ export function SellerPlanPanel({ planId, highlightPlan }: { planId: string; hig
       } catch {}
       if (tries >= 45) {
         setAwaiting(false);
-        setMsg("Still waiting for M-Pesa. Refresh once you receive the confirmation SMS.");
+        setMsg(
+          "Still waiting for M-Pesa. Refresh once you receive the confirmation SMS.",
+        );
       }
     }, 4000);
     return () => clearInterval(t);
   }, [awaiting, router]);
 
   const pendName = pending ? planName(pending.planId) : "";
-  const highlight = highlightPlan && highlightPlan !== planId
-    ? PLAN_META.find((p) => p.id === highlightPlan)
-    : null;
+  const highlight =
+    highlightPlan && highlightPlan !== planId
+      ? PLAN_META.find((p) => p.id === highlightPlan)
+      : null;
 
   const choose = async (id: string) => {
     setBusy(id);
@@ -126,24 +151,44 @@ export function SellerPlanPanel({ planId, highlightPlan }: { planId: string; hig
     <div className="card border-brand-600 p-5">
       <p className="font-bold">Personal seller plan: {planName(planId)}</p>
       <p className="mt-1 text-xs text-ink-500">
-        Same Silver/Gold limits as shops — no storefront needed. Creating a shop later moves this plan to the storefront.
+        Same Silver/Gold limits as shops — no storefront needed. Creating a shop
+        later moves this plan to the storefront.
       </p>
       {highlight && (
-        <p className="mt-2 rounded-xl bg-brand-50 p-3 text-sm text-brand-700">
-          You picked <strong>{highlight.name}</strong> on Pricing — confirm it below{highlight.id !== "free" ? " and complete payment to activate" : ""}.
+        <p className="mt-2 rounded bg-brand-50 p-3 text-sm text-brand-700">
+          You picked <strong>{highlight.name}</strong> on Pricing — confirm it
+          below
+          {highlight.id !== "free" ? " and complete payment to activate" : ""}.
         </p>
       )}
       {pending && (
-        <div className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm" role="status">
-          <p className="font-bold text-amber-900">Awaiting payment: {pendName} · {formatKES(pending.amount)}</p>
+        <div
+          className="mt-3 rounded border border-amber-300 bg-amber-50 p-3 text-sm"
+          role="status"
+        >
+          <p className="font-bold text-amber-900">
+            Awaiting payment: {pendName} · {formatKES(pending.amount)}
+          </p>
           <p className="mt-0.5 text-xs text-amber-800">
-            Still on {planName(planId)} until payment confirms. M-Pesa prompt sent to {pending.phone}. This page updates automatically after you pay; an admin confirms manual payments.
+            Still on {planName(planId)} until payment confirms. M-Pesa prompt
+            sent to {pending.phone}. This page updates automatically after you
+            pay; an admin confirms manual payments.
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <button onClick={() => choose(pending.planId)} disabled={busy !== null} className="btn-primary shrink-0 !px-3 !py-1.5 text-xs">
-              {busy === pending.planId ? "Processing…" : `Pay ${formatKES(pending.amount)}${balance !== null ? ` (wallet ${formatKES(balance)})` : ""}`}
+            <button
+              onClick={() => choose(pending.planId)}
+              disabled={busy !== null}
+              className="btn-primary shrink-0 !px-3 !py-1.5 text-xs"
+            >
+              {busy === pending.planId
+                ? "Processing…"
+                : `Pay ${formatKES(pending.amount)}${balance !== null ? ` (wallet ${formatKES(balance)})` : ""}`}
             </button>
-            <button onClick={clearPending} disabled={busy !== null} className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs">
+            <button
+              onClick={clearPending}
+              disabled={busy !== null}
+              className="btn-secondary shrink-0 !px-3 !py-1.5 text-xs"
+            >
               Cancel request
             </button>
           </div>
@@ -163,25 +208,52 @@ export function SellerPlanPanel({ planId, highlightPlan }: { planId: string; hig
         {PLAN_META.map((p) => {
           const active = planId === p.id;
           const highlighted = highlight?.id === p.id && !active;
-          const isUpgrade = (p.id === "silver" && planId === "free") || (p.id === "gold" && planId !== "gold");
+          const isUpgrade =
+            (p.id === "silver" && planId === "free") ||
+            (p.id === "gold" && planId !== "gold");
           return (
-            <div key={p.id} className={`flex flex-wrap items-center gap-2 rounded-xl border p-3 text-sm ${active ? "border-brand-600 bg-brand-50" : highlighted ? "border-brand-600 ring-2 ring-brand-600/30" : "border-neutral-200"}`}>
+            <div
+              key={p.id}
+              className={`flex flex-wrap items-center gap-2 rounded border p-3 text-sm ${active ? "border-brand-600 bg-brand-50" : highlighted ? "border-brand-600 ring-2 ring-ink-900" : "border-neutral-200"}`}
+            >
               <div className="min-w-0 flex-1">
-                <p className="font-bold">{p.name} · {p.price}{active && " ✓"}</p>
+                <p className="font-bold">
+                  {p.name} · {p.price}
+                  {active && " ✓"}
+                </p>
                 <p className="text-xs text-ink-500">{p.blurb}</p>
               </div>
               {!active && (
-                <button onClick={() => choose(p.id)} disabled={busy !== null} className={highlighted ? "btn-primary shrink-0 !px-3 !py-1.5 text-xs" : "btn-secondary shrink-0 !px-3 !py-1.5 text-xs"}>
-                  {busy === p.id ? "Processing…" : isUpgrade ? `Upgrade to ${p.name}` : `Switch to ${p.name}`}
+                <button
+                  onClick={() => choose(p.id)}
+                  disabled={busy !== null}
+                  className={
+                    highlighted
+                      ? "btn-primary shrink-0 !px-3 !py-1.5 text-xs"
+                      : "btn-secondary shrink-0 !px-3 !py-1.5 text-xs"
+                  }
+                >
+                  {busy === p.id
+                    ? "Processing…"
+                    : isUpgrade
+                      ? `Upgrade to ${p.name}`
+                      : `Switch to ${p.name}`}
                 </button>
               )}
             </div>
           );
         })}
       </div>
-      {msg && <p role="status" className="mt-2 text-sm text-ink-700">{msg}</p>}
+      {msg && (
+        <p role="status" className="mt-2 text-sm text-ink-700">
+          {msg}
+        </p>
+      )}
       <p className="mt-2 text-xs text-ink-400">
-        One plan per seller. <Link href="/pricing" className="link-bd">Compare plans →</Link>
+        One plan per seller.{" "}
+        <Link href="/pricing" className="link-bd">
+          Compare plans →
+        </Link>
       </p>
     </div>
   );

@@ -10,11 +10,15 @@ import { join } from "path";
 const onVercel = Boolean(process.env.VERCEL);
 
 export function uploadsBaseDir(): string {
-  return onVercel ? join(tmpdir(), "chap", "uploads") : join(process.cwd(), "public", "uploads");
+  return onVercel
+    ? join(tmpdir(), "chap", "uploads")
+    : join(process.cwd(), "public", "uploads");
 }
 
 export function privateBaseDir(): string {
-  return onVercel ? join(tmpdir(), "chap", "private") : join(process.cwd(), ".data", "private");
+  return onVercel
+    ? join(tmpdir(), "chap", "private")
+    : join(process.cwd(), ".data", "private");
 }
 
 /** Public URL for a stored upload (served from /api/files on serverless). */
@@ -24,7 +28,9 @@ export function uploadPublicUrl(stamp: string, name: string): string {
 
 /** Disk cache for watermarked renditions (git-ignored; ephemeral on serverless). */
 export function wmCacheDir(): string {
-  return onVercel ? join(tmpdir(), "chap", "wmcache") : join(process.cwd(), ".data", "wmcache");
+  return onVercel
+    ? join(tmpdir(), "chap", "wmcache")
+    : join(process.cwd(), ".data", "wmcache");
 }
 
 export function isServerlessUploads(): boolean {
@@ -35,14 +41,16 @@ export function isS3Configured(): boolean {
   const driver = (process.env.UPLOAD_DRIVER || "").trim().toLowerCase();
   // Explicit opt-out always wins (local/ephemeral even if keys exist).
   if (driver === "local") return false;
-  const hasKeys = Boolean(process.env.S3_BUCKET && process.env.S3_ACCESS_KEY && process.env.S3_SECRET_KEY);
+  const hasKeys = Boolean(
+    process.env.S3_BUCKET &&
+      process.env.S3_ACCESS_KEY &&
+      process.env.S3_SECRET_KEY,
+  );
   // Auto-enable when keys exist so setting S3_* alone is enough; explicit
   // UPLOAD_DRIVER=s3 keeps working for backwards compatibility.
   if (driver === "s3") return hasKeys;
   return hasKeys;
 }
-
-
 
 export function s3PublicUrl(key: string): string {
   const bucket = process.env.S3_BUCKET || "chap-media";
@@ -53,12 +61,19 @@ export function s3PublicUrl(key: string): string {
 }
 
 /** Shared SigV4 signer (no SDK dep). Returns the URL + authorized headers. */
-async function s3Sign(method: "PUT" | "GET", key: string, contentType?: string, payloadHash?: string): Promise<{ url: string; headers: Record<string, string> }> {
+async function s3Sign(
+  method: "PUT" | "GET",
+  key: string,
+  contentType?: string,
+  payloadHash?: string,
+): Promise<{ url: string; headers: Record<string, string> }> {
   const bucket = process.env.S3_BUCKET!;
   const region = process.env.S3_REGION || "eu-west-1";
   const access = process.env.S3_ACCESS_KEY!;
   const secret = process.env.S3_SECRET_KEY!;
-  const endpoint = (process.env.S3_ENDPOINT || `https://s3.${region}.amazonaws.com`).replace(/\/$/, "");
+  const endpoint = (
+    process.env.S3_ENDPOINT || `https://s3.${region}.amazonaws.com`
+  ).replace(/\/$/, "");
   const url = `${endpoint}/${bucket}/${key}`;
   const { createHash, createHmac } = await import("crypto");
   const now = new Date();
@@ -73,9 +88,24 @@ async function s3Sign(method: "PUT" | "GET", key: string, contentType?: string, 
     ...(contentType ? { "content-type": contentType } : {}),
   };
   const signed = Object.keys(headers).sort().join(";");
-  const canonical = [method, `/${bucket}/${key}`, "", ...Object.keys(headers).sort().map((k) => `${k}:${headers[k]}`), "", signed, hash].join("\n");
+  const canonical = [
+    method,
+    `/${bucket}/${key}`,
+    "",
+    ...Object.keys(headers)
+      .sort()
+      .map((k) => `${k}:${headers[k]}`),
+    "",
+    signed,
+    hash,
+  ].join("\n");
   const scope = `${day}/${region}/s3/aws4_request`;
-  const toSign = ["AWS4-HMAC-SHA256", amz, scope, createHash("sha256").update(canonical).digest("hex")].join("\n");
+  const toSign = [
+    "AWS4-HMAC-SHA256",
+    amz,
+    scope,
+    createHash("sha256").update(canonical).digest("hex"),
+  ].join("\n");
   const kDate = createHmac("sha256", `AWS4${secret}`).update(day).digest();
   const kRegion = createHmac("sha256", kDate).update(region).digest();
   const kSvc = createHmac("sha256", kRegion).update("s3").digest();
@@ -83,12 +113,19 @@ async function s3Sign(method: "PUT" | "GET", key: string, contentType?: string, 
   const sig = createHmac("sha256", kSign).update(toSign).digest("hex");
   return {
     url,
-    headers: { ...headers, Authorization: `AWS4-HMAC-SHA256 Credential=${access}/${scope}, SignedHeaders=${signed}, Signature=${sig}` },
+    headers: {
+      ...headers,
+      Authorization: `AWS4-HMAC-SHA256 Credential=${access}/${scope}, SignedHeaders=${signed}, Signature=${sig}`,
+    },
   };
 }
 
 /** Minimal S3 PUT via SigV4 (no SDK dep). Throws on misconfig/HTTP error. */
-export async function s3Put(key: string, body: Buffer, contentType: string): Promise<string> {
+export async function s3Put(
+  key: string,
+  body: Buffer,
+  contentType: string,
+): Promise<string> {
   const { createHash } = await import("crypto");
   const hash = createHash("sha256").update(body).digest("hex");
   const { url, headers } = await s3Sign("PUT", key, contentType, hash);

@@ -2,14 +2,23 @@ import type { Category, Listing } from "@/data/catalog";
 import { categoryBySlug } from "@/data/catalog";
 import { formatKES } from "./format";
 import { slugify } from "./utils";
-import { breadcrumbJsonLd, collectionJsonLd, faqJsonLd, productJsonLd, serviceJsonLd } from "./seo";
+import {
+  breadcrumbJsonLd,
+  collectionJsonLd,
+  faqJsonLd,
+  productJsonLd,
+  serviceJsonLd,
+} from "./seo";
 
 /** URL slug for a category's subcategory (e.g. "Smart TVs" → "smart-tvs"). */
 export function subcategorySlug(name: string): string {
   return slugify(name);
 }
 
-export function subcategoryBySlug(category: Category, slug: string): string | undefined {
+export function subcategoryBySlug(
+  category: Category,
+  slug: string,
+): string | undefined {
   const wanted = slug.toLowerCase();
   return category.subcategories.find((s) => subcategorySlug(s) === wanted);
 }
@@ -18,12 +27,18 @@ export function categoryPath(category: Category, subcategory?: string): string {
   return `/browse/${category.slug}${subcategory ? `/${subcategorySlug(subcategory)}` : ""}`;
 }
 
-export function categoryLabel(category: Category, subcategory?: string): string {
+export function categoryLabel(
+  category: Category,
+  subcategory?: string,
+): string {
   return subcategory ?? category.name;
 }
 
 /** Keyword set for category/subcategory metadata. Natural phrases, no stuffing. */
-export function categoryKeywords(category: Category, subcategory?: string): string[] {
+export function categoryKeywords(
+  category: Category,
+  subcategory?: string,
+): string[] {
   const label = categoryLabel(category, subcategory);
   const counties = ["Nairobi", "Mombasa", "Kisumu", "Nakuru", "Eldoret"];
   return [
@@ -33,23 +48,40 @@ export function categoryKeywords(category: Category, subcategory?: string): stri
     `${label} price in Kenya`,
     `${label} for sale`,
     ...counties.map((c) => `${label} ${c}`),
-    ...category.subcategories.filter((s) => s !== subcategory).slice(0, 8).map((s) => `${s} Kenya`),
+    ...category.subcategories
+      .filter((s) => s !== subcategory)
+      .slice(0, 8)
+      .map((s) => `${s} Kenya`),
     `${category.name} Kenya`,
     "chap.co.ke",
   ];
 }
 
-export type CategoryPriceRange = { min: number; max: number; count: number } | null;
+export type CategoryPriceRange = {
+  min: number;
+  max: number;
+  count: number;
+} | null;
 
 export function priceRangeOf(items: Listing[]): CategoryPriceRange {
-  const prices = items.map((l) => l.price).filter((p) => Number.isFinite(p) && p > 0);
+  const prices = items
+    .map((l) => l.price)
+    .filter((p) => Number.isFinite(p) && p > 0);
   if (prices.length === 0) return null;
-  return { min: Math.min(...prices), max: Math.max(...prices), count: prices.length };
+  return {
+    min: Math.min(...prices),
+    max: Math.max(...prices),
+    count: prices.length,
+  };
 }
 
-export function topCountiesOf(items: Listing[], limit = 8): { county: string; count: number }[] {
+export function topCountiesOf(
+  items: Listing[],
+  limit = 8,
+): { county: string; count: number }[] {
   const counts = new Map<string, number>();
-  for (const l of items) if (l.county) counts.set(l.county, (counts.get(l.county) ?? 0) + 1);
+  for (const l of items)
+    if (l.county) counts.set(l.county, (counts.get(l.county) ?? 0) + 1);
   return [...counts.entries()]
     .map(([county, count]) => ({ county, count }))
     .sort((a, b) => b.count - a.count || a.county.localeCompare(b.county))
@@ -72,10 +104,12 @@ export function categoryMetaDescription(
   category: Category,
   subcategory: string | undefined,
   total: number,
-  prices: CategoryPriceRange
+  prices: CategoryPriceRange,
 ): string {
   const label = categoryLabel(category, subcategory);
-  const priceText = prices ? ` Prices from ${formatKES(prices.min)} to ${formatKES(prices.max)}.` : "";
+  const priceText = prices
+    ? ` Prices from ${formatKES(prices.min)} to ${formatKES(prices.max)}.`
+    : "";
   return `Compare ${total > 0 ? `${total} ` : ""}${label.toLowerCase()} listings from sellers across Kenya.${priceText} Buy online or contact the seller on Chap.`;
 }
 
@@ -84,7 +118,7 @@ export function categoryFaqs(
   subcategory: string | undefined,
   total: number,
   prices: CategoryPriceRange,
-  counties: { county: string; count: number }[]
+  counties: { county: string; count: number }[],
 ): { q: string; a: string }[] {
   const label = categoryLabel(category, subcategory);
   const lower = label.toLowerCase();
@@ -122,7 +156,11 @@ export function categoryFaqs(
   ];
 }
 
-export function categoryIntro(category: Category, subcategory: string | undefined, total: number): string {
+export function categoryIntro(
+  category: Category,
+  subcategory: string | undefined,
+  total: number,
+): string {
   const label = categoryLabel(category, subcategory);
   return `Shop ${label.toLowerCase()} on Chap, Kenya's marketplace for products, classifieds and services. Compare ${total > 0 ? `${total} live ` : ""}listings from trusted sellers, check prices in Kenyan shillings, and buy online or contact the seller directly. ${category.blurb}.`;
 }
@@ -135,32 +173,48 @@ export function listingPath(l: Pick<Listing, "listingType" | "slug">): string {
       : `/product/${l.slug}`;
 }
 
-export function sellerPath(l: Pick<Listing, "shopSlug" | "sellerName">): string {
-  return l.shopSlug ? `/shops/${l.shopSlug}` : `/seller/${slugify(l.sellerName)}`;
+export function sellerPath(
+  l: Pick<Listing, "shopSlug" | "sellerName">,
+): string {
+  return l.shopSlug
+    ? `/shops/${l.shopSlug}`
+    : `/seller/${slugify(l.sellerName)}`;
 }
 
 /** Schema breadcrumb trail for a listing: Home → section → category → listing. */
 export function listingBreadcrumbs(
   l: Listing,
   section: { name: string; url: string },
-  categoryOverride?: Category | null
+  categoryOverride?: Category | null,
 ): { name: string; url: string }[] {
-  const category = categoryOverride === null ? undefined : categoryOverride ?? categoryBySlug(l.categorySlug);
+  const category =
+    categoryOverride === null
+      ? undefined
+      : (categoryOverride ?? categoryBySlug(l.categorySlug));
   return [
     { name: "Home", url: "/" },
     section,
     ...(category ? [{ name: category.name, url: categoryPath(category) }] : []),
     {
       name: l.subcategory ?? l.title,
-      url: l.subcategory && category ? categoryPath(category, l.subcategory) : listingPath(l),
+      url:
+        l.subcategory && category
+          ? categoryPath(category, l.subcategory)
+          : listingPath(l),
     },
     ...(l.subcategory ? [{ name: l.title, url: listingPath(l) }] : []),
   ];
 }
 
 /** Keyword set for a product/classified/service page. */
-export function listingKeywords(l: Listing, categoryOverride?: Category | null): string[] {
-  const category = categoryOverride === null ? undefined : categoryOverride ?? categoryBySlug(l.categorySlug);
+export function listingKeywords(
+  l: Listing,
+  categoryOverride?: Category | null,
+): string[] {
+  const category =
+    categoryOverride === null
+      ? undefined
+      : (categoryOverride ?? categoryBySlug(l.categorySlug));
   const brand = String(l.attributes?.brand ?? "").trim();
   return [
     l.title,
@@ -176,8 +230,14 @@ export function listingKeywords(l: Listing, categoryOverride?: Category | null):
 }
 
 /** Product schema for a shop listing (priced items only). */
-export function productSchema(l: Listing, categoryOverride?: Category | null): Record<string, unknown> {
-  const category = categoryOverride === null ? undefined : categoryOverride ?? categoryBySlug(l.categorySlug);
+export function productSchema(
+  l: Listing,
+  categoryOverride?: Category | null,
+): Record<string, unknown> {
+  const category =
+    categoryOverride === null
+      ? undefined
+      : (categoryOverride ?? categoryBySlug(l.categorySlug));
   return productJsonLd({
     name: l.title,
     description: l.description,
@@ -186,7 +246,9 @@ export function productSchema(l: Listing, categoryOverride?: Category | null): R
     url: listingPath(l),
     sku: l.id,
     brand: String(l.attributes?.brand ?? "").trim() || undefined,
-    category: category ? `${category.name}${l.subcategory ? ` > ${l.subcategory}` : ""}` : undefined,
+    category: category
+      ? `${category.name}${l.subcategory ? ` > ${l.subcategory}` : ""}`
+      : undefined,
     condition: l.condition,
     stock: l.stock,
     sellerName: l.sellerName,
@@ -224,7 +286,9 @@ export function categoryJsonLd(input: {
         name: `${label} in Kenya`,
         description: input.description,
         url: categoryPath(input.category, input.subcategory),
-        items: input.items.slice(0, 48).map((l) => ({ name: l.title, url: listingPath(l) })),
+        items: input.items
+          .slice(0, 48)
+          .map((l) => ({ name: l.title, url: listingPath(l) })),
       }),
       breadcrumbJsonLd([
         { name: "Home", url: "/" },
@@ -238,4 +302,3 @@ export function categoryJsonLd(input: {
     ],
   };
 }
-

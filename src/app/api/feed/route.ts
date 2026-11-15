@@ -9,8 +9,12 @@ import { rateLimit, clientKey } from "@/lib/rate-limit";
  * gated by resolveStoreDetail, same as the web pages).
  */
 export async function GET(req: NextRequest) {
-  const rl = rateLimit(clientKey(req, "feed"), { limit: 120, windowMs: 60_000 });
-  if (!rl.ok) return NextResponse.json({ error: "Too many requests." }, { status: 429 });
+  const rl = rateLimit(clientKey(req, "feed"), {
+    limit: 120,
+    windowMs: 60_000,
+  });
+  if (!rl.ok)
+    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   const q = new URL(req.url).searchParams;
   const slug = (q.get("slug") || q.get("id") || "").trim();
   if (slug) {
@@ -23,8 +27,12 @@ export async function GET(req: NextRequest) {
     }
     const { resolveStoreDetail } = await import("@/lib/live-listings");
     const resolved = await resolveStoreDetail(slug);
-    if (!resolved) return NextResponse.json({ error: "Not found." }, { status: 404 });
-    return NextResponse.json({ item: resolved.listing, previewStatus: resolved.previewStatus });
+    if (!resolved)
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+    return NextResponse.json({
+      item: resolved.listing,
+      previewStatus: resolved.previewStatus,
+    });
   }
   const params: SearchParams = {
     q: q.get("q") ?? "",

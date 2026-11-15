@@ -34,7 +34,11 @@ function score(candidate: Listing, base: Listing): number {
   if (candidate.listingType === "classified") s += 0.5;
   if (candidate.shopSlug) s += 0.5;
   // Recency tie-break (newer first).
-  s += Math.max(0, 1 - (Date.now() - +new Date(candidate.createdAt)) / (30 * 864e5)) * 0.5;
+  s +=
+    Math.max(
+      0,
+      1 - (Date.now() - +new Date(candidate.createdAt)) / (30 * 864e5),
+    ) * 0.5;
   return s;
 }
 
@@ -43,7 +47,10 @@ function score(candidate: Listing, base: Listing): number {
  * rest of the marketplace (2). The strip used to be pure score order, so a
  * phone page could suggest sofas — now same-category picks always lead.
  */
-export function relatedTier(candidate: Pick<Listing, "categorySlug" | "subcategory">, base: Pick<Listing, "categorySlug" | "subcategory">): number {
+export function relatedTier(
+  candidate: Pick<Listing, "categorySlug" | "subcategory">,
+  base: Pick<Listing, "categorySlug" | "subcategory">,
+): number {
   if (candidate.categorySlug !== base.categorySlug) return 2;
   const baseSub = subOf(base);
   if (baseSub && subOf(candidate) === baseSub) return 0;
@@ -60,13 +67,20 @@ export function relatedTier(candidate: Pick<Listing, "categorySlug" | "subcatego
  * Same-seller match that survives renames and static/store splits: stable
  * owner id first, then shop, then the legacy display-name equality.
  */
-export function sameSeller(a: Pick<Listing, "ownerId" | "shopSlug" | "sellerName">, b: Pick<Listing, "ownerId" | "shopSlug" | "sellerName">): boolean {
+export function sameSeller(
+  a: Pick<Listing, "ownerId" | "shopSlug" | "sellerName">,
+  b: Pick<Listing, "ownerId" | "shopSlug" | "sellerName">,
+): boolean {
   if (a.ownerId && b.ownerId && a.ownerId === b.ownerId) return true;
   if (a.shopSlug && b.shopSlug && a.shopSlug === b.shopSlug) return true;
   return a.sellerName === b.sellerName;
 }
 
-export function getRelated(base: Listing, count = 6, catalogue: Listing[] = LISTINGS): RelatedGroups {
+export function getRelated(
+  base: Listing,
+  count = 6,
+  catalogue: Listing[] = LISTINGS,
+): RelatedGroups {
   // Callers pass static + live merged: a newly registered shop's products
   // only exist in the store, so a static-only pool hides its "More from"
   // strip entirely while demo shops show one.
@@ -80,7 +94,11 @@ export function getRelated(base: Listing, count = 6, catalogue: Listing[] = LIST
   const sellerIds = new Set(fromSeller.map((l) => l.id));
   const fromOthers = pool
     .filter((l) => !sameSeller(l, base) && !sellerIds.has(l.id))
-    .sort((a, b) => relatedTier(a, base) - relatedTier(b, base) || score(b, base) - score(a, base))
+    .sort(
+      (a, b) =>
+        relatedTier(a, base) - relatedTier(b, base) ||
+        score(b, base) - score(a, base),
+    )
     .slice(0, count);
   return { fromOthers, fromSeller };
 }

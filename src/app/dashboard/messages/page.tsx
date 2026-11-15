@@ -5,7 +5,11 @@ import Link from "next/link";
 import { MessageCircleOff, Search } from "lucide-react";
 import { timeAgo } from "@/lib/format";
 
-function ChatList({ items, filter, setFilter }: {
+function ChatList({
+  items,
+  filter,
+  setFilter,
+}: {
   items: Convo[];
   filter: string;
   setFilter: (v: string) => void;
@@ -13,7 +17,9 @@ function ChatList({ items, filter, setFilter }: {
   const q = filter.trim().toLowerCase();
   const shown = q
     ? items.filter((c) =>
-        [c.listingTitle, c.sellerName, c.lastMessage].some((s) => (s ?? "").toLowerCase().includes(q))
+        [c.listingTitle, c.sellerName, c.lastMessage].some((s) =>
+          (s ?? "").toLowerCase().includes(q),
+        ),
       )
     : items;
   return (
@@ -23,29 +29,48 @@ function ChatList({ items, filter, setFilter }: {
         <input
           aria-label="Search chats"
           placeholder="Search chats…"
-          className="input-bd !rounded-full !pl-9"
+          className="input-bd !rounded !pl-9"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
       </div>
       {shown.length === 0 ? (
-        <p className="mt-4 text-center text-sm text-ink-500">No chats match “{filter.trim()}”.</p>
+        <p className="mt-4 text-center text-sm text-ink-500">
+          No chats match “{filter.trim()}”.
+        </p>
       ) : (
         <ul className="mt-3 space-y-2">
           {shown.map((c) => (
             <li key={c.id}>
-              <Link href={`/dashboard/messages/${c.id}`} className="card flex items-center gap-3 p-4 hover:border-brand-600">
-                <span aria-hidden className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 font-black text-brand-700">
+              <Link
+                href={`/dashboard/messages/${c.id}`}
+                className="card flex items-center gap-3 p-4 hover:border-brand-600"
+              >
+                <span
+                  aria-hidden
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 font-black text-brand-700"
+                >
                   {(c.sellerName ?? "C").charAt(0).toUpperCase()}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
-                    <strong className="truncate text-sm">{c.listingTitle ?? "General enquiry"}</strong>
-                    {c.unread > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1.5 text-[11px] font-bold text-white">{c.unread > 99 ? "99+" : c.unread}</span>}
+                    <strong className="truncate text-sm">
+                      {c.listingTitle ?? "General enquiry"}
+                    </strong>
+                    {c.unread > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent-500 px-1.5 text-[11px] font-bold text-white">
+                        {c.unread > 99 ? "99+" : c.unread}
+                      </span>
+                    )}
                   </span>
-                  <span className="block truncate text-sm text-ink-500">{c.lastMessage ?? "—"}</span>
+                  <span className="block truncate text-sm text-ink-500">
+                    {c.lastMessage ?? "—"}
+                  </span>
                   <span className="text-xs text-ink-400">
-                    {c.sellerName && c.sellerName.trim().toLowerCase() !== "seller" ? `${c.sellerName} · ` : null}
+                    {c.sellerName &&
+                    c.sellerName.trim().toLowerCase() !== "seller"
+                      ? `${c.sellerName} · `
+                      : null}
                     {c.lastAt ? timeAgo(c.lastAt) : ""}
                   </span>
                 </span>
@@ -93,7 +118,10 @@ export default function InboxPage() {
   return (
     <div>
       <h1 className="section-title">Messages</h1>
-      <p className="mt-1 text-sm text-ink-500">Buyer–seller chats with rich text. Abusive users can be blocked and reported.</p>
+      <p className="mt-1 text-sm text-ink-500">
+        Buyer–seller chats with rich text. Abusive users can be blocked and
+        reported.
+      </p>
 
       {!ready ? (
         <p className="mt-4 text-sm text-ink-500">Loading…</p>
@@ -101,8 +129,12 @@ export default function InboxPage() {
         <div className="card mt-4 p-8 text-center">
           <MessageCircleOff className="mx-auto h-10 w-10 text-brand-600" />
           <p className="mt-2 font-bold">No conversations yet</p>
-          <p className="mt-1 text-sm text-ink-500">Open any listing and tap Message seller to start chatting.</p>
-          <Link href="/classifieds" className="btn-primary mt-4">Browse classifieds</Link>
+          <p className="mt-1 text-sm text-ink-500">
+            Open any listing and tap Message seller to start chatting.
+          </p>
+          <Link href="/classifieds" className="btn-primary mt-4">
+            Browse classifieds
+          </Link>
         </div>
       ) : (
         <ChatList items={items} filter={filter} setFilter={setFilter} />

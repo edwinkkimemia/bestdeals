@@ -7,15 +7,26 @@ import type { UserRecord, VerificationRecord } from "./store";
 
 export type VerificationUploader = Pick<
   UserRecord,
-  "id" | "name" | "businessName" | "email" | "phone" | "role" | "sellerKind" | "verified" | "emailVerified" | "createdAt"
+  | "id"
+  | "name"
+  | "businessName"
+  | "email"
+  | "phone"
+  | "role"
+  | "sellerKind"
+  | "verified"
+  | "emailVerified"
+  | "createdAt"
 > | null;
 
-export type EnrichedVerification = VerificationRecord & { user: VerificationUploader };
+export type EnrichedVerification = VerificationRecord & {
+  user: VerificationUploader;
+};
 
 /** Pure join: attach uploader profiles to verification rows (null = deleted account). */
 export function attachVerificationUsers(
   items: VerificationRecord[],
-  users: UserRecord[]
+  users: UserRecord[],
 ): EnrichedVerification[] {
   const byId = new Map(users.map((u) => [u.id, u]));
   return items.map((v) => {

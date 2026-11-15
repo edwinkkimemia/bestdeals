@@ -2,11 +2,11 @@
  * In-app notification centre (Jiji-style).
  *
  * Storage reuses the existing `Notification` table / DemoStore memory with:
- *   channel  = "inapp"
- *   template = notification type (message | listing | order | verification | promotion | alert | system)
- *   payload  = { title, body, link? }
- *   sentAt   = read timestamp (null = unread) — avoids a schema migration.
- *   createdAt = delivery time
+ * channel = "inapp"
+ * template = notification type (message | listing | order | verification | promotion | alert | system)
+ * payload = { title, body, link? }
+ * sentAt = read timestamp (null = unread) — avoids a schema migration.
+ * createdAt = delivery time
  *
  * Out-of-band email/SMS stays in `lib/notify.ts`; this module is the bell
  * icon + /dashboard/notifications feed.
@@ -45,7 +45,17 @@ export const NOTIFICATION_LABELS: Record<NotificationType, string> = {
 };
 
 export function isNotificationType(v: string): v is NotificationType {
-  return (["message", "listing", "order", "verification", "promotion", "alert", "system"] as string[]).includes(v);
+  return (
+    [
+      "message",
+      "listing",
+      "order",
+      "verification",
+      "promotion",
+      "alert",
+      "system",
+    ] as string[]
+  ).includes(v);
 }
 
 /** Best-effort in-app notify — never throws into checkout/chat/moderation flows. */
@@ -60,9 +70,11 @@ export async function notifyUser(input: {
     if (!input.userId) return null;
     const store = getStore();
     // Store interface carries the centre methods (see store.ts).
-    const fn = (store as unknown as {
-      createNotification?: (d: typeof input) => Promise<AppNotification>;
-    }).createNotification;
+    const fn = (
+      store as unknown as {
+        createNotification?: (d: typeof input) => Promise<AppNotification>;
+      }
+    ).createNotification;
     if (typeof fn !== "function") return null;
     const title = input.title.trim().slice(0, 120) || "Notification";
     const body = input.body.trim().slice(0, 500) || title;

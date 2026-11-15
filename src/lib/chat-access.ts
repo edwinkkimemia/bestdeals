@@ -8,9 +8,23 @@
  */
 import type { Store } from "./store";
 
-export type ChatIdentity = { userId?: string; phone?: string; altPhone?: string };
-export type ChatParty = { buyerId?: string; sellerId?: string; buyerPhone?: string; sellerName?: string };
-export type ChatUser = { id: string; name: string; role: string; phone?: string } | null;
+export type ChatIdentity = {
+  userId?: string;
+  phone?: string;
+  altPhone?: string;
+};
+export type ChatParty = {
+  buyerId?: string;
+  sellerId?: string;
+  buyerPhone?: string;
+  sellerName?: string;
+};
+export type ChatUser = {
+  id: string;
+  name: string;
+  role: string;
+  phone?: string;
+} | null;
 
 const KENYAN_PHONE = /^(\+254|0)[17]\d{8}$/;
 
@@ -25,7 +39,11 @@ export function validPhone(p: string): boolean {
  * "general" orphans the thread (no seller to deliver to) and the seller's
  * inbox stays empty. The server pins the real owner from the preserved id.
  */
-export function newChatListingId(listingParam: string, catalogId: string | undefined, shopSlug: string): string {
+export function newChatListingId(
+  listingParam: string,
+  catalogId: string | undefined,
+  shopSlug: string,
+): string {
   if (catalogId) return catalogId;
   const raw = listingParam.trim().slice(0, 80);
   if (raw) return raw;
@@ -34,28 +52,46 @@ export function newChatListingId(listingParam: string, catalogId: string | undef
   return "general";
 }
 
-export function identityOf(user: { id: string; phone: string } | null, phone: string): ChatIdentity | null {
+export function identityOf(
+  user: { id: string; phone: string } | null,
+  phone: string,
+): ChatIdentity | null {
   const q = validPhone(phone.trim()) ? phone.trim() : undefined;
   if (user) {
-    return { userId: user.id, phone: user.phone, ...(q && q !== user.phone ? { altPhone: q } : {}) };
+    return {
+      userId: user.id,
+      phone: user.phone,
+      ...(q && q !== user.phone ? { altPhone: q } : {}),
+    };
   }
   return q ? { phone: q } : null;
 }
 
 /** Resolve the viewer's sender id, or null when not a participant. */
-export function isParticipant(c: ChatParty, id: ChatIdentity, user?: ChatUser): string | null {
-  if (id.userId && (c.buyerId === id.userId || c.sellerId === id.userId)) return id.userId;
+export function isParticipant(
+  c: ChatParty,
+  id: ChatIdentity,
+  user?: ChatUser,
+): string | null {
+  if (id.userId && (c.buyerId === id.userId || c.sellerId === id.userId))
+    return id.userId;
   const phones = [id.phone, id.altPhone].filter(Boolean) as string[];
   for (const p of phones) {
-    if (c.buyerPhone === p || c.buyerId === `phone:${p}`) return id.userId ?? `phone:${p}`;
+    if (c.buyerPhone === p || c.buyerId === `phone:${p}`)
+      return id.userId ?? `phone:${p}`;
   }
   // Signed-in seller whose display name matches the listing's seller, plus admins.
-  if (user && (user.name === c.sellerName || user.role === "ADMIN")) return user.id;
+  if (user && (user.name === c.sellerName || user.role === "ADMIN"))
+    return user.id;
   return null;
 }
 
 /** Is this message mine? Covers pre-claim guest messages (`phone:X`) read as the account. */
-export function mineOf(senderId: string, viewer: string, accountPhone?: string): boolean {
+export function mineOf(
+  senderId: string,
+  viewer: string,
+  accountPhone?: string,
+): boolean {
   if (senderId === viewer) return true;
   if (accountPhone && senderId === `phone:${accountPhone}`) return true;
   return false;
@@ -69,11 +105,12 @@ export function mineOf(senderId: string, viewer: string, accountPhone?: string):
 export async function isChatSeller(
   store: Store,
   convo: { listingId?: string; sellerName?: string },
-  user: ChatUser
+  user: ChatUser,
 ): Promise<boolean> {
   if (!user) return false;
   if (user.role === "ADMIN") return true;
-  if (user.name && convo.sellerName && user.name === convo.sellerName) return true;
+  if (user.name && convo.sellerName && user.name === convo.sellerName)
+    return true;
   if (!convo.listingId) return false;
   const s = await store.getListing(convo.listingId).catch(() => null);
   if (s) {
@@ -99,7 +136,7 @@ export async function isChatSeller(
  */
 export async function resolveThreadSeller(
   store: Store,
-  convo: { listingId?: string; sellerName?: string }
+  convo: { listingId?: string; sellerName?: string },
 ): Promise<{ name: string; phone?: string }> {
   const stored = (convo.sellerName || "").trim();
   const needsHeal = !stored || stored.toLowerCase() === "seller";
@@ -122,7 +159,10 @@ export async function resolveThreadSeller(
       const shop = await store.getShopBySlug(s.shopSlug).catch(() => null);
       if (shop) return { name: shop.name, phone: shop.phone };
     }
-    return { name: s.sellerName || stored || "Seller", phone: s.sellerPhone || undefined };
+    return {
+      name: s.sellerName || stored || "Seller",
+      phone: s.sellerPhone || undefined,
+    };
   }
   const { getListing } = await import("@/data/catalog");
   const c = getListing(lid);

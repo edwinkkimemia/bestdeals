@@ -45,7 +45,14 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "Save anything with the heart icon — it becomes a saved search for similar items, and your price history and order tracking live in your account.",
             ],
           },
-          { type: "links", links: [{ href: "/safety", label: "Buyer Safety guide" }, { href: "/shipping", label: "Shipping & Delivery" }, { href: "/returns", label: "Returns & Refunds" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/safety", label: "Buyer Safety guide" },
+              { href: "/shipping", label: "Shipping & Delivery" },
+              { href: "/returns", label: "Returns & Refunds" },
+            ],
+          },
         ],
       },
       {
@@ -64,7 +71,14 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "Get verified (national ID, passport, or business permit) to earn the ✓ badge buyers filter for.",
             ],
           },
-          { type: "links", links: [{ href: "/start-selling", label: "Sell on Chap" }, { href: "/pricing", label: "Business plans" }, { href: "/sellers", label: "Seller Guidelines" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/start-selling", label: "Sell on Chap" },
+              { href: "/pricing", label: "Business plans" },
+              { href: "/sellers", label: "Seller Guidelines" },
+            ],
+          },
         ],
       },
       {
@@ -82,7 +96,14 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "Refunds go back through the original channel; M-Pesa reversals typically land within 5 business days.",
             ],
           },
-          { type: "links", links: [{ href: "/orders", label: "Track my orders" }, { href: "/faq", label: "FAQs" }, { href: "/contact", label: "Contact support" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/orders", label: "Track my orders" },
+              { href: "/faq", label: "FAQs" },
+              { href: "/contact", label: "Contact support" },
+            ],
+          },
         ],
       },
       {
@@ -92,14 +113,30 @@ export const INFO_PAGES: Record<string, InfoPage> = {
             type: "p",
             text: "Your account holds listings, orders, messages, saved searches, and notification preferences. Verification documents are stored privately and visible only to moderators — never on public pages. You can export or delete your data from account settings, in line with Kenya's Data Protection Act, 2019.",
           },
-          { type: "links", links: [{ href: "/dashboard/verify", label: "Get verified" }, { href: "/privacy", label: "Privacy Policy" }, { href: "/terms", label: "Terms & Conditions" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/dashboard/verify", label: "Get verified" },
+              { href: "/privacy", label: "Privacy Policy" },
+              { href: "/terms", label: "Terms & Conditions" },
+            ],
+          },
         ],
       },
     ],
     faqs: [
-      { q: "I can't sign in — what do I do?", a: "Use the exact email you registered with, and check for typos. If you've forgotten your password, use account recovery on the sign-in page. Still stuck? Email support@chap.co.ke from your registered address." },
-      { q: "Why is my listing 'pending'?", a: "Every listing passes moderation before going live — usually within a few hours. Rejected listings show the reason in your dashboard; fix it and resubmit." },
-      { q: "How do I change my delivery address?", a: "You set the address at checkout for each order. Saved addresses and notification preferences live in account settings." },
+      {
+        q: "I can't sign in — what do I do?",
+        a: "Use the exact email you registered with, and check for typos. If you've forgotten your password, use account recovery on the sign-in page. Still stuck? Email support@chap.co.ke from your registered address.",
+      },
+      {
+        q: "Why is my listing 'pending'?",
+        a: "Every listing passes moderation before going live — usually within a few hours. Rejected listings show the reason in your dashboard; fix it and resubmit.",
+      },
+      {
+        q: "How do I change my delivery address?",
+        a: "You set the address at checkout for each order. Saved addresses and notification preferences live in account settings.",
+      },
     ],
     related: [
       { href: "/faq", label: "FAQs" },
@@ -151,7 +188,14 @@ export const INFO_PAGES: Record<string, InfoPage> = {
             type: "p",
             text: "Questions about shop plans, bulk uploads, verification, or advertising? Write to support@chap.co.ke with your shop name and slug — bulk and subscription queries are prioritised for paying plans.",
           },
-          { type: "links", links: [{ href: "/pricing", label: "Business plans" }, { href: "/advertising", label: "Advertising" }, { href: "/sellers", label: "Seller Guidelines" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/pricing", label: "Business plans" },
+              { href: "/advertising", label: "Advertising" },
+              { href: "/sellers", label: "Seller Guidelines" },
+            ],
+          },
         ],
       },
     ],
@@ -165,7 +209,8 @@ export const INFO_PAGES: Record<string, InfoPage> = {
   faq: {
     title: "Frequently Asked Questions",
     updated: UPDATED,
-    intro: "Short answers to the questions Kenyans ask us most. For the full guides, follow the links under each answer.",
+    intro:
+      "Short answers to the questions Kenyans ask us most. For the full guides, follow the links under each answer.",
     sections: [
       {
         heading: "Accounts & getting started",
@@ -206,15 +251,33 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "Can I sell wholesale? Yes — Gold shops support bulk catalogues, CSV upload, and bulk-buyer enquiries.",
             ],
           },
-          { type: "links", links: [{ href: "/start-selling", label: "Sell on Chap" }, { href: "/sellers", label: "Seller Guidelines" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/start-selling", label: "Sell on Chap" },
+              { href: "/sellers", label: "Seller Guidelines" },
+            ],
+          },
         ],
       },
     ],
     faqs: [
-      { q: "Does Chap deliver countrywide?", a: "Yes — sellers configure standard (24–72h countrywide), express (same-day in Nairobi and major towns), and pickup options. Fees show before you confirm, and multi-seller carts split fulfilment per seller." },
-      { q: "Can I return something?", a: "Sealed electronics from shops: 7-day returns. Classifieds (new or used, person-to-person): inspect before paying — sales are final unless the item was misrepresented, in which case dispute it." },
-      { q: "Someone asked for an application fee for a job — legit?", a: "No. Real employers on Chap never charge to apply. Report the listing immediately and never send money to 'secure' a job." },
-      { q: "How do I delete my account and data?", a: "From account settings you can export or delete your data, per the Data Protection Act, 2019. Deletion removes your profile and listings; completed-order records are retained as the law requires for transactions." },
+      {
+        q: "Does Chap deliver countrywide?",
+        a: "Yes — sellers configure standard (24–72h countrywide), express (same-day in Nairobi and major towns), and pickup options. Fees show before you confirm, and multi-seller carts split fulfilment per seller.",
+      },
+      {
+        q: "Can I return something?",
+        a: "Sealed electronics from shops: 7-day returns. Classifieds (new or used, person-to-person): inspect before paying — sales are final unless the item was misrepresented, in which case dispute it.",
+      },
+      {
+        q: "Someone asked for an application fee for a job — legit?",
+        a: "No. Real employers on Chap never charge to apply. Report the listing immediately and never send money to 'secure' a job.",
+      },
+      {
+        q: "How do I delete my account and data?",
+        a: "From account settings you can export or delete your data, per the Data Protection Act, 2019. Deletion removes your profile and listings; completed-order records are retained as the law requires for transactions.",
+      },
     ],
     related: [
       { href: "/help", label: "Help Centre" },
@@ -279,13 +342,26 @@ export const INFO_PAGES: Record<string, InfoPage> = {
             type: "p",
             text: "Every listing carries a Report button; every order has a dispute flow; every message thread can be reported. Moderators review with recorded reasons, repeat offenders are suspended with appeal rights, and verification badges only appear after real checks. Paid promotion never overrides a safety removal.",
           },
-          { type: "links", links: [{ href: "/prohibited", label: "Prohibited Items" }, { href: "/contact", label: "Report to support" }, { href: "/sellers", label: "What sellers must follow" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/prohibited", label: "Prohibited Items" },
+              { href: "/contact", label: "Report to support" },
+              { href: "/sellers", label: "What sellers must follow" },
+            ],
+          },
         ],
       },
     ],
     faqs: [
-      { q: "I already sent money to a scammer. What now?", a: "1) Call Safaricom (100/200) immediately — M-Pesa reversals are time-sensitive. 2) Report the listing and user on Chap. 3) Report to police with your transaction messages. Then email support@chap.co.ke with the order/listing link so we can ban the account." },
-      { q: "The seller wants to meet at their house. Should I?", a: "Prefer public places. If you must go, take someone with you, share your live location with a friend, and keep it daytime." },
+      {
+        q: "I already sent money to a scammer. What now?",
+        a: "1) Call Safaricom (100/200) immediately — M-Pesa reversals are time-sensitive. 2) Report the listing and user on Chap. 3) Report to police with your transaction messages. Then email support@chap.co.ke with the order/listing link so we can ban the account.",
+      },
+      {
+        q: "The seller wants to meet at their house. Should I?",
+        a: "Prefer public places. If you must go, take someone with you, share your live location with a friend, and keep it daytime.",
+      },
     ],
     related: [
       { href: "/prohibited", label: "Prohibited Items" },
@@ -328,7 +404,13 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "No review manipulation: fake reviews, paid ratings, and review extortion all lead to suspension.",
             ],
           },
-          { type: "links", links: [{ href: "/prohibited", label: "Prohibited Items" }, { href: "/dashboard/verify", label: "Get verified" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/prohibited", label: "Prohibited Items" },
+              { href: "/dashboard/verify", label: "Get verified" },
+            ],
+          },
         ],
       },
       {
@@ -351,7 +433,13 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "Appeal from your dashboard within 14 days — a different moderator re-reviews. Genuine mistakes get listings restored.",
             ],
           },
-          { type: "links", links: [{ href: "/terms", label: "Terms & Conditions" }, { href: "/contact", label: "Appeal to support" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/terms", label: "Terms & Conditions" },
+              { href: "/contact", label: "Appeal to support" },
+            ],
+          },
         ],
       },
     ],
@@ -402,7 +490,14 @@ export const INFO_PAGES: Record<string, InfoPage> = {
             type: "p",
             text: "Our operating principles: real data only (no fake discounts, countdowns, or verification badges), moderation with recorded reasons and appeals, verification that means something, and unit economics that keep fees fair so sellers stay. We measure repeat buyers and resolved disputes, not vanity registrations.",
           },
-          { type: "links", links: [{ href: "/safety", label: "Buyer Safety" }, { href: "/sellers", label: "Seller Guidelines" }, { href: "/privacy", label: "Privacy Policy" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/safety", label: "Buyer Safety" },
+              { href: "/sellers", label: "Seller Guidelines" },
+              { href: "/privacy", label: "Privacy Policy" },
+            ],
+          },
         ],
       },
     ],
@@ -487,7 +582,14 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "These terms are governed by the laws of Kenya. We may update them with notice on-site; continued use means acceptance.",
             ],
           },
-          { type: "links", links: [{ href: "/privacy", label: "Privacy Policy" }, { href: "/sellers", label: "Seller Guidelines" }, { href: "/prohibited", label: "Prohibited Items" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/privacy", label: "Privacy Policy" },
+              { href: "/sellers", label: "Seller Guidelines" },
+              { href: "/prohibited", label: "Prohibited Items" },
+            ],
+          },
         ],
       },
     ],
@@ -542,7 +644,10 @@ export const INFO_PAGES: Record<string, InfoPage> = {
             type: "p",
             text: "Chap shows ads (including Google AdSense) to keep the marketplace free. Ads load in non-personalized mode until you make a consent choice; if you accept personalized ads, Google may use cookies — including the DoubleClick cookie — to serve ads based on your visits here and on other sites. You can opt out of personalized advertising at google.com/ads/preferences, or choose “Essential only” in the consent notice on this site. Ad units never appear on checkout, payment, account, or verification pages, and advertisers never receive your name, email, phone, or ID documents.",
           },
-          { type: "links", links: [{ href: "/advertising", label: "Advertising on Chap" }] },
+          {
+            type: "links",
+            links: [{ href: "/advertising", label: "Advertising on Chap" }],
+          },
         ],
       },
       {
@@ -566,7 +671,14 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "Complain to us first; unresolved complaints may go to the Office of the Data Protection Commissioner (ODPC).",
             ],
           },
-          { type: "links", links: [{ href: "/help", label: "Help Centre" }, { href: "/terms", label: "Terms & Conditions" }, { href: "/contact", label: "Contact" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/help", label: "Help Centre" },
+              { href: "/terms", label: "Terms & Conditions" },
+              { href: "/contact", label: "Contact" },
+            ],
+          },
         ],
       },
     ],
@@ -617,13 +729,26 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "Partial refunds (e.g. one suborder of a multi-seller cart) are supported; each suborder resolves independently.",
             ],
           },
-          { type: "links", links: [{ href: "/orders", label: "My orders & disputes" }, { href: "/shipping", label: "Shipping & Delivery" }, { href: "/contact", label: "Contact support" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/orders", label: "My orders & disputes" },
+              { href: "/shipping", label: "Shipping & Delivery" },
+              { href: "/contact", label: "Contact support" },
+            ],
+          },
         ],
       },
     ],
     faqs: [
-      { q: "The seller won't answer about my return.", a: "Don't wait — open a dispute from the order page immediately. The seller gets a deadline to respond, then a moderator decides with or without them." },
-      { q: "Can I return a phone because I found it cheaper elsewhere?", a: "Price differences alone aren't return grounds unless the shop's policy allows change-of-mind returns. Compare with the 'Related from other sellers' rail before you buy." },
+      {
+        q: "The seller won't answer about my return.",
+        a: "Don't wait — open a dispute from the order page immediately. The seller gets a deadline to respond, then a moderator decides with or without them.",
+      },
+      {
+        q: "Can I return a phone because I found it cheaper elsewhere?",
+        a: "Price differences alone aren't return grounds unless the shop's policy allows change-of-mind returns. Compare with the 'Related from other sellers' rail before you buy.",
+      },
     ],
     related: [
       { href: "/shipping", label: "Shipping & Delivery" },
@@ -673,7 +798,14 @@ export const INFO_PAGES: Record<string, InfoPage> = {
             type: "p",
             text: "Furniture, building materials, and farm inputs often need special transport — check the listing's delivery notes and message the seller for bulky-item quotes before checkout. Perishables, gas cylinders, and regulated goods ship only where the seller explicitly offers it.",
           },
-          { type: "links", links: [{ href: "/returns", label: "Returns & Refunds" }, { href: "/shops", label: "Browse shops" }, { href: "/help", label: "Help Centre" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/returns", label: "Returns & Refunds" },
+              { href: "/shops", label: "Browse shops" },
+              { href: "/help", label: "Help Centre" },
+            ],
+          },
         ],
       },
     ],
@@ -725,7 +857,14 @@ export const INFO_PAGES: Record<string, InfoPage> = {
             type: "p",
             text: "First offence typically means instant removal; fraud, counterfeits, and repeat offences mean suspension or permanent bans, with serious cases referred to law enforcement. If your legitimate listing was caught by mistake, appeal within 14 days — a different moderator re-reviews and restores genuine mistakes.",
           },
-          { type: "links", links: [{ href: "/sellers", label: "Seller Guidelines" }, { href: "/safety", label: "Buyer Safety" }, { href: "/contact", label: "Appeal" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/sellers", label: "Seller Guidelines" },
+              { href: "/safety", label: "Buyer Safety" },
+              { href: "/contact", label: "Appeal" },
+            ],
+          },
         ],
       },
     ],
@@ -755,7 +894,13 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "Boosts start when payment is confirmed and stop automatically at expiry — cancel anytime from Promotion.",
             ],
           },
-          { type: "links", links: [{ href: "/dashboard/promotion", label: "Boost a listing" }, { href: "/pricing", label: "Plans & pricing" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/dashboard/promotion", label: "Boost a listing" },
+              { href: "/pricing", label: "Plans & pricing" },
+            ],
+          },
         ],
       },
       {
@@ -784,7 +929,14 @@ export const INFO_PAGES: Record<string, InfoPage> = {
               "We report impressions, clicks, enquiries, and attributed orders — vanity metrics alone don't count as performance.",
             ],
           },
-          { type: "links", links: [{ href: "/pricing", label: "Plans & pricing" }, { href: "/sellers", label: "Seller Guidelines" }, { href: "/contact", label: "Talk to us" }] },
+          {
+            type: "links",
+            links: [
+              { href: "/pricing", label: "Plans & pricing" },
+              { href: "/sellers", label: "Seller Guidelines" },
+              { href: "/contact", label: "Talk to us" },
+            ],
+          },
         ],
       },
     ],

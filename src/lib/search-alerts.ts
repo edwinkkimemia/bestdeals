@@ -12,7 +12,13 @@ import { getStore, type Store } from "./store";
 import { countyMatches } from "./kenya";
 import { formatKES } from "./format";
 
-async function pushAlert(store: Store, userId: string, title: string, body: string, link: string) {
+async function pushAlert(
+  store: Store,
+  userId: string,
+  title: string,
+  body: string,
+  link: string,
+) {
   try {
     const { pushEnabledFor } = await import("./notification-preferences");
     if (!(await pushEnabledFor(userId, "alert", store))) return;
@@ -56,7 +62,10 @@ type SavedRow = {
   lastAlertAt?: string;
 };
 
-const norm = (v: unknown): string => String(v ?? "").trim().toLowerCase();
+const norm = (v: unknown): string =>
+  String(v ?? "")
+    .trim()
+    .toLowerCase();
 const num = (v: unknown): number | undefined => {
   const n = typeof v === "string" && v.trim() === "" ? NaN : Number(v);
   return Number.isFinite(n) ? n : undefined;
@@ -66,7 +75,8 @@ export function asAlertQuery(raw: Record<string, unknown>): AlertQuery {
   return {
     q: typeof raw.q === "string" ? raw.q : undefined,
     category: typeof raw.category === "string" ? raw.category : undefined,
-    subcategory: typeof raw.subcategory === "string" ? raw.subcategory : undefined,
+    subcategory:
+      typeof raw.subcategory === "string" ? raw.subcategory : undefined,
     min: num(raw.min),
     max: num(raw.max),
     county: typeof raw.county === "string" ? raw.county : undefined,
@@ -78,12 +88,29 @@ export function asAlertQuery(raw: Record<string, unknown>): AlertQuery {
 
 /** Does one listing satisfy one saved search? Mirrors lib/search filter semantics. */
 export function listingMatchesQuery(l: AlertListing, q: AlertQuery): boolean {
-  if (q.category && q.category !== "all" && norm(l.categorySlug) !== norm(q.category)) return false;
-  if (q.subcategory && q.subcategory !== "all" && norm(l.subcategory) !== norm(q.subcategory)) return false;
+  if (
+    q.category &&
+    q.category !== "all" &&
+    norm(l.categorySlug) !== norm(q.category)
+  )
+    return false;
+  if (
+    q.subcategory &&
+    q.subcategory !== "all" &&
+    norm(l.subcategory) !== norm(q.subcategory)
+  )
+    return false;
   if (q.type && q.type !== "all" && norm(l.type) !== norm(q.type)) return false;
-  if (q.condition && q.condition !== "all" && norm(l.condition) !== norm(q.condition)) return false;
-  if (q.min != null && Number.isFinite(q.min) && l.price < (q.min as number)) return false;
-  if (q.max != null && Number.isFinite(q.max) && l.price > (q.max as number)) return false;
+  if (
+    q.condition &&
+    q.condition !== "all" &&
+    norm(l.condition) !== norm(q.condition)
+  )
+    return false;
+  if (q.min != null && Number.isFinite(q.min) && l.price < (q.min as number))
+    return false;
+  if (q.max != null && Number.isFinite(q.max) && l.price > (q.max as number))
+    return false;
   if (q.county && q.county !== "all") {
     try {
       if (!countyMatches(l.county, q.county)) return false;
@@ -95,7 +122,8 @@ export function listingMatchesQuery(l: AlertListing, q: AlertQuery): boolean {
   const qq = (q.q ?? "").trim().toLowerCase();
   if (qq) {
     const tokens = qq.split(/\s+/).filter(Boolean);
-    const hay = `${l.title} ${l.description} ${l.subcategory ?? ""} ${l.town} ${l.county}`.toLowerCase();
+    const hay =
+      `${l.title} ${l.description} ${l.subcategory ?? ""} ${l.town} ${l.county}`.toLowerCase();
     if (!tokens.some((t) => hay.includes(t))) return false;
   }
   return true;
@@ -121,12 +149,16 @@ export function listingLink(l: Pick<AlertListing, "slug" | "type">): string {
 }
 
 async function readSaved(store: Store, userId: string): Promise<SavedRow[]> {
-  const v = (await store.getSetting(`saved_searches:${userId}`).catch(() => null)) as SavedRow[] | null;
+  const v = (await store
+    .getSetting(`saved_searches:${userId}`)
+    .catch(() => null)) as SavedRow[] | null;
   return Array.isArray(v) ? v : [];
 }
 
 async function readSent(store: Store, userId: string): Promise<string[]> {
-  const v = (await store.getSetting(`alerts_sent:${userId}`).catch(() => null)) as string[] | null;
+  const v = (await store
+    .getSetting(`alerts_sent:${userId}`)
+    .catch(() => null)) as string[] | null;
   return Array.isArray(v) ? v : [];
 }
 
@@ -136,7 +168,7 @@ async function readSent(store: Store, userId: string): Promise<string[]> {
  */
 export async function fanoutNewListingAlert(
   listing: AlertListing,
-  storeOverride?: Store
+  storeOverride?: Store,
 ): Promise<number> {
   const store = storeOverride ?? getStore();
   let users: { id: string }[] = [];
@@ -176,15 +208,23 @@ export async function fanoutNewListingAlert(
     try {
       const title = `New ad: ${listing.title.slice(0, 80)}`;
       const body = `Matches ${describeQuery(asAlertQuery(hit.query ?? {}))} — ${formatKES(listing.price)}.`;
-      await store.createNotification({ userId: u.id, type: "alert", title, body, link });
+      await store.createNotification({
+        userId: u.id,
+        type: "alert",
+        title,
+        body,
+        link,
+      });
       pushes.push(pushAlert(store, u.id, title, body, link));
       sent += 1;
       const nextSeen = [...seen, listing.id].slice(-200);
       await store.setSetting(`alerts_sent:${u.id}`, nextSeen).catch(() => {});
       const nextSaved = saved.map((s) =>
-        s.id === hit.id ? { ...s, lastAlertAt: new Date().toISOString() } : s
+        s.id === hit.id ? { ...s, lastAlertAt: new Date().toISOString() } : s,
       );
-      await store.setSetting(`saved_searches:${u.id}`, nextSaved).catch(() => {});
+      await store
+        .setSetting(`saved_searches:${u.id}`, nextSaved)
+        .catch(() => {});
     } catch {}
   }
   await Promise.allSettled(pushes);
@@ -199,11 +239,17 @@ export async function fanoutNewListingAlert(
 export async function fanoutPriceDrop(
   listing: AlertListing,
   oldPrice: number,
-  storeOverride?: Store
+  storeOverride?: Store,
 ): Promise<number> {
   const store = storeOverride ?? getStore();
   const next = listing.price;
-  if (!Number.isFinite(oldPrice) || !Number.isFinite(next) || next >= oldPrice || next <= 0) return 0;
+  if (
+    !Number.isFinite(oldPrice) ||
+    !Number.isFinite(next) ||
+    next >= oldPrice ||
+    next <= 0
+  )
+    return 0;
   const pct = Math.round(((oldPrice - next) / oldPrice) * 100);
   const link = listingLink(listing);
   let users: { id: string }[] = [];
@@ -219,18 +265,30 @@ export async function fanoutPriceDrop(
     if (!u?.id || u.id === listing.ownerId) continue;
     // 1) Wishlist price drop.
     try {
-      const wish = (await store.getSetting(`wishlist:${u.id}`).catch(() => null)) as string[] | null;
+      const wish = (await store
+        .getSetting(`wishlist:${u.id}`)
+        .catch(() => null)) as string[] | null;
       if (Array.isArray(wish) && wish.includes(listing.id)) {
         const key = `${listing.id}:${next}`;
-        const done = (await store.getSetting(`price_alerts_sent:${u.id}`).catch(() => null)) as string[] | null;
+        const done = (await store
+          .getSetting(`price_alerts_sent:${u.id}`)
+          .catch(() => null)) as string[] | null;
         const arr = Array.isArray(done) ? done : [];
         if (!arr.includes(key)) {
           const title = `Price drop: ${listing.title.slice(0, 70)}`;
           const body = `Was ${formatKES(oldPrice)}, now ${formatKES(next)}${pct > 0 ? ` (−${pct}%)` : ""}.`;
-          await store.createNotification({ userId: u.id, type: "alert", title, body, link });
+          await store.createNotification({
+            userId: u.id,
+            type: "alert",
+            title,
+            body,
+            link,
+          });
           pushes.push(pushAlert(store, u.id, title, body, link));
           sent += 1;
-          await store.setSetting(`price_alerts_sent:${u.id}`, [...arr, key].slice(-200)).catch(() => {});
+          await store
+            .setSetting(`price_alerts_sent:${u.id}`, [...arr, key].slice(-200))
+            .catch(() => {});
           continue; // one bell per user per edit is enough
         }
       }
@@ -242,7 +300,8 @@ export async function fanoutPriceDrop(
         try {
           const q = asAlertQuery(s.query ?? {});
           if (q.max == null || !Number.isFinite(q.max)) return false;
-          if (!(oldPrice > (q.max as number) && next <= (q.max as number))) return false;
+          if (!(oldPrice > (q.max as number) && next <= (q.max as number)))
+            return false;
           return listingMatchesQuery({ ...listing }, { ...q, max: undefined });
         } catch {
           return false;
@@ -251,7 +310,13 @@ export async function fanoutPriceDrop(
       if (hit) {
         const title = `Now in your budget: ${listing.title.slice(0, 70)}`;
         const body = `“${hit.name.slice(0, 40)}” — now ${formatKES(next)} (was ${formatKES(oldPrice)}).`;
-        await store.createNotification({ userId: u.id, type: "alert", title, body, link });
+        await store.createNotification({
+          userId: u.id,
+          type: "alert",
+          title,
+          body,
+          link,
+        });
         pushes.push(pushAlert(store, u.id, title, body, link));
         sent += 1;
       }

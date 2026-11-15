@@ -71,7 +71,7 @@ describe("invoices", () => {
         status: "paid",
         customerEmail: owner.email,
       },
-      store
+      store,
     );
     const promo = await store.createPromotion({
       listingId: listing.id,
@@ -90,7 +90,7 @@ describe("invoices", () => {
         method: "mpesa",
         status: "pending",
       },
-      store
+      store,
     );
 
     const items = await listInvoicesForOwner(owner.id, store);
@@ -122,7 +122,7 @@ describe("invoices", () => {
         method: "mpesa",
         status: "pending",
       },
-      store
+      store,
     );
     await store.activatePromotion(promo.id);
     const active = (await store.getPromotion(promo.id))!;
@@ -133,7 +133,7 @@ describe("invoices", () => {
         status: "paid",
         providerRef: "RC-123",
       },
-      store
+      store,
     );
 
     assert.equal(paid.id, pending.id);
@@ -164,7 +164,7 @@ describe("invoices", () => {
         customerEmail: owner.email,
         description: "Gold shop plan - monthly subscription",
       },
-      store
+      store,
     );
     const invoice = (await listInvoicesForOwner(owner.id, store))[0];
     assert.ok(invoice);
@@ -194,10 +194,28 @@ describe("invoices", () => {
         method: "wallet",
         status: "paid",
       },
-      store
+      store,
     );
-    assert.ok(await getInvoiceForUser("INV-PRIVATE-1", { id: owner.id, role: "SELLER" }, store));
-    assert.ok(await getInvoiceForUser("INV-PRIVATE-1", { id: "someone-else", role: "SELLER" }, store) === null);
-    assert.ok(await getInvoiceForUser("INV-PRIVATE-1", { id: "admin-1", role: "ADMIN" }, store));
+    assert.ok(
+      await getInvoiceForUser(
+        "INV-PRIVATE-1",
+        { id: owner.id, role: "SELLER" },
+        store,
+      ),
+    );
+    assert.ok(
+      (await getInvoiceForUser(
+        "INV-PRIVATE-1",
+        { id: "someone-else", role: "SELLER" },
+        store,
+      )) === null,
+    );
+    assert.ok(
+      await getInvoiceForUser(
+        "INV-PRIVATE-1",
+        { id: "admin-1", role: "ADMIN" },
+        store,
+      ),
+    );
   });
 });

@@ -21,8 +21,14 @@ export async function GET(req: NextRequest) {
     const mine = await store.listListingsByStatus("active").catch(() => []);
     const { LISTINGS } = await import("@/data/catalog");
     const k = keyword.toLowerCase();
-    const supply = [...mine, ...LISTINGS].filter((l) => `${l.title} ${l.description}`.toLowerCase().includes(k)).length;
-    return NextResponse.json({ keyword, supply, ...nicheScore(keyword, supply) });
+    const supply = [...mine, ...LISTINGS].filter((l) =>
+      `${l.title} ${l.description}`.toLowerCase().includes(k),
+    ).length;
+    return NextResponse.json({
+      keyword,
+      supply,
+      ...nicheScore(keyword, supply),
+    });
   }
   return NextResponse.json({ error: "Unknown op." }, { status: 400 });
 }

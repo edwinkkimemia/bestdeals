@@ -16,7 +16,10 @@ function wantsHtml(req: NextRequest): boolean {
   const accept = req.headers.get("accept") ?? "";
   const ct = req.headers.get("content-type") ?? "";
   // Plain HTML <form> posts land here — redirect instead of showing raw JSON.
-  return accept.includes("text/html") || ct.includes("application/x-www-form-urlencoded");
+  return (
+    accept.includes("text/html") ||
+    ct.includes("application/x-www-form-urlencoded")
+  );
 }
 
 export async function POST(req: NextRequest) {

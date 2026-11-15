@@ -4,8 +4,14 @@
 export const MODERATION_REASONS = [
   { code: "duplicate", label: "Duplicate of an existing ad" },
   { code: "category", label: "Wrong category — suggest the right one" },
-  { code: "title", label: "Title: remove contacts / repeated words / be specific" },
-  { code: "photos", label: "Photos: low-quality, watermarked, screenshots or contacts" },
+  {
+    code: "title",
+    label: "Title: remove contacts / repeated words / be specific",
+  },
+  {
+    code: "photos",
+    label: "Photos: low-quality, watermarked, screenshots or contacts",
+  },
   { code: "description", label: "Description doesn't match the item" },
   { code: "price", label: "Price outside the market range" },
   { code: "prohibited", label: "Prohibited item" },

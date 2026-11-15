@@ -29,12 +29,19 @@ async function logoBuffer(): Promise<Buffer> {
 
 /** chaplogo.png faded to watermark opacity, scaled to `targetWidth`. */
 async function fadedLogo(targetWidth: number): Promise<Buffer> {
-  const resized = sharp(await logoBuffer()).resize(Math.max(1, Math.round(targetWidth)));
-  const { data, info } = await resized.ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const resized = sharp(await logoBuffer()).resize(
+    Math.max(1, Math.round(targetWidth)),
+  );
+  const { data, info } = await resized
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
   for (let i = 3; i < data.length; i += info.channels) {
     data[i] = Math.round(data[i] * LOGO_OPACITY);
   }
-  return sharp(data, { raw: { width: info.width, height: info.height, channels: info.channels } })
+  return sharp(data, {
+    raw: { width: info.width, height: info.height, channels: info.channels },
+  })
     .png()
     .toBuffer();
 }
@@ -50,7 +57,7 @@ function textPillSvg(w: number, h: number): Buffer {
     `<svg width="${w}" height="${h}">` +
       `<rect x="${x}" y="${y}" width="${pillW}" height="${pillH}" rx="${Math.round(pillH / 2)}" fill="rgba(0,67,210,0.85)"/>` +
       `<text x="${x + pillW / 2}" y="${y + pillH / 2}" font-family="Arial,Helvetica,sans-serif" font-size="${fontSize}" font-weight="bold" fill="#ffffff" text-anchor="middle" dominant-baseline="central">chap.co.ke</text>` +
-      `</svg>`
+      `</svg>`,
   );
 }
 
@@ -91,6 +98,10 @@ export async function watermarkBuffer(input: Buffer): Promise<Buffer> {
 export function sniffContentType(buf: Buffer): string {
   if (buf[0] === 0x89 && buf[1] === 0x50) return "image/png";
   if (buf[0] === 0xff && buf[1] === 0xd8) return "image/jpeg";
-  if (buf.subarray(0, 4).toString() === "RIFF" && buf.subarray(8, 12).toString() === "WEBP") return "image/webp";
+  if (
+    buf.subarray(0, 4).toString() === "RIFF" &&
+    buf.subarray(8, 12).toString() === "WEBP"
+  )
+    return "image/webp";
   return "image/jpeg";
 }

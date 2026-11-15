@@ -20,7 +20,9 @@ function read(): CartLine[] {
     const raw = JSON.parse(localStorage.getItem(KEY) || "[]") as CartLine[];
     // Keep all ids — seller store listings aren't in the static catalogue but
     // checkout validates them server-side. Drop only malformed rows.
-    return raw.filter((l) => typeof l.id === "string" && l.id.length > 0 && l.qty > 0).slice(0, 50);
+    return raw
+      .filter((l) => typeof l.id === "string" && l.id.length > 0 && l.qty > 0)
+      .slice(0, 50);
   } catch {
     return [];
   }
@@ -44,17 +46,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       add: (id, qty = 1) =>
         setLines((prev) => {
           const f = prev.find((l) => l.id === id);
-          if (f) return prev.map((l) => (l.id === id ? { ...l, qty: Math.min(99, l.qty + qty) } : l));
+          if (f)
+            return prev.map((l) =>
+              l.id === id ? { ...l, qty: Math.min(99, l.qty + qty) } : l,
+            );
           return [...prev, { id, qty }];
         }),
       setQty: (id, qty) =>
         setLines((prev) =>
-          qty <= 0 ? prev.filter((l) => l.id !== id) : prev.map((l) => (l.id === id ? { ...l, qty: Math.min(99, qty) } : l))
+          qty <= 0
+            ? prev.filter((l) => l.id !== id)
+            : prev.map((l) =>
+                l.id === id ? { ...l, qty: Math.min(99, qty) } : l,
+              ),
         ),
       remove: (id) => setLines((prev) => prev.filter((l) => l.id !== id)),
       clear: () => setLines([]),
     }),
-    [lines]
+    [lines],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

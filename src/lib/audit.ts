@@ -20,13 +20,19 @@ const CAP = 2000;
 export async function logAudit(e: Omit<AuditEntry, "at">): Promise<void> {
   try {
     const store = getStore();
-    const cur = ((await store.getSetting(KEY).catch(() => null)) as AuditEntry[] | null) ?? [];
+    const cur =
+      ((await store.getSetting(KEY).catch(() => null)) as
+        | AuditEntry[]
+        | null) ?? [];
     cur.unshift({ ...e, at: new Date().toISOString() });
     await store.setSetting(KEY, cur.slice(0, CAP)).catch(() => {});
   } catch {}
 }
 
 export async function listAudit(limit = 100): Promise<AuditEntry[]> {
-  const cur = ((await getStore().getSetting(KEY).catch(() => null)) as AuditEntry[] | null) ?? [];
+  const cur =
+    ((await getStore()
+      .getSetting(KEY)
+      .catch(() => null)) as AuditEntry[] | null) ?? [];
   return cur.slice(0, Math.min(Math.max(limit, 1), 500));
 }

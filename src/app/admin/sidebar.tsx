@@ -49,7 +49,10 @@ export function AdminSidebar() {
 
   const signOut = async () => {
     try {
-      await fetch("/api/auth/signout", { method: "POST", headers: { "Content-Type": "application/json" } });
+      await fetch("/api/auth/signout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
     } catch {}
     router.push("/");
     router.refresh();
@@ -66,8 +69,10 @@ export function AdminSidebar() {
               href={href}
               aria-current={isActive(href, exact) ? "page" : undefined}
               className={cn(
-                "flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-medium",
-                isActive(href, exact) ? "bg-ink-900 font-bold text-white" : "text-ink-700 hover:bg-sand-100"
+                "flex items-center gap-2 rounded px-2.5 py-1.5 text-[13px] font-medium",
+                isActive(href, exact)
+                  ? "bg-ink-900 font-bold text-white"
+                  : "text-ink-700 hover:bg-neutral-200",
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
@@ -76,17 +81,26 @@ export function AdminSidebar() {
           ))}
         </nav>
         <div className="mt-auto space-y-1 pt-3">
-          <Link href="/" className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] font-medium text-ink-700 hover:bg-sand-100">
+          <Link
+            href="/"
+            className="flex items-center gap-2 rounded px-2.5 py-1.5 text-[13px] font-medium text-ink-700 hover:bg-neutral-200"
+          >
             <ExternalLink className="h-4 w-4" /> View site
           </Link>
-          <button onClick={signOut} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] font-semibold text-red-700 hover:bg-red-50">
+          <button
+            onClick={signOut}
+            className="flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-left text-[13px] font-semibold text-red-700 hover:bg-red-50"
+          >
             <LogOut className="h-4 w-4" /> Sign out
           </button>
         </div>
       </div>
 
       {/* Mobile: slim icon-only sidebar rail */}
-      <nav aria-label="Admin sections" className="sticky top-[62px] flex max-h-[calc(100dvh-80px)] flex-col items-center gap-1 self-start overflow-y-auto py-4 [-ms-overflow-style:none] [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden">
+      <nav
+        aria-label="Admin sections"
+        className="sticky top-[62px] flex max-h-[calc(100dvh-80px)] flex-col items-center gap-1 self-start overflow-y-auto py-4 [-ms-overflow-style:none] [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
+      >
         {NAV.map(({ href, label, Icon, exact }) => (
           <Link
             key={href}
@@ -95,8 +109,10 @@ export function AdminSidebar() {
             aria-label={label}
             aria-current={isActive(href, exact) ? "page" : undefined}
             className={cn(
-              "flex h-10 w-10 items-center justify-center rounded-xl",
-              isActive(href, exact) ? "bg-ink-900 font-bold text-white" : "text-ink-700 hover:bg-sand-100"
+              "flex h-10 w-10 items-center justify-center rounded",
+              isActive(href, exact)
+                ? "bg-ink-900 font-bold text-white"
+                : "text-ink-700 hover:bg-neutral-200",
             )}
           >
             <Icon className="h-5 w-5" aria-hidden />
@@ -106,7 +122,7 @@ export function AdminSidebar() {
           href="/"
           title="View site"
           aria-label="View site"
-          className="mt-2 flex h-10 w-10 items-center justify-center rounded-xl text-ink-700 hover:bg-sand-100"
+          className="mt-2 flex h-10 w-10 items-center justify-center rounded text-ink-700 hover:bg-neutral-200"
         >
           <ExternalLink className="h-5 w-5" aria-hidden />
         </Link>
@@ -114,7 +130,7 @@ export function AdminSidebar() {
           onClick={signOut}
           title="Sign out"
           aria-label="Sign out"
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-red-700 hover:bg-red-50"
+          className="flex h-10 w-10 items-center justify-center rounded text-red-700 hover:bg-red-50"
         >
           <LogOut className="h-5 w-5" aria-hidden />
         </button>

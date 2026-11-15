@@ -24,7 +24,10 @@ export function BottomNav() {
     <>
       {/* spacer so footer content clears the fixed bar */}
       <div aria-hidden className="h-[76px] md:hidden" />
-      <nav aria-label="Mobile" className="fixed inset-x-0 bottom-0 z-40 border-t border-neutral-200 bg-white/95 backdrop-blur md:hidden">
+      <nav
+        aria-label="Mobile"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-neutral-200 bg-white md:hidden"
+      >
         <div className="grid grid-cols-5 px-2 pb-[env(safe-area-inset-bottom)] pt-1.5">
           {tabs.map(({ href, label, Icon, badge, fab }) => (
             <Link
@@ -32,11 +35,16 @@ export function BottomNav() {
               href={href}
               aria-current={isActive(href) ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-lg py-1 text-[11px] font-medium",
-                isActive(href) ? "text-brand-700" : "text-ink-400"
+                "flex flex-col items-center gap-0.5 rounded py-1 text-[11px] font-medium",
+                isActive(href) ? "text-brand-700" : "text-ink-400",
               )}
             >
-              <span className={cn("relative flex h-9 w-9 items-center justify-center rounded-full", fab && "bg-accent-500 text-white shadow-lg")}>
+              <span
+                className={cn(
+                  "relative flex h-9 w-9 items-center justify-center rounded",
+                  fab && "bg-accent-500 text-white",
+                )}
+              >
                 <Icon className="h-5 w-5" />
                 {!!badge && badge > 0 && (
                   <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent-600 px-1 text-[10px] font-bold text-white">

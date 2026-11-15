@@ -1,7 +1,15 @@
 import Link from "next/link";
 import { Fragment } from "react";
 import type { Metadata } from "next";
-import { ArrowRight, BadgeCheck, MapPin, Search, ShieldCheck, Store, Truck } from "lucide-react";
+import {
+  ArrowRight,
+  BadgeCheck,
+  MapPin,
+  Search,
+  ShieldCheck,
+  Store,
+  Truck,
+} from "lucide-react";
 import { LISTINGS, POPULAR_SEARCHES } from "@/data/catalog";
 import { getCategories } from "@/lib/categories";
 import { currentUser } from "@/lib/auth";
@@ -16,7 +24,8 @@ import { AD_SLOTS } from "@/lib/ads";
 
 export const metadata: Metadata = {
   title: { absolute: "chap.co.ke — Kenya's Marketplace for Everything" },
-  description: "Discover great deals, shop trusted businesses, buy and sell new or pre-owned items, and find services across Kenya.",
+  description:
+    "Discover great deals, shop trusted businesses, buy and sell new or pre-owned items, and find services across Kenya.",
   keywords: [
     "Kenya marketplace",
     "buy and sell in Kenya",
@@ -30,16 +39,25 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     title: "chap.co.ke — Everything You Need. All in One Place.",
-    description: "Shop products, classifieds, business shops and local services across Kenya.",
+    description:
+      "Shop products, classifieds, business shops and local services across Kenya.",
     url: "https://chap.co.ke/",
     siteName: "chap.co.ke",
     locale: "en_KE",
-    images: [{ url: "/chaplogo.png", width: 1147, height: 287, alt: "chap.co.ke — Kenya's marketplace" }],
+    images: [
+      {
+        url: "/chaplogo.png",
+        width: 1147,
+        height: 287,
+        alt: "chap.co.ke — Kenya's marketplace",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "chap.co.ke — Kenya's Marketplace for Everything",
-    description: "Shop products, classifieds, business shops and local services across Kenya.",
+    description:
+      "Shop products, classifieds, business shops and local services across Kenya.",
     images: ["/chaplogo.png"],
   },
 };
@@ -50,12 +68,13 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   const user = await currentUser().catch(() => null);
   const categories = await getCategories();
-  const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } = await import("@/lib/live-listings");
+  const { getLiveStoreListings, mergeStaticAndLive, withLiveVerification } =
+    await import("@/lib/live-listings");
   // Hero collage: four different categories (and distinct photos) shuffled on every request.
   const seenHeroImages = new Set<string>();
   const heroCategories = shuffleSeeded(
     categories,
-    Math.floor(Math.random() * 1_000_000_000)
+    Math.floor(Math.random() * 1_000_000_000),
   )
     .filter((c) => {
       if (seenHeroImages.has(c.image)) return false;
@@ -67,48 +86,97 @@ export default async function HomePage() {
   // Stamp the merged set: static catalogue rows need live plan/verified flags
   // for card checkmarks, not just the store half.
   const all = await withLiveVerification(mergeStaticAndLive(LISTINGS, liveAll));
-  const deals = shuffleFeaturedFirst(all.filter((l) => l.compareAt && l.compareAt > l.price)).slice(0, 6);
-  const featured = shuffleFeaturedFirst(all.filter((l) => l.featured)).slice(0, 12);
-  const fresh = shuffleFeaturedFirst([...all].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 36)).slice(0, 12);
-  const freshClassifieds = shuffleFeaturedFirst(all.filter((l) => l.listingType === "classified")
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 18)).slice(0, 6);
-  const fromShops = shuffleFeaturedFirst(all.filter((l) => l.shopSlug)
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 18)).slice(0, 6);
+  const deals = shuffleFeaturedFirst(
+    all.filter((l) => l.compareAt && l.compareAt > l.price),
+  ).slice(0, 6);
+  const featured = shuffleFeaturedFirst(all.filter((l) => l.featured)).slice(
+    0,
+    12,
+  );
+  const fresh = shuffleFeaturedFirst(
+    [...all]
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+      .slice(0, 36),
+  ).slice(0, 12);
+  const freshClassifieds = shuffleFeaturedFirst(
+    all
+      .filter((l) => l.listingType === "classified")
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+      .slice(0, 18),
+  ).slice(0, 6);
+  const fromShops = shuffleFeaturedFirst(
+    all
+      .filter((l) => l.shopSlug)
+      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+      .slice(0, 18),
+  ).slice(0, 6);
   const countiesByListings = [...KENYA_COUNTIES]
     .map((c) => ({
       ...c,
-      count: all.filter((l) => l.county.trim().toLowerCase() === c.county.toLowerCase()).length,
+      count: all.filter(
+        (l) => l.county.trim().toLowerCase() === c.county.toLowerCase(),
+      ).length,
     }))
     .sort((a, b) => b.count - a.count);
 
   return (
     <div>
-      {/* A: Hero + search — mobile-first: headline, search, swipeable categories */}
-      <section className="bg-gradient-to-b from-brand-50 via-white to-white">
+      {/* A: Hero + search — solid, flat, single-colour headline */}
+      <section className="border-b border-neutral-200 bg-white">
         <div className="container-bd grid items-center gap-6 py-8 md:py-10 lg:grid-cols-[240px_minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-8">
           {/* Categories column — desktop (hover/tap reveals subcategories) */}
           <HeroCategories categories={categories} />
           <div className="min-w-0">
-            <h1 className="text-[28px] font-extrabold leading-[1.08] tracking-tight text-ink-900 sm:text-4xl xl:text-5xl">
-              <span className="text-brand-600">Buy.</span> <span className="text-accent-500">Sell.</span> <span className="text-brand-900">Discover.</span>
+            <p className="kicker">Kenya&apos;s marketplace for everything</p>
+            <h1 className="mt-1 text-[28px] font-extrabold leading-[1.05] tracking-tight text-ink-900 sm:text-4xl xl:text-5xl">
+              Buy. Sell. Discover.
             </h1>
             <p className="mt-2 max-w-xl text-[15px] text-ink-500 sm:text-base">
-              Shop trusted businesses, buy and sell new or pre-owned items, and find services across Kenya.
+              Shop trusted businesses, buy and sell new or pre-owned items, and
+              find services across Kenya.
             </p>
-            <form action="/search" className="mt-4 flex max-w-xl overflow-hidden rounded-2xl border-2 border-brand-600 bg-white shadow-card">
-              <input name="q" aria-label="Search the marketplace" placeholder="Search phones, cars, rentals, fundis…" className="w-full min-w-0 px-4 py-3 text-[15px] outline-none" />
-              <button className="flex shrink-0 items-center gap-2 bg-brand-600 px-5 font-semibold text-white hover:bg-brand-700 sm:px-6" type="submit">
-                <Search className="h-4 w-4" /> <span className="hidden min-[400px]:inline">Search</span>
+            <form
+              action="/search"
+              className="mt-4 flex max-w-xl overflow-hidden rounded border-2 border-ink-900 bg-white"
+            >
+              <input
+                name="q"
+                aria-label="Search the marketplace"
+                placeholder="Search phones, cars, rentals, fundis…"
+                className="w-full min-w-0 px-4 py-3 text-[15px] font-medium outline-none"
+              />
+              <button
+                className="flex shrink-0 items-center gap-2 bg-ink-900 px-5 font-bold text-white hover:bg-black sm:px-6"
+                type="submit"
+              >
+                <Search className="h-4 w-4" />{" "}
+                <span className="hidden min-[400px]:inline">Search</span>
               </button>
             </form>
             <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-3">
-              <Link href="/browse" className="btn-primary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base">Explore <ArrowRight className="h-4 w-4" /></Link>
-              <Link href={user ? "/sell" : "/start-selling"} className="btn-secondary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base"><Store className="h-4 w-4" /> Sell on Chap</Link>
+              <Link
+                href="/browse"
+                className="btn-primary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base"
+              >
+                Explore <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link
+                href={user ? "/sell" : "/start-selling"}
+                className="btn-secondary !h-11 !px-4 !text-sm sm:!px-6 sm:!text-base"
+              >
+                <Store className="h-4 w-4" /> Sell on Chap
+              </Link>
             </div>
             <div className="mt-3 flex flex-wrap gap-2 text-xs">
               <span className="self-center text-ink-400">Popular:</span>
               {POPULAR_SEARCHES.slice(0, 4).map((s) => (
-                <Link key={s} href={`/search?q=${encodeURIComponent(s)}`} className="chip hover:border-brand-600">{s}</Link>
+                <Link
+                  key={s}
+                  href={`/search?q=${encodeURIComponent(s)}`}
+                  className="chip hover:border-brand-600"
+                >
+                  {s}
+                </Link>
               ))}
             </div>
           </div>
@@ -119,17 +187,20 @@ export default async function HomePage() {
                 key={c.slug}
                 href={`/browse/${c.slug}`}
                 aria-label={`Browse ${c.name}`}
-                className={`group relative block overflow-hidden rounded-2xl shadow-card focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 ${i % 2 === 1 ? "mt-5" : ""} ${i < 2 ? "h-52" : "h-44"}`}
+                className={`group relative block overflow-hidden rounded border border-neutral-200 bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-900 focus-visible:ring-offset-2 ${i < 2 ? "h-52" : "h-44"}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={c.image}
                   alt=""
                   aria-hidden
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  className="h-full w-full object-cover"
                   loading={i < 2 ? "eager" : "lazy"}
                 />
-                <span aria-hidden className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2 pt-8 text-xs font-bold text-white">
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 bottom-0 bg-black/65 px-3 py-2 text-xs font-bold text-white"
+                >
                   {c.name}
                 </span>
               </Link>
@@ -138,17 +209,33 @@ export default async function HomePage() {
         </div>
         {/* Mobile/tablet swipeable category strip — all categories, one compact row */}
         <div className="container-bd pb-7 lg:hidden">
-          <CategoryStrip categories={categories} title="Browse by category" viewAllHref="/browse" />
+          <CategoryStrip
+            categories={categories}
+            title="Browse by category"
+            viewAllHref="/browse"
+          />
         </div>
       </section>
 
       {/* trust strip */}
       <section className="hidden border-y border-neutral-200 bg-white sm:block">
         <div className="container-bd grid grid-cols-2 gap-4 py-4 text-sm lg:grid-cols-4">
-          <p className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-brand-600" /> Moderated listings & reporting</p>
-          <p className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-brand-600" /> Verified sellers clearly labelled</p>
-          <p className="flex items-center gap-2"><Truck className="h-4 w-4 text-brand-600" /> Delivery across all 47 counties</p>
-          <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-brand-600" /> Browse by county & town</p>
+          <p className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-brand-600" /> Moderated
+            listings & reporting
+          </p>
+          <p className="flex items-center gap-2">
+            <BadgeCheck className="h-4 w-4 text-brand-600" /> Verified sellers
+            clearly labelled
+          </p>
+          <p className="flex items-center gap-2">
+            <Truck className="h-4 w-4 text-brand-600" /> Delivery across all 47
+            counties
+          </p>
+          <p className="flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-brand-600" /> Browse by county &
+            town
+          </p>
         </div>
       </section>
 
@@ -157,31 +244,53 @@ export default async function HomePage() {
         <section className="container-bd py-10" aria-labelledby="featured">
           <div className="mb-5 flex items-end justify-between">
             <div>
-              <h2 id="featured" className="section-title">Featured products</h2>
-              <p className="text-sm text-ink-500">Promoted by sellers · always labelled Featured · never overrides safety.</p>
+              <h2 id="featured" className="section-title">
+                Featured products
+              </h2>
+              <p className="text-sm text-ink-500">
+                Promoted by sellers · always labelled Featured · never overrides
+                safety.
+              </p>
             </div>
-            <Link href="/dashboard/promotion" className="link-bd">Promote yours →</Link>
+            <Link href="/dashboard/promotion" className="link-bd">
+              Promote yours →
+            </Link>
           </div>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-            {featured.map((l) => <ListingCard key={l.id} listing={l} />)}
+            {featured.map((l) => (
+              <ListingCard key={l.id} listing={l} />
+            ))}
           </div>
         </section>
       )}
 
       {/* B: categories — compact desktop rail; mobile uses the hero slider */}
       <section className="container-bd hidden py-8 lg:block">
-        <CategoryStrip categories={categories} title="Browse categories" viewAllHref="/browse" />
+        <CategoryStrip
+          categories={categories}
+          title="Browse categories"
+          viewAllHref="/browse"
+        />
       </section>
 
       {/* C: Today's Best Deals — genuine savings only */}
-      <section className="bg-sand-50 py-10" aria-labelledby="deals">
+      <section
+        className="border-y border-neutral-200 bg-neutral-100 py-10"
+        aria-labelledby="deals"
+      >
         <div className="container-bd">
           <div className="mb-5 flex items-end justify-between">
             <div>
-              <h2 id="deals" className="section-title">Today&apos;s Best Deals</h2>
-              <p className="text-sm text-ink-500">Real savings from verified prices. No fake countdowns.</p>
+              <h2 id="deals" className="section-title">
+                Today&apos;s Best Deals
+              </h2>
+              <p className="text-sm text-ink-500">
+                Real savings from verified prices. No fake countdowns.
+              </p>
             </div>
-            <Link href="/deals" className="link-bd">All deals →</Link>
+            <Link href="/deals" className="link-bd">
+              All deals →
+            </Link>
           </div>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
             {deals.map((l, i) => (
@@ -196,7 +305,11 @@ export default async function HomePage() {
 
       {/* D: locations — compact national rail, listings stay close to the top */}
       <section className="container-bd py-6">
-        <CountyStrip counties={countiesByListings} title="Shop by location" viewAllHref="/location" />
+        <CountyStrip
+          counties={countiesByListings}
+          title="Shop by location"
+          viewAllHref="/location"
+        />
       </section>
 
       {/* E: trending near you */}
@@ -204,15 +317,31 @@ export default async function HomePage() {
         <div className="card flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center">
           <MapPin className="h-6 w-6 shrink-0 text-brand-600" />
           <div className="flex-1">
-            <h2 id="near" className="text-lg font-bold">Trending near you</h2>
-            <p className="text-sm text-ink-500">Pick your county to see relevant products & classifieds. No precise location needed.</p>
+            <h2 id="near" className="text-lg font-bold">
+              Trending near you
+            </h2>
+            <p className="text-sm text-ink-500">
+              Pick your county to see relevant products & classifieds. No
+              precise location needed.
+            </p>
           </div>
           <form action="/search" className="flex w-full gap-2 sm:w-auto">
-            <select name="county" aria-label="County" className="input-bd sm:w-52" defaultValue="all">
+            <select
+              name="county"
+              aria-label="County"
+              className="input-bd sm:w-52"
+              defaultValue="all"
+            >
               <option value="all">All Kenya</option>
-              {COUNTY_NAMES.map((c) => <option key={c} value={c}>{c}</option>)}
+              {COUNTY_NAMES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
             </select>
-            <button className="btn-primary shrink-0" type="submit">Show</button>
+            <button className="btn-primary shrink-0" type="submit">
+              Show
+            </button>
           </form>
         </div>
       </section>
@@ -221,10 +350,17 @@ export default async function HomePage() {
       <section className="container-bd py-4" aria-labelledby="new">
         <div className="mb-5 flex items-end justify-between">
           <div>
-            <h2 id="new" className="section-title">Newly listed</h2>
-            <p className="text-sm text-ink-500">Fresh products, classifieds and services from sellers across Kenya.</p>
+            <h2 id="new" className="section-title">
+              Newly listed
+            </h2>
+            <p className="text-sm text-ink-500">
+              Fresh products, classifieds and services from sellers across
+              Kenya.
+            </p>
           </div>
-          <Link href="/search?sort=newest" className="link-bd">View newest →</Link>
+          <Link href="/search?sort=newest" className="link-bd">
+            View newest →
+          </Link>
         </div>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
           {fresh.map((l, i) => (
@@ -237,17 +373,28 @@ export default async function HomePage() {
       </section>
 
       {/* G2: fresh classifieds */}
-      <section className="bg-sand-50 py-10" aria-labelledby="fresh-classifieds">
+      <section
+        className="border-y border-neutral-200 bg-neutral-100 py-10"
+        aria-labelledby="fresh-classifieds"
+      >
         <div className="container-bd">
           <div className="mb-5 flex items-end justify-between">
             <div>
-              <h2 id="fresh-classifieds" className="section-title">Fresh classifieds</h2>
-              <p className="text-sm text-ink-500">New & pre-owned from individual sellers — enquire and negotiate.</p>
+              <h2 id="fresh-classifieds" className="section-title">
+                Fresh classifieds
+              </h2>
+              <p className="text-sm text-ink-500">
+                New & pre-owned from individual sellers — enquire and negotiate.
+              </p>
             </div>
-            <Link href="/classifieds" className="link-bd">All classifieds →</Link>
+            <Link href="/classifieds" className="link-bd">
+              All classifieds →
+            </Link>
           </div>
           <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-            {freshClassifieds.map((l) => <ListingCard key={l.id} listing={l} />)}
+            {freshClassifieds.map((l) => (
+              <ListingCard key={l.id} listing={l} />
+            ))}
           </div>
         </div>
       </section>
@@ -256,42 +403,80 @@ export default async function HomePage() {
       <section className="container-bd py-10" aria-labelledby="from-shops">
         <div className="mb-5 flex items-end justify-between">
           <div>
-            <h2 id="from-shops" className="section-title">From business shops</h2>
-            <p className="text-sm text-ink-500">Catalogue picks from verified stores with delivery countrywide.</p>
+            <h2 id="from-shops" className="section-title">
+              From business shops
+            </h2>
+            <p className="text-sm text-ink-500">
+              Catalogue picks from verified stores with delivery countrywide.
+            </p>
           </div>
-          <Link href="/shops" className="link-bd">All shops →</Link>
+          <Link href="/shops" className="link-bd">
+            All shops →
+          </Link>
         </div>
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-          {fromShops.map((l) => <ListingCard key={l.id} listing={l} />)}
+          {fromShops.map((l) => (
+            <ListingCard key={l.id} listing={l} />
+          ))}
         </div>
       </section>
 
       {/* I + J: sell + trust */}
       <section className="container-bd grid gap-3 py-10 lg:grid-cols-2">
-        <div className="rounded-card bg-brand-700 p-6 text-white">
-          <h2 className="text-2xl font-bold">Sell on Chap</h2>
-          <p className="mt-2 text-sm opacity-90">Register free, list in minutes from your phone, reach buyers countrywide. Upgrade only when paid growth pays off.</p>
+        <div className="rounded border-2 border-ink-900 bg-ink-900 p-6 text-white">
+          <p className="kicker !text-white/60">For sellers</p>
+          <h2 className="mt-1 text-2xl font-extrabold tracking-tight">
+            Sell on Chap
+          </h2>
+          <p className="mt-2 text-sm opacity-90">
+            Register free, list in minutes from your phone, reach buyers
+            countrywide. Upgrade only when paid growth pays off.
+          </p>
           <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm">
             <li>Create a free account</li>
             <li>Post photos, price & location</li>
             <li>Answer enquiries & deliver</li>
           </ol>
           <div className="mt-4 flex gap-2">
-            <Link href="/sell" className="btn-accent">Start selling</Link>
-            <Link href="/pricing" className="rounded-xl border border-white/40 px-5 py-2.5 text-sm font-semibold hover:bg-white/10">See plans</Link>
+            <Link href="/sell" className="btn-accent">
+              Start selling
+            </Link>
+            <Link
+              href="/pricing"
+              className="rounded border border-white/40 px-5 py-2.5 text-sm font-bold hover:bg-white/10"
+            >
+              See plans
+            </Link>
           </div>
         </div>
         <div className="card p-6">
-          <h2 className="text-2xl font-bold">Trust & safety</h2>
+          <p className="kicker">Safety</p>
+          <h2 className="mt-1 text-2xl font-extrabold tracking-tight">
+            Trust & safety
+          </h2>
           <ul className="mt-2 space-y-2 text-sm text-ink-700">
-            <li>· Every listing can be reported; moderators review with reasons recorded.</li>
-            <li>· Verification badges appear only after checks are completed.</li>
-            <li>· Meet in public, inspect before paying, never share your M-Pesa PIN.</li>
-            <li>· Jobs never charge application fees — report anyone who asks.</li>
+            <li>
+              · Every listing can be reported; moderators review with reasons
+              recorded.
+            </li>
+            <li>
+              · Verification badges appear only after checks are completed.
+            </li>
+            <li>
+              · Meet in public, inspect before paying, never share your M-Pesa
+              PIN.
+            </li>
+            <li>
+              · Jobs never charge application fees — report anyone who asks.
+            </li>
           </ul>
           <div className="mt-4 flex gap-2">
-            <Link href="/safety" className="btn-secondary">Buyer safety</Link>
-            <Link href="/prohibited" className="btn-secondary">Prohibited items</Link>
+            <Link href="/safety" className="btn-secondary">
+              Buyer safety
+            </Link>
+            <Link href="/prohibited" className="btn-secondary">
+              Prohibited items
+            </Link>
           </div>
         </div>
       </section>

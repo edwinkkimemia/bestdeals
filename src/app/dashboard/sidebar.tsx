@@ -24,7 +24,11 @@ import { cn } from "@/lib/utils";
 const NAV = [
   { href: "/dashboard", label: "Overview", Icon: LayoutDashboard, exact: true },
   { href: "/dashboard/notifications", label: "Notifications", Icon: Bell },
-  { href: "/dashboard/saved-searches", label: "Saved searches", Icon: Bookmark },
+  {
+    href: "/dashboard/saved-searches",
+    label: "Saved searches",
+    Icon: Bookmark,
+  },
   { href: "/dashboard/listings", label: "My listings", Icon: Package },
   { href: "/dashboard/messages", label: "Messages", Icon: MessageCircle },
   { href: "/dashboard/analytics", label: "Analytics", Icon: BarChart3 },
@@ -37,7 +41,13 @@ const NAV = [
   { href: "/dashboard/settings", label: "Settings", Icon: Settings },
 ];
 
-export function DashboardSidebar({ unread, notifUnread = 0 }: { unread: number; notifUnread?: number }) {
+export function DashboardSidebar({
+  unread,
+  notifUnread = 0,
+}: {
+  unread: number;
+  notifUnread?: number;
+}) {
   const path = usePathname();
   const router = useRouter();
   const isActive = (href: string, exact?: boolean) =>
@@ -45,7 +55,10 @@ export function DashboardSidebar({ unread, notifUnread = 0 }: { unread: number; 
 
   const signOut = async () => {
     try {
-      await fetch("/api/auth/signout", { method: "POST", headers: { "Content-Type": "application/json" } });
+      await fetch("/api/auth/signout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
     } catch {}
     router.push("/");
     router.refresh();
@@ -62,8 +75,10 @@ export function DashboardSidebar({ unread, notifUnread = 0 }: { unread: number; 
               href={href}
               aria-current={isActive(href, exact) ? "page" : undefined}
               className={cn(
-                "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium",
-                isActive(href, exact) ? "bg-brand-50 font-bold text-brand-700" : "text-ink-700 hover:bg-sand-100"
+                "flex items-center gap-2.5 rounded px-3 py-2 text-sm font-medium",
+                isActive(href, exact)
+                  ? "bg-brand-50 font-bold text-brand-700"
+                  : "text-ink-700 hover:bg-neutral-200",
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
@@ -85,14 +100,20 @@ export function DashboardSidebar({ unread, notifUnread = 0 }: { unread: number; 
           <Link href="/sell" className="btn-primary w-full !py-2 text-sm">
             <Plus className="h-4 w-4" /> Sell an item
           </Link>
-          <button onClick={signOut} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm font-semibold text-red-700 hover:bg-red-50">
+          <button
+            onClick={signOut}
+            className="flex w-full items-center gap-2.5 rounded px-3 py-2 text-left text-sm font-semibold text-red-700 hover:bg-red-50"
+          >
             <LogOut className="h-4 w-4" /> Sign out
           </button>
         </div>
       </div>
 
       {/* Mobile: slim icon-only sidebar rail */}
-      <nav aria-label="Dashboard sections" className="sticky top-[62px] flex max-h-[calc(100dvh-80px)] flex-col items-center gap-1 self-start overflow-y-auto py-4 [-ms-overflow-style:none] [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden">
+      <nav
+        aria-label="Dashboard sections"
+        className="sticky top-[62px] flex max-h-[calc(100dvh-80px)] flex-col items-center gap-1 self-start overflow-y-auto py-4 [-ms-overflow-style:none] [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden"
+      >
         {NAV.map(({ href, label, Icon, exact }) => (
           <Link
             key={href}
@@ -101,8 +122,10 @@ export function DashboardSidebar({ unread, notifUnread = 0 }: { unread: number; 
             aria-label={label}
             aria-current={isActive(href, exact) ? "page" : undefined}
             className={cn(
-              "relative flex h-10 w-10 items-center justify-center rounded-xl",
-              isActive(href, exact) ? "bg-brand-50 font-bold text-brand-700" : "text-ink-700 hover:bg-sand-100"
+              "relative flex h-10 w-10 items-center justify-center rounded",
+              isActive(href, exact)
+                ? "bg-brand-50 font-bold text-brand-700"
+                : "text-ink-700 hover:bg-neutral-200",
             )}
           >
             <Icon className="h-5 w-5" aria-hidden />
@@ -122,7 +145,7 @@ export function DashboardSidebar({ unread, notifUnread = 0 }: { unread: number; 
           onClick={signOut}
           title="Sign out"
           aria-label="Sign out"
-          className="mt-2 flex h-10 w-10 items-center justify-center rounded-xl text-red-700 hover:bg-red-50"
+          className="mt-2 flex h-10 w-10 items-center justify-center rounded text-red-700 hover:bg-red-50"
         >
           <LogOut className="h-5 w-5" aria-hidden />
         </button>

@@ -4,20 +4,32 @@ import { Badge } from "./ui/badge";
 function Stars({ n }: { n: number }) {
   return (
     <span className="text-amber-500" aria-label={`${n} out of 5 stars`}>
-      {"★".repeat(n)}{"☆".repeat(5 - n)}
+      {"★".repeat(n)}
+      {"☆".repeat(5 - n)}
     </span>
   );
 }
 
 /** Approved reviews only — callers must filter by status. Never renders pending. */
-export function ReviewsBlock({ reviews, title, embedded = false }: { reviews: ReviewRecord[]; title: string; embedded?: boolean }) {
+export function ReviewsBlock({
+  reviews,
+  title,
+  embedded = false,
+}: {
+  reviews: ReviewRecord[];
+  title: string;
+  embedded?: boolean;
+}) {
   const outer = embedded ? "" : "mt-10";
   const heading = embedded ? "text-base font-bold" : "section-title";
   if (reviews.length === 0) {
     return (
       <section className={outer}>
         <h2 className={heading}>{title}</h2>
-        <p className="mt-2 text-sm text-ink-500">No verified reviews yet — be the first buyer to leave one after your order.</p>
+        <p className="mt-2 text-sm text-ink-500">
+          No verified reviews yet — be the first buyer to leave one after your
+          order.
+        </p>
       </section>
     );
   }
@@ -26,7 +38,8 @@ export function ReviewsBlock({ reviews, title, embedded = false }: { reviews: Re
     <section className={outer}>
       <h2 className={heading}>{title}</h2>
       <p className="mt-1 text-sm text-ink-500">
-        <Stars n={Math.round(avg)} /> {avg.toFixed(1)} · {reviews.length} approved review{reviews.length === 1 ? "" : "s"}
+        <Stars n={Math.round(avg)} /> {avg.toFixed(1)} · {reviews.length}{" "}
+        approved review{reviews.length === 1 ? "" : "s"}
       </p>
       <ul className="mt-4 space-y-2">
         {reviews.slice(0, 5).map((r) => (
@@ -39,7 +52,9 @@ export function ReviewsBlock({ reviews, title, embedded = false }: { reviews: Re
               ) : (
                 <Badge>Community review</Badge>
               )}
-              <span className="ml-auto text-xs text-ink-400">{new Date(r.createdAt).toLocaleDateString("en-KE")}</span>
+              <span className="ml-auto text-xs text-ink-400">
+                {new Date(r.createdAt).toLocaleDateString("en-KE")}
+              </span>
             </div>
             {r.body && <p className="mt-1 text-sm text-ink-700">{r.body}</p>}
           </li>

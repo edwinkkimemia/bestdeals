@@ -10,14 +10,20 @@ export function Badge({
   className?: string;
 }) {
   const tones: Record<string, string> = {
-    neutral: "border-neutral-200 bg-sand-50 text-ink-700",
+    neutral: "border-neutral-200 bg-neutral-100 text-ink-700",
     green: "border-green-200 bg-green-50 text-green-800",
     amber: "border-amber-200 bg-amber-50 text-amber-800",
     red: "border-red-200 bg-red-50 text-red-700",
     blue: "border-blue-200 bg-blue-50 text-blue-800",
   };
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium", tones[tone], className)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded border px-2.5 py-0.5 text-xs font-medium",
+        tones[tone],
+        className,
+      )}
+    >
       {children}
     </span>
   );
@@ -49,7 +55,7 @@ export function TenureBadge({ since }: { since?: string | null }) {
   return (
     <span
       title={`On Chap since ${since}`}
-      className="inline-flex shrink-0 items-center rounded-full border border-neutral-200 bg-sand-50 px-2.5 py-0.5 text-xs font-medium text-ink-700"
+      className="inline-flex shrink-0 items-center rounded border border-neutral-200 bg-neutral-100 px-2.5 py-0.5 text-xs font-medium text-ink-700"
     >
       {t} on Chap
     </span>
@@ -61,7 +67,13 @@ export function TenureBadge({ since }: { since?: string | null }) {
  * shown alongside the verification badge on seller/shop identities.
  * Renders nothing on Free (or unknown) plans.
  */
-export function PlanCheckmark({ plan, size = "md" }: { plan?: string | null; size?: "sm" | "md" }) {
+export function PlanCheckmark({
+  plan,
+  size = "md",
+}: {
+  plan?: string | null;
+  size?: "sm" | "md";
+}) {
   const id = (plan ?? "").toLowerCase();
   if (id !== "silver" && id !== "gold") return null;
   const label = id === "gold" ? "Gold plan seller" : "Silver plan seller";

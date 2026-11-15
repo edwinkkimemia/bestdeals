@@ -8,12 +8,19 @@ export function referralLink(userId: string, base: string): string {
 
 /** Opaque, stable referral code derived from user id + secret (safe to share). */
 export function referralCode(userId: string): string {
-  const secret = process.env.AUTH_SECRET || "dev-only-secret-change-me-32chars!!";
-  return createHash("sha256").update(`${secret}:${userId}`).digest("hex").slice(0, 12);
+  const secret =
+    process.env.AUTH_SECRET || "dev-only-secret-change-me-32chars!!";
+  return createHash("sha256")
+    .update(`${secret}:${userId}`)
+    .digest("hex")
+    .slice(0, 12);
 }
 
 /** Resolve an opaque code (or legacy raw user id) back to the referrer. */
-export async function resolveReferrer(code: string, store: Store = getStore()): Promise<string | null> {
+export async function resolveReferrer(
+  code: string,
+  store: Store = getStore(),
+): Promise<string | null> {
   const c = code.trim();
   if (!c) return null;
   // Legacy: raw user id still works during rollout.
@@ -39,17 +46,24 @@ export const REFERRAL_REWARD = {
  * latest active listing (skipped with status `qualified` when they have none
  * live yet — the count still shows on their dashboard).
  */
-export async function qualifyReferralsFor(referredUserId: string, store: Store = getStore()): Promise<{
+export async function qualifyReferralsFor(
+  referredUserId: string,
+  store: Store = getStore(),
+): Promise<{
   qualified: boolean;
   rewardPromoId?: string;
 } | null> {
-  const ref = await store.findReferralByReferred(referredUserId).catch(() => null);
+  const ref = await store
+    .findReferralByReferred(referredUserId)
+    .catch(() => null);
   if (!ref || ref.status !== "pending") return null;
   const referred = await store.findUserById(referredUserId).catch(() => null);
   if (!referred || !referred.verified) return null;
 
   await store.setReferralStatus(ref.id, "qualified");
-  const mine = await store.listListingsByOwner(ref.referrerUserId).catch(() => []);
+  const mine = await store
+    .listListingsByOwner(ref.referrerUserId)
+    .catch(() => []);
   const target = mine.find((l) => l.status === "active");
   if (!target) return { qualified: true };
   try {

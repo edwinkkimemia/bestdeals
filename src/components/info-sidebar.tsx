@@ -42,11 +42,15 @@ export function InfoSidebar({ current }: { current: string }) {
   return (
     <>
       <details className="card px-4 py-3 lg:hidden">
-        <summary className="cursor-pointer text-sm font-bold">Browse guides & policies</summary>
+        <summary className="cursor-pointer text-sm font-bold">
+          Browse guides & policies
+        </summary>
         <div className="mt-3 space-y-4">
           {GROUPS.map((g) => (
             <div key={g.title}>
-              <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-ink-400">{g.title}</p>
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-ink-400">
+                {g.title}
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {g.links.map((l) => (
                   <Link
@@ -55,7 +59,8 @@ export function InfoSidebar({ current }: { current: string }) {
                     aria-current={current === l.href ? "page" : undefined}
                     className={cn(
                       "chip hover:border-brand-600",
-                      current === l.href && "!border-brand-600 !bg-brand-50 !text-brand-700 font-bold"
+                      current === l.href &&
+                        "!border-brand-600 !bg-brand-50 !text-brand-700 font-bold",
                     )}
                   >
                     {l.label}
@@ -70,7 +75,9 @@ export function InfoSidebar({ current }: { current: string }) {
         <div className="sticky top-36 space-y-5">
           {GROUPS.map((g) => (
             <nav key={g.title} aria-label={g.title}>
-              <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-ink-400">{g.title}</p>
+              <p className="mb-1.5 text-xs font-bold uppercase tracking-wide text-ink-400">
+                {g.title}
+              </p>
               <ul className="space-y-0.5 border-l border-neutral-200">
                 {g.links.map((l) => {
                   const active = current === l.href;
@@ -83,7 +90,7 @@ export function InfoSidebar({ current }: { current: string }) {
                           "-ml-px block border-l-2 py-1 pl-3 text-sm",
                           active
                             ? "border-brand-600 font-semibold text-brand-700"
-                            : "border-transparent text-ink-500 hover:border-brand-300 hover:text-brand-700"
+                            : "border-transparent text-ink-500 hover:border-brand-300 hover:text-brand-700",
                         )}
                       >
                         {l.label}

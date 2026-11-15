@@ -33,15 +33,43 @@ function VerifyForm() {
   return (
     <div className="container-bd max-w-md py-12">
       <h1 className="text-2xl font-bold">Verify your email</h1>
-      <p className="text-sm text-ink-500">One click confirms your address — it helps buyers trust your listings.</p>
+      <p className="text-sm text-ink-500">
+        One click confirms your address — it helps buyers trust your listings.
+      </p>
       <div className="card mt-5 space-y-3 p-5">
-        {!token && <p className="text-sm text-ink-500">No token in this link. Request a fresh one from your dashboard or profile.</p>}
-        {msg && <p role="status" className={`rounded-lg p-2 text-sm ${ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`}>{msg}</p>}
-        {!ok && token && (
-          <button className="btn-primary w-full" disabled={busy} onClick={confirm}>{busy ? "Verifying…" : "Confirm my email"}</button>
+        {!token && (
+          <p className="text-sm text-ink-500">
+            No token in this link. Request a fresh one from your dashboard or
+            profile.
+          </p>
         )}
-        {ok && <Link href="/dashboard" className="btn-primary w-full">Go to dashboard</Link>}
-        <p className="text-center text-sm"><Link href="/dashboard/profile" className="link-bd">Resend link from profile →</Link></p>
+        {msg && (
+          <p
+            role="status"
+            className={`rounded p-2 text-sm ${ok ? "bg-green-50 text-green-800" : "bg-red-50 text-red-700"}`}
+          >
+            {msg}
+          </p>
+        )}
+        {!ok && token && (
+          <button
+            className="btn-primary w-full"
+            disabled={busy}
+            onClick={confirm}
+          >
+            {busy ? "Verifying…" : "Confirm my email"}
+          </button>
+        )}
+        {ok && (
+          <Link href="/dashboard" className="btn-primary w-full">
+            Go to dashboard
+          </Link>
+        )}
+        <p className="text-center text-sm">
+          <Link href="/dashboard/profile" className="link-bd">
+            Resend link from profile →
+          </Link>
+        </p>
       </div>
     </div>
   );
@@ -49,7 +77,13 @@ function VerifyForm() {
 
 export default function EmailVerifyPage() {
   return (
-    <Suspense fallback={<div className="container-bd max-w-md py-12 text-sm text-ink-500">Loading…</div>}>
+    <Suspense
+      fallback={
+        <div className="container-bd max-w-md py-12 text-sm text-ink-500">
+          Loading…
+        </div>
+      }
+    >
       <VerifyForm />
     </Suspense>
   );

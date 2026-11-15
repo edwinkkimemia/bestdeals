@@ -19,8 +19,15 @@ function reconcileSecretOk(req: NextRequest): boolean {
  * confirms as successful. Safe to re-run; never activates an unpaid purchase.
  */
 export async function POST(req: NextRequest) {
-  const rl = rateLimit(clientKey(req, "mpesa:reconcile"), { limit: 5, windowMs: 60_000 });
-  if (!rl.ok) return NextResponse.json({ error: "Too many reconciliation attempts." }, { status: 429 });
+  const rl = rateLimit(clientKey(req, "mpesa:reconcile"), {
+    limit: 5,
+    windowMs: 60_000,
+  });
+  if (!rl.ok)
+    return NextResponse.json(
+      { error: "Too many reconciliation attempts." },
+      { status: 429 },
+    );
 
   const bySecret = reconcileSecretOk(req);
   const user = bySecret ? null : await currentUser().catch(() => null);
@@ -30,7 +37,10 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}));
   const limit = Number((body as { limit?: unknown }).limit ?? 20);
-  const result = await reconcilePendingMpesaLinks(getStore(), Number.isFinite(limit) ? limit : 20);
+  const result = await reconcilePendingMpesaLinks(
+    getStore(),
+    Number.isFinite(limit) ? limit : 20,
+  );
   await logAudit({
     actorId: user?.id,
     actorEmail: user?.email,

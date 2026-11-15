@@ -18,7 +18,8 @@ export function PaymentStatusRefresh() {
   useEffect(() => {
     let stopped = false;
     const poll = async () => {
-      if (stopped || (typeof document !== "undefined" && document.hidden)) return;
+      if (stopped || (typeof document !== "undefined" && document.hidden))
+        return;
       try {
         const [a, b] = await Promise.all([
           fetch("/api/account/plan", { cache: "no-store" }).catch(() => null),
@@ -34,7 +35,9 @@ export function PaymentStatusRefresh() {
         const prev = last.current;
         if (prev) {
           const sellerCleared = prev.seller && !sellerPending;
-          const shopCleared = prev.shops.some((slug) => !shopPending.includes(slug));
+          const shopCleared = prev.shops.some(
+            (slug) => !shopPending.includes(slug),
+          );
           if (sellerCleared || shopCleared) router.refresh();
         }
         last.current = { seller: sellerPending, shops: shopPending };

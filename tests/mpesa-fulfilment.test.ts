@@ -1,10 +1,16 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { freshDemoStore } from "../src/lib/store.ts";
-import { fulfilLinkedPurchase, reconcilePendingMpesaLinks } from "../src/lib/mpesa-fulfilment.ts";
+import {
+  fulfilLinkedPurchase,
+  reconcilePendingMpesaLinks,
+} from "../src/lib/mpesa-fulfilment.ts";
 import { pendingPlanKey, pendingSellerPlanKey } from "../src/lib/plans.ts";
 
-async function makeSeller(store: ReturnType<typeof freshDemoStore>, email: string) {
+async function makeSeller(
+  store: ReturnType<typeof freshDemoStore>,
+  email: string,
+) {
   return store.createUser({
     name: "M-Pesa Seller",
     email,
@@ -48,8 +54,13 @@ describe("M-Pesa callback fulfilment", () => {
     await store.setSetting("mpesa_link:ws_CO_BOOST", { promoId: promo.id });
 
     const ok = await fulfilLinkedPurchase(
-      { checkoutRequestId: "ws_CO_BOOST", orderRef: "ws_CO_BOOST", amount: 299, providerRef: "RC-BOOST" },
-      store
+      {
+        checkoutRequestId: "ws_CO_BOOST",
+        orderRef: "ws_CO_BOOST",
+        amount: 299,
+        providerRef: "RC-BOOST",
+      },
+      store,
     );
 
     assert.equal(ok, true);
@@ -79,17 +90,29 @@ describe("M-Pesa callback fulfilment", () => {
       invoiceId: invoice.id,
       at: new Date().toISOString(),
     });
-    await store.setSetting("mpesa_link:ws_CO_SELLER", { planUser: user.id, planId: "silver" });
+    await store.setSetting("mpesa_link:ws_CO_SELLER", {
+      planUser: user.id,
+      planId: "silver",
+    });
 
     const ok = await fulfilLinkedPurchase(
-      { checkoutRequestId: "ws_CO_SELLER", orderRef: "ws_CO_SELLER", amount: 499, providerRef: "RC-SELLER" },
-      store
+      {
+        checkoutRequestId: "ws_CO_SELLER",
+        orderRef: "ws_CO_SELLER",
+        amount: 499,
+        providerRef: "RC-SELLER",
+      },
+      store,
     );
 
     assert.equal(ok, true);
     assert.equal((await store.findUserById(user.id))?.planId, "silver");
     assert.equal(await store.getSetting(pendingSellerPlanKey(user.id)), null);
-    const invoices = (await store.getSetting("invoices")) as { id: string; status: string; providerRef?: string }[];
+    const invoices = (await store.getSetting("invoices")) as {
+      id: string;
+      status: string;
+      providerRef?: string;
+    }[];
     assert.equal(invoices[0]?.status, "paid");
     assert.equal(invoices[0]?.providerRef, "RC-SELLER");
   });
@@ -125,17 +148,28 @@ describe("M-Pesa callback fulfilment", () => {
       invoiceId: invoice.id,
       at: new Date().toISOString(),
     });
-    await store.setSetting("mpesa_link:ws_CO_SHOP", { planShop: shop.slug, planId: "gold" });
+    await store.setSetting("mpesa_link:ws_CO_SHOP", {
+      planShop: shop.slug,
+      planId: "gold",
+    });
 
     const ok = await fulfilLinkedPurchase(
-      { checkoutRequestId: "ws_CO_SHOP", orderRef: "ws_CO_SHOP", amount: 999, providerRef: "RC-SHOP" },
-      store
+      {
+        checkoutRequestId: "ws_CO_SHOP",
+        orderRef: "ws_CO_SHOP",
+        amount: 999,
+        providerRef: "RC-SHOP",
+      },
+      store,
     );
 
     assert.equal(ok, true);
     assert.equal((await store.getShopBySlug(shop.slug))?.planId, "gold");
     assert.equal(await store.getSetting(pendingPlanKey(shop.slug)), null);
-    const invoices = (await store.getSetting("invoices")) as { id: string; status: string }[];
+    const invoices = (await store.getSetting("invoices")) as {
+      id: string;
+      status: string;
+    }[];
     assert.equal(invoices[0]?.status, "paid");
   });
 
@@ -170,12 +204,20 @@ describe("M-Pesa callback fulfilment", () => {
     await store.setSetting("mpesa_link:ws_CO_MISMATCH", { promoId: promo.id });
 
     const ok = await fulfilLinkedPurchase(
-      { checkoutRequestId: "ws_CO_MISMATCH", orderRef: "ws_CO_MISMATCH", amount: 1, providerRef: "RC-MISMATCH" },
-      store
+      {
+        checkoutRequestId: "ws_CO_MISMATCH",
+        orderRef: "ws_CO_MISMATCH",
+        amount: 1,
+        providerRef: "RC-MISMATCH",
+      },
+      store,
     );
 
     assert.equal(ok, false);
-    assert.equal((await store.getPromotion(promo.id))?.status, "pending_payment");
+    assert.equal(
+      (await store.getPromotion(promo.id))?.status,
+      "pending_payment",
+    );
     assert.notEqual(await store.getSetting("mpesa_link:ws_CO_MISMATCH"), null);
   });
 
@@ -216,7 +258,9 @@ describe("M-Pesa callback fulfilment", () => {
       "MPESA_SHORTCODE",
       "MPESA_PASSKEY",
     ] as const;
-    const saved = Object.fromEntries(keys.map((k) => [k, process.env[k]])) as Record<string, string | undefined>;
+    const saved = Object.fromEntries(
+      keys.map((k) => [k, process.env[k]]),
+    ) as Record<string, string | undefined>;
     const originalFetch = globalThis.fetch;
     try {
       process.env.MPESA_ENV = "production";
@@ -226,11 +270,19 @@ describe("M-Pesa callback fulfilment", () => {
       process.env.MPESA_PASSKEY = "test-passkey";
       globalThis.fetch = (async (url: string | URL | Request) => {
         if (String(url).includes("/oauth/")) {
-          return new Response(JSON.stringify({ access_token: "test-token" }), { status: 200 });
+          return new Response(JSON.stringify({ access_token: "test-token" }), {
+            status: 200,
+          });
         }
-        return new Response(JSON.stringify({ ResultCode: "0", ResultDesc: "The service request is processed successfully." }), {
-          status: 200,
-        });
+        return new Response(
+          JSON.stringify({
+            ResultCode: "0",
+            ResultDesc: "The service request is processed successfully.",
+          }),
+          {
+            status: 200,
+          },
+        );
       }) as typeof fetch;
 
       const result = await reconcilePendingMpesaLinks(store);

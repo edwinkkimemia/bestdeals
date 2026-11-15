@@ -7,14 +7,24 @@
  * Legacy boosts (created before this ledger existed) are derived from their
  * Promotion row, so older receipts do not disappear.
  */
-import { getStore, type PromotionRecord, type ShopRecord, type Store, type UserRecord } from "./store";
+import {
+  getStore,
+  type PromotionRecord,
+  type ShopRecord,
+  type Store,
+  type UserRecord,
+} from "./store";
 import { SHOP_PLANS } from "@/data/catalog";
 
 export const INVOICES_SETTING = "invoices";
 
 /** Readable, collision-resistant id for a plan purchase. Promotions use `promo:<id>`. */
 export function newPlanInvoiceId(scope: string): string {
-  const prefix = scope.toLowerCase().replace(/[^a-z0-9]+/g, "").slice(0, 8) || "chap";
+  const prefix =
+    scope
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "")
+      .slice(0, 8) || "chap";
   return `INV-${prefix}-${Date.now().toString(36)}`;
 }
 
@@ -84,7 +94,12 @@ export type InvoiceView = {
   promos?: { id: string; kind: string; days: number; status: string };
   listing?: { id: string; title: string };
   shop?: { slug: string; name: string };
-  customer: { name: string; email: string; phone: string; businessName?: string };
+  customer: {
+    name: string;
+    email: string;
+    phone: string;
+    businessName?: string;
+  };
   ownerId?: string;
   userId?: string;
   lineItems: InvoiceLine[];
@@ -98,7 +113,10 @@ export type InvoiceView = {
 export const invoicePromoId = (promoId: string) => `promo:${promoId}`;
 
 export function invoicePromoNumber(promoId: string): string {
-  const compact = promoId.replace(/[^A-Za-z0-9]/g, "").slice(-8).toUpperCase();
+  const compact = promoId
+    .replace(/[^A-Za-z0-9]/g, "")
+    .slice(-8)
+    .toUpperCase();
   return `INV-B-${compact || "BOOST"}`;
 }
 
@@ -111,11 +129,19 @@ function normalizedStatus(raw: unknown): StoredInvoiceStatus {
   if (v === "paid") return "paid";
   if (v === "cancelled" || v === "canceled") return "cancelled";
   if (v === "void") return "void";
-  if (v === "pending" || v === "unpaid" || v === "pending_payment") return "pending";
+  if (v === "pending" || v === "unpaid" || v === "pending_payment")
+    return "pending";
   return "pending";
 }
 
-function normalizeStored(raw: Partial<StoredInvoice> & { id: string; amount: number; at: string; method: string }): StoredInvoice {
+function normalizeStored(
+  raw: Partial<StoredInvoice> & {
+    id: string;
+    amount: number;
+    at: string;
+    method: string;
+  },
+): StoredInvoice {
   return {
     ...raw,
     kind: raw.kind === "promotion" ? "promotion" : "plan",
@@ -128,32 +154,46 @@ function normalizeStored(raw: Partial<StoredInvoice> & { id: string; amount: num
   };
 }
 
-export async function readInvoiceLedger(store: Store = getStore()): Promise<StoredInvoice[]> {
-  const rows = ((await store.getSetting(INVOICES_SETTING).catch(() => null)) as
-    | (Partial<StoredInvoice> & { id: string; amount: number; at: string; method: string })[]
-    | null) ?? [];
+export async function readInvoiceLedger(
+  store: Store = getStore(),
+): Promise<StoredInvoice[]> {
+  const rows =
+    ((await store.getSetting(INVOICES_SETTING).catch(() => null)) as
+      | (Partial<StoredInvoice> & {
+          id: string;
+          amount: number;
+          at: string;
+          method: string;
+        })[]
+      | null) ?? [];
   return Array.isArray(rows)
     ? rows
-        .filter((row) => row && typeof row === "object" && typeof row.id === "string")
+        .filter(
+          (row) => row && typeof row === "object" && typeof row.id === "string",
+        )
         .map((row) => normalizeStored(row))
     : [];
 }
 
-export async function writeInvoiceLedger(items: StoredInvoice[], store: Store = getStore()): Promise<void> {
+export async function writeInvoiceLedger(
+  items: StoredInvoice[],
+  store: Store = getStore(),
+): Promise<void> {
   // Keep the newest 500 billing documents. The list is newest-first.
-  await store
-    .setSetting(INVOICES_SETTING, items.slice(0, 500))
-    .catch(() => {});
+  await store.setSetting(INVOICES_SETTING, items.slice(0, 500)).catch(() => {});
 }
 
 /** Upsert by id, preserving email timestamps when a payment status changes. */
-export async function saveInvoiceRecord(record: StoredInvoice, store: Store = getStore()): Promise<StoredInvoice> {
+export async function saveInvoiceRecord(
+  record: StoredInvoice,
+  store: Store = getStore(),
+): Promise<StoredInvoice> {
   const ledger = await readInvoiceLedger(store);
   const existing = ledger.find((row) => row.id === record.id);
   // Do not blank persisted billing details when a later activation call only
   // knows the promotion/plan status.
   const definedRecord = Object.fromEntries(
-    Object.entries(record).filter(([, value]) => value !== undefined)
+    Object.entries(record).filter(([, value]) => value !== undefined),
   ) as StoredInvoice;
   const merged: StoredInvoice = {
     ...existing,
@@ -161,27 +201,33 @@ export async function saveInvoiceRecord(record: StoredInvoice, store: Store = ge
     emailedAt: record.emailedAt ?? existing?.emailedAt,
     paidEmailedAt: record.paidEmailedAt ?? existing?.paidEmailedAt,
   };
-  await writeInvoiceLedger([merged, ...ledger.filter((row) => row.id !== record.id)], store);
+  await writeInvoiceLedger(
+    [merged, ...ledger.filter((row) => row.id !== record.id)],
+    store,
+  );
   return merged;
 }
 
 export async function updateInvoiceRecord(
   id: string,
   patch: Partial<StoredInvoice>,
-  store: Store = getStore()
+  store: Store = getStore(),
 ): Promise<StoredInvoice | null> {
   const ledger = await readInvoiceLedger(store);
   const existing = ledger.find((row) => row.id === id);
   if (!existing) return null;
   const next: StoredInvoice = { ...existing, ...patch, id: existing.id };
-  await writeInvoiceLedger([next, ...ledger.filter((row) => row.id !== id)], store);
+  await writeInvoiceLedger(
+    [next, ...ledger.filter((row) => row.id !== id)],
+    store,
+  );
   return next;
 }
 
 export async function markInvoicePaid(
   id: string,
   providerRef?: string,
-  store: Store = getStore()
+  store: Store = getStore(),
 ): Promise<StoredInvoice | null> {
   return updateInvoiceRecord(
     id,
@@ -190,14 +236,14 @@ export async function markInvoicePaid(
       paidAt: new Date().toISOString(),
       ...(providerRef ? { providerRef } : {}),
     },
-    store
+    store,
   );
 }
 
 export async function markInvoiceEmailSent(
   id: string,
   kind: "created" | "paid",
-  store: Store = getStore()
+  store: Store = getStore(),
 ): Promise<void> {
   const ledger = await readInvoiceLedger(store);
   const idx = ledger.findIndex((row) => row.id === id);
@@ -209,7 +255,10 @@ export async function markInvoiceEmailSent(
   };
   // A paid receipt also counts as delivery of the invoice.
   if (kind === "paid" && !next.emailedAt) next.emailedAt = at;
-  await writeInvoiceLedger([next, ...ledger.filter((_, i) => i !== idx)], store);
+  await writeInvoiceLedger(
+    [next, ...ledger.filter((_, i) => i !== idx)],
+    store,
+  );
 }
 
 export type PromotionInvoiceInput = {
@@ -226,7 +275,7 @@ export type PromotionInvoiceInput = {
 /** Create/update the ledger row for a boost purchase. */
 export async function recordPromotionInvoice(
   input: PromotionInvoiceInput,
-  store: Store = getStore()
+  store: Store = getStore(),
 ): Promise<StoredInvoice> {
   const { promo } = input;
   const status: StoredInvoiceStatus =
@@ -263,7 +312,7 @@ export async function recordPromotionInvoice(
 export async function activatePromotionInvoice(
   promo: PromotionRecord,
   providerRef?: string,
-  store: Store = getStore()
+  store: Store = getStore(),
 ): Promise<StoredInvoice> {
   return recordPromotionInvoice(
     {
@@ -272,11 +321,13 @@ export async function activatePromotionInvoice(
       status: "paid",
       providerRef,
     },
-    store
+    store,
   );
 }
 
-function storePromoStatusToInvoice(promo: PromotionRecord): StoredInvoiceStatus {
+function storePromoStatusToInvoice(
+  promo: PromotionRecord,
+): StoredInvoiceStatus {
   return promo.status === "active" || promo.status === "expired"
     ? "paid"
     : promo.status === "cancelled"
@@ -284,10 +335,15 @@ function storePromoStatusToInvoice(promo: PromotionRecord): StoredInvoiceStatus 
       : "pending";
 }
 
-function displayStatus(kind: InvoiceKind, stored: StoredInvoiceStatus, promo?: PromotionRecord | null): InvoiceStatus {
+function displayStatus(
+  kind: InvoiceKind,
+  stored: StoredInvoiceStatus,
+  promo?: PromotionRecord | null,
+): InvoiceStatus {
   if (kind === "promotion") {
     if (stored === "paid") return "paid";
-    if (promo?.status === "active" || promo?.status === "expired") return "paid";
+    if (promo?.status === "active" || promo?.status === "expired")
+      return "paid";
     if (stored === "cancelled" || promo?.status === "cancelled") return "void";
     return "pending";
   }
@@ -297,7 +353,10 @@ function displayStatus(kind: InvoiceKind, stored: StoredInvoiceStatus, promo?: P
 }
 
 function planName(planId?: string): string {
-  return SHOP_PLANS.find((p) => p.id === planId)?.name ?? (planId ? planId[0].toUpperCase() + planId.slice(1) : "Seller");
+  return (
+    SHOP_PLANS.find((p) => p.id === planId)?.name ??
+    (planId ? planId[0].toUpperCase() + planId.slice(1) : "Seller")
+  );
 }
 
 function methodLabel(method: string): string {
@@ -313,7 +372,11 @@ function formatDate(iso?: string): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (Number.isNaN(+d)) return "";
-  return d.toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-KE", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export function invoiceDateLabel(iso?: string): string {
@@ -325,25 +388,36 @@ async function ownerFor(
   shop: ShopRecord | null,
   promo: PromotionRecord | null,
   listingOwnerId: string | undefined,
-  store: Store
+  store: Store,
 ): Promise<UserRecord | null> {
-  const id = stored.ownerId || stored.userId || shop?.ownerId || promo?.ownerId || listingOwnerId;
+  const id =
+    stored.ownerId ||
+    stored.userId ||
+    shop?.ownerId ||
+    promo?.ownerId ||
+    listingOwnerId;
   return id ? store.findUserById(id).catch(() => null) : null;
 }
 
 async function hydrateInvoice(
   stored: StoredInvoice,
   promosById: Map<string, PromotionRecord> = new Map(),
-  store: Store = getStore()
+  store: Store = getStore(),
 ): Promise<InvoiceView> {
   const kind: InvoiceKind = stored.kind === "promotion" ? "promotion" : "plan";
   const promo =
     (stored.promoId && promosById.get(stored.promoId)) ||
-    (stored.promoId ? await store.getPromotion(stored.promoId).catch(() => null) : null);
+    (stored.promoId
+      ? await store.getPromotion(stored.promoId).catch(() => null)
+      : null);
   const listingId = stored.listingId || promo?.listingId;
-  const listing = listingId ? await store.getListing(listingId).catch(() => null) : null;
+  const listing = listingId
+    ? await store.getListing(listingId).catch(() => null)
+    : null;
   const shopSlug = stored.shopSlug || listing?.shopSlug;
-  const shop = shopSlug ? await store.getShopBySlug(shopSlug).catch(() => null) : null;
+  const shop = shopSlug
+    ? await store.getShopBySlug(shopSlug).catch(() => null)
+    : null;
   const owner = await ownerFor(stored, shop, promo, listing?.ownerId, store);
   const status = displayStatus(kind, stored.status, promo);
   // Display document numbers in upper case (internal ids remain untouched).
@@ -376,21 +450,39 @@ async function hydrateInvoice(
     number,
     kind,
     status,
-    statusLabel: status === "paid" ? "Paid" : status === "void" ? "Void" : "Unpaid",
+    statusLabel:
+      status === "paid" ? "Paid" : status === "void" ? "Void" : "Unpaid",
     amount: stored.amount,
     currency: "KES",
     issuedAt: stored.at,
     dueAt: stored.dueAt || (status === "pending" ? stored.at : undefined),
-    paidAt: stored.paidAt || (status === "paid" ? promo?.startsAt || stored.at : undefined),
+    paidAt:
+      stored.paidAt ||
+      (status === "paid" ? promo?.startsAt || stored.at : undefined),
     renewsAt: stored.renewsAt,
     method: stored.method,
     methodLabel: methodLabel(stored.method),
     reference: stored.providerRef,
     description,
     planId: plan,
-    promos: promo ? { id: promo.id, kind: promo.kind, days: promo.days, status: promo.status } : undefined,
-    listing: listing ? { id: listing.id, title: listing.title } : listingTitle ? { id: listingId || "", title: listingTitle } : undefined,
-    shop: shop ? { slug: shop.slug, name: shop.name } : shopSlug ? { slug: shopSlug, name: shopName || shopSlug } : undefined,
+    promos: promo
+      ? {
+          id: promo.id,
+          kind: promo.kind,
+          days: promo.days,
+          status: promo.status,
+        }
+      : undefined,
+    listing: listing
+      ? { id: listing.id, title: listing.title }
+      : listingTitle
+        ? { id: listingId || "", title: listingTitle }
+        : undefined,
+    shop: shop
+      ? { slug: shop.slug, name: shop.name }
+      : shopSlug
+        ? { slug: shopSlug, name: shopName || shopSlug }
+        : undefined,
     customer: {
       name: displayName,
       email: stored.customerEmail || owner?.email || "",
@@ -417,7 +509,7 @@ async function hydrateInvoice(
 
 function syntheticPromotionInvoice(
   promo: PromotionRecord,
-  ownerId?: string
+  ownerId?: string,
 ): StoredInvoice {
   return normalizeStored({
     id: invoicePromoId(promo.id),
@@ -431,13 +523,18 @@ function syntheticPromotionInvoice(
     dueAt: promo.createdAt || promo.startsAt,
     method: "mpesa",
     status: storePromoStatusToInvoice(promo),
-    ...(promo.status === "active" || promo.status === "expired" ? { paidAt: promo.startsAt } : {}),
+    ...(promo.status === "active" || promo.status === "expired"
+      ? { paidAt: promo.startsAt }
+      : {}),
     description: `${promo.kind === "featured" ? "Featured" : promo.kind === "sponsored" ? "Sponsored" : "Listing"} boost - ${promo.days} days`,
   });
 }
 
 /** Build the owner-facing receipt list, including legacy promotions. */
-export async function listInvoicesForOwner(userId: string, store: Store = getStore()): Promise<InvoiceView[]> {
+export async function listInvoicesForOwner(
+  userId: string,
+  store: Store = getStore(),
+): Promise<InvoiceView[]> {
   const [ledger, ownedShops, promos] = await Promise.all([
     readInvoiceLedger(store),
     store.listShopsByOwner(userId).catch(() => []),
@@ -445,7 +542,11 @@ export async function listInvoicesForOwner(userId: string, store: Store = getSto
   ]);
   const slugs = new Set(ownedShops.map((s) => s.slug));
   const promoMap = new Map(promos.map((p) => [p.id, p]));
-  const ledgerPromoIds = new Set(ledger.filter((row) => row.kind === "promotion" && row.promoId).map((row) => row.promoId!));
+  const ledgerPromoIds = new Set(
+    ledger
+      .filter((row) => row.kind === "promotion" && row.promoId)
+      .map((row) => row.promoId!),
+  );
   const synthetic = promos
     .filter((promo) => !ledgerPromoIds.has(promo.id))
     .map((promo) => syntheticPromotionInvoice(promo, userId));
@@ -454,34 +555,49 @@ export async function listInvoicesForOwner(userId: string, store: Store = getSto
       row.ownerId === userId ||
       row.userId === userId ||
       (row.shopSlug ? slugs.has(row.shopSlug) : false) ||
-      (row.kind === "promotion" && row.promoId ? promoMap.has(row.promoId) : false)
+      (row.kind === "promotion" && row.promoId
+        ? promoMap.has(row.promoId)
+        : false),
   );
   const rows = [...visible, ...synthetic].sort(
-    (a, b) => +new Date(b.at) - +new Date(a.at) || a.id.localeCompare(b.id)
+    (a, b) => +new Date(b.at) - +new Date(a.at) || a.id.localeCompare(b.id),
   );
-  const views = await Promise.all(rows.slice(0, 300).map((row) => hydrateInvoice(row, promoMap, store)));
+  const views = await Promise.all(
+    rows.slice(0, 300).map((row) => hydrateInvoice(row, promoMap, store)),
+  );
   return views.sort((a, b) => +new Date(b.issuedAt) - +new Date(a.issuedAt));
 }
 
 /** Admin export/history. Includes plan invoices and every promotion (legacy + ledger). */
-export async function listInvoicesForAdmin(store: Store = getStore()): Promise<InvoiceView[]> {
+export async function listInvoicesForAdmin(
+  store: Store = getStore(),
+): Promise<InvoiceView[]> {
   const [ledger, promos] = await Promise.all([
     readInvoiceLedger(store),
     store.listPromotions().catch(() => []),
   ]);
   const promoMap = new Map(promos.map((p) => [p.id, p]));
-  const ledgerPromoIds = new Set(ledger.filter((row) => row.kind === "promotion" && row.promoId).map((row) => row.promoId!));
+  const ledgerPromoIds = new Set(
+    ledger
+      .filter((row) => row.kind === "promotion" && row.promoId)
+      .map((row) => row.promoId!),
+  );
   const synthetic = promos
     .filter((promo) => !ledgerPromoIds.has(promo.id))
     .map((promo) => syntheticPromotionInvoice(promo));
   const rows = [...ledger, ...synthetic].sort(
-    (a, b) => +new Date(b.at) - +new Date(a.at) || a.id.localeCompare(b.id)
+    (a, b) => +new Date(b.at) - +new Date(a.at) || a.id.localeCompare(b.id),
   );
-  return Promise.all(rows.slice(0, 500).map((row) => hydrateInvoice(row, promoMap, store)));
+  return Promise.all(
+    rows.slice(0, 500).map((row) => hydrateInvoice(row, promoMap, store)),
+  );
 }
 
 /** Resolve one invoice without an auth check (internal callers: PDF/email/activation). */
-export async function getInvoiceById(id: string, store: Store = getStore()): Promise<InvoiceView | null> {
+export async function getInvoiceById(
+  id: string,
+  store: Store = getStore(),
+): Promise<InvoiceView | null> {
   let decoded = String(id || "");
   try {
     decoded = decodeURIComponent(decoded);
@@ -491,14 +607,20 @@ export async function getInvoiceById(id: string, store: Store = getStore()): Pro
   const ledger = await readInvoiceLedger(store);
   let stored =
     ledger.find((row) => row.id === decoded) ||
-    ledger.find((row) => row.promoId && invoicePromoId(row.promoId) === decoded) ||
+    ledger.find(
+      (row) => row.promoId && invoicePromoId(row.promoId) === decoded,
+    ) ||
     ledger.find((row) => row.promoId && row.promoId === decoded) ||
     null;
   if (!stored) {
-    const promoId = decoded.startsWith("promo:") ? decoded.slice("promo:".length) : decoded;
+    const promoId = decoded.startsWith("promo:")
+      ? decoded.slice("promo:".length)
+      : decoded;
     const promo = await store.getPromotion(promoId).catch(() => null);
     if (promo) {
-      stored = ledger.find((row) => row.promoId === promoId) || syntheticPromotionInvoice(promo);
+      stored =
+        ledger.find((row) => row.promoId === promoId) ||
+        syntheticPromotionInvoice(promo);
     }
   }
   if (!stored) return null;
@@ -508,22 +630,27 @@ export async function getInvoiceById(id: string, store: Store = getStore()): Pro
 export async function getInvoiceForUser(
   id: string,
   user: { id: string; role: string },
-  store: Store = getStore()
+  store: Store = getStore(),
 ): Promise<InvoiceView | null> {
   const invoice = await getInvoiceById(id, store);
   if (!invoice) return null;
   if (user.role === "ADMIN") return invoice;
   if (invoice.ownerId === user.id || invoice.userId === user.id) return invoice;
   const owned = await store.listShopsByOwner(user.id).catch(() => []);
-  if (invoice.shopSlug && owned.some((shop) => shop.slug === invoice.shopSlug)) return invoice;
+  if (invoice.shopSlug && owned.some((shop) => shop.slug === invoice.shopSlug))
+    return invoice;
   return null;
 }
 
 /** Locate the ledger row for a promotion (used when a payment confirms). */
 export async function getPromotionInvoiceRecord(
   promoId: string,
-  store: Store = getStore()
+  store: Store = getStore(),
 ): Promise<StoredInvoice | null> {
   const ledger = await readInvoiceLedger(store);
-  return ledger.find((row) => row.promoId === promoId || row.id === invoicePromoId(promoId)) ?? null;
+  return (
+    ledger.find(
+      (row) => row.promoId === promoId || row.id === invoicePromoId(promoId),
+    ) ?? null
+  );
 }

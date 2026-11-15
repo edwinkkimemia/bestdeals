@@ -3,6 +3,15 @@ import { currentUser } from "@/lib/auth";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 
+/** Compare 07… and +254… as the same Kenyan number; keep one canonical form. */
+function normalizeKenyanPhone(value: string): string {
+  const trimmed = value.trim();
+  const digits = trimmed.replace(/\D/g, "");
+  if (trimmed.startsWith("+254") && digits.length === 12)
+    return `0${digits.slice(3)}`;
+  return trimmed;
+}
+
 /**
  * Verification requests: national ID for individuals; business permit PLUS
  * owner ID for businesses (two documents, two queue records).
@@ -11,32 +20,57 @@ import { rateLimit, clientKey } from "@/lib/rate-limit";
  */
 export async function POST(req: NextRequest) {
   const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
-  const rl = rateLimit(clientKey(req, `verify:${user.id}`), { limit: 5, windowMs: 3600_000 });
-  if (!rl.ok) return NextResponse.json({ error: "Too many requests. Try again later." }, { status: 429 });
+  if (!user)
+    return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  const rl = rateLimit(clientKey(req, `verify:${user.id}`), {
+    limit: 5,
+    windowMs: 3600_000,
+  });
+  if (!rl.ok)
+    return NextResponse.json(
+      { error: "Too many requests. Try again later." },
+      { status: 429 },
+    );
 
   const body = await req.json().catch(() => ({}));
   const { kind, docPath, fileName, phone, docPath2, fileName2 } = body as {
-    kind?: string; docPath?: string; fileName?: string; phone?: string;
-    docPath2?: string; fileName2?: string;
+    kind?: string;
+    docPath?: string;
+    fileName?: string;
+    phone?: string;
+    docPath2?: string;
+    fileName2?: string;
   };
   if (!["id", "business"].includes(kind ?? "")) {
-    return NextResponse.json({ error: "Choose verification type: ID or business." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Choose verification type: ID or business." },
+      { status: 400 },
+    );
   }
   const store = getStore();
   const fresh = await store.findUserById(user.id).catch(() => null);
   const accountPhone = fresh?.phone ?? user.phone;
-  if (!phone || !/^(\+254|0)[17]\d{8}$/.test(phone)) {
-    return NextResponse.json({ error: "Confirm a valid Kenyan phone number." }, { status: 400 });
-  }
-  if (phone !== accountPhone) {
+  const confirmedPhone = normalizeKenyanPhone(phone ?? "");
+  if (!/^(\+254|0)[17]\d{8}$/.test(confirmedPhone)) {
     return NextResponse.json(
-      { error: "That number doesn't match your account phone. Update it in Profile first, so listings and WhatsApp use one verified number." },
-      { status: 400 }
+      { error: "Confirm a valid Kenyan phone number." },
+      { status: 400 },
+    );
+  }
+  if (confirmedPhone !== normalizeKenyanPhone(accountPhone)) {
+    return NextResponse.json(
+      {
+        error:
+          "That number doesn't match your account phone. Update it in Profile first, so listings and WhatsApp use one verified number.",
+      },
+      { status: 400 },
     );
   }
   if (!docPath || !docPath.startsWith("private:")) {
-    return NextResponse.json({ error: "Upload your document first (JPG/PNG/WebP, ≤5MB)." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Upload your document first (JPG/PNG/WebP, ≤5MB)." },
+      { status: 400 },
+    );
   }
   // Prove the file exists and was uploaded (not a forged private: string).
   const { privateBaseDir, isS3Configured } = await import("@/lib/storage");
@@ -49,26 +83,42 @@ export async function POST(req: NextRequest) {
     if (isDbDocRef(p)) {
       const key = dbDocKey(p);
       const staged = key
-        ? ((await store.getSetting(key).catch(() => null)) as { by?: string; base64?: string } | null)
+        ? ((await store.getSetting(key).catch(() => null)) as {
+            by?: string;
+            base64?: string;
+          } | null)
         : null;
       if (!staged?.base64 || staged.by !== user.id) {
-        return NextResponse.json({ error: "Document upload not found. Upload again." }, { status: 400 });
+        return NextResponse.json(
+          { error: "Document upload not found. Upload again." },
+          { status: 400 },
+        );
       }
       continue;
     }
     const rel = p.replace(/^private:/, "");
-    if (rel.includes("..")) return NextResponse.json({ error: "Invalid document path." }, { status: 400 });
+    if (rel.includes(".."))
+      return NextResponse.json(
+        { error: "Invalid document path." },
+        { status: 400 },
+      );
     if (!isS3Configured() && !existsSync(join(privateBaseDir(), rel))) {
-      return NextResponse.json({ error: "Document upload not found. Upload again." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Document upload not found. Upload again." },
+        { status: 400 },
+      );
     }
   }
   if (kind === "business" && (!docPath2 || !docPath2.startsWith("private:"))) {
-    return NextResponse.json({ error: "Businesses need both: the permit AND the owner ID." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Businesses need both: the permit AND the owner ID." },
+      { status: 400 },
+    );
   }
   const rec = await store.createVerification({
     userId: user.id,
     kind: kind!,
-    phone,
+    phone: confirmedPhone,
     docPath,
     fileName: (fileName ?? "document").slice(0, 120),
   });
@@ -77,7 +127,7 @@ export async function POST(req: NextRequest) {
     await store.createVerification({
       userId: user.id,
       kind: "id",
-      phone,
+      phone: confirmedPhone,
       docPath: docPath2,
       fileName: (fileName2 ?? "owner-id").slice(0, 120),
     });
@@ -97,7 +147,8 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const store = getStore();
   const all = await store.listVerifications();
   const fresh = await store.findUserById(user.id).catch(() => null);
@@ -116,15 +167,21 @@ export async function GET() {
 /** Withdraw a pending verification (author only). */
 export async function DELETE(req: NextRequest) {
   const user = await currentUser().catch(() => null);
-  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const id = new URL(req.url).searchParams.get("id");
   if (!id) return NextResponse.json({ error: "Missing id." }, { status: 400 });
   const store = getStore();
   const all = await store.listVerifications().catch(() => []);
   const v = all.find((x) => x.id === id);
   if (!v) return NextResponse.json({ error: "Not found." }, { status: 404 });
-  if (v.userId !== user.id && user.role !== "ADMIN") return NextResponse.json({ error: "Not yours." }, { status: 403 });
-  if (v.status !== "pending") return NextResponse.json({ error: "Only pending requests can be withdrawn." }, { status: 409 });
+  if (v.userId !== user.id && user.role !== "ADMIN")
+    return NextResponse.json({ error: "Not yours." }, { status: 403 });
+  if (v.status !== "pending")
+    return NextResponse.json(
+      { error: "Only pending requests can be withdrawn." },
+      { status: 409 },
+    );
   await store.decideVerification(id, false, user.id).catch(() => {});
   return NextResponse.json({ ok: true });
 }

@@ -11,7 +11,8 @@ export function ViewCount({ listingId }: { listingId: string }) {
     fetch(`/api/analytics/track?listingId=${encodeURIComponent(listingId)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (live && d && typeof d.views === "number" && d.views > 0) setViews(d.views);
+        if (live && d && typeof d.views === "number" && d.views > 0)
+          setViews(d.views);
       })
       .catch(() => {});
     return () => {
@@ -20,8 +21,12 @@ export function ViewCount({ listingId }: { listingId: string }) {
   }, [listingId]);
   if (views === null) return null;
   return (
-    <p className="flex items-center gap-1 text-xs text-ink-400" aria-label={`${views} views`}>
-      <Eye className="h-3.5 w-3.5" /> {views.toLocaleString()} view{views === 1 ? "" : "s"}
+    <p
+      className="flex items-center gap-1 text-xs text-ink-400"
+      aria-label={`${views} views`}
+    >
+      <Eye className="h-3.5 w-3.5" /> {views.toLocaleString()} view
+      {views === 1 ? "" : "s"}
     </p>
   );
 }

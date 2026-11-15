@@ -5,7 +5,8 @@ import { jwtVerify } from "jose";
 /** Route guard: dashboards + admin require a *valid* signed session (chat included). */
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const needsAuth = pathname.startsWith("/dashboard") || pathname.startsWith("/admin");
+  const needsAuth =
+    pathname.startsWith("/dashboard") || pathname.startsWith("/admin");
   if (!needsAuth) return NextResponse.next();
   const token = req.cookies.get("bd_session")?.value;
   if (!token) {
@@ -15,7 +16,7 @@ export async function middleware(req: NextRequest) {
   }
   try {
     const secret = new TextEncoder().encode(
-      process.env.AUTH_SECRET || "dev-only-secret-change-me-32chars!!"
+      process.env.AUTH_SECRET || "dev-only-secret-change-me-32chars!!",
     );
     await jwtVerify(token, secret);
     return NextResponse.next();

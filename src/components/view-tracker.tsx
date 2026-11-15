@@ -26,7 +26,7 @@ export function ViewTracker({ listingId }: { listingId: string }) {
       fetch("/api/analytics/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ listingId }),
+        body: JSON.stringify({ listingId, platform: "web" }),
         keepalive: true,
       }).catch(() => {});
     };

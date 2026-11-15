@@ -26,24 +26,42 @@ export async function PlansSection({ status }: { status: string }) {
     store.countLiveListingsByOwner().catch(() => []),
   ]);
   const rows = auditPlanRows(users, shops, counts);
-  const items = (tab === "needs-upgrade" ? rows.filter((r) => r.needsUpgrade) : rows).sort(
-    (a, b) => b.liveCount - a.liveCount
-  );
+  const items = (
+    tab === "needs-upgrade" ? rows.filter((r) => r.needsUpgrade) : rows
+  ).sort((a, b) => b.liveCount - a.liveCount);
   const needCount = rows.filter((r) => r.needsUpgrade).length;
   return (
     <div>
-      <SectionHeading icon={CreditCard}>Plan audit ({items.length}{tab === "all" ? ` accounts · ${needCount} need upgrade` : " to fix"})</SectionHeading>
+      <SectionHeading icon={CreditCard}>
+        Plan audit ({items.length}
+        {tab === "all" ? ` accounts · ${needCount} need upgrade` : " to fix"})
+      </SectionHeading>
       <p className="mt-1 text-sm text-ink-500">
-        Live listings per account (rejected/sold/expired don&apos;t count): ≤5 fits Free, 6–30 needs Silver, 31+ needs Gold.
-        Assign upgrades only — accounts are never auto-downgraded. A seller has one plan: it lands on the first owned shop when there is one (storefront earns its checkmark), else the personal seller plan.
+        Live listings per account (rejected/sold/expired don&apos;t count): ≤5
+        fits Free, 6–30 needs Silver, 31+ needs Gold. Assign upgrades only —
+        accounts are never auto-downgraded. A seller has one plan: it lands on
+        the first owned shop when there is one (storefront earns its checkmark),
+        else the personal seller plan.
       </p>
       <SectionTabs base="/admin/plans" tabs={TABS} current={tab} />
       <AdminTable
-        columns={["Seller", "Live", "Effective", "Expected", "Status", "Lands on", "Actions"]}
-        empty={tab === "needs-upgrade" ? "Everyone fits their plan ✓" : "No accounts."}
+        columns={[
+          "Seller",
+          "Live",
+          "Effective",
+          "Expected",
+          "Status",
+          "Lands on",
+          "Actions",
+        ]}
+        empty={
+          tab === "needs-upgrade"
+            ? "Everyone fits their plan ✓"
+            : "No accounts."
+        }
       >
         {items.map((r) => (
-          <tr key={r.userId} className="transition hover:bg-sand-50">
+          <tr key={r.userId} className="transition hover:bg-neutral-100">
             <Td>
               <strong className="block">{r.name}</strong>
               <span className="block text-xs text-ink-400">{r.email}</span>
@@ -59,7 +77,9 @@ export async function PlansSection({ status }: { status: string }) {
               )}
             </Td>
             <Td className="whitespace-nowrap text-xs text-ink-500">
-              {r.target.kind === "shop" ? `shop: ${r.target.name}` : "personal plan"}
+              {r.target.kind === "shop"
+                ? `shop: ${r.target.name}`
+                : "personal plan"}
             </Td>
             <Td>
               {r.needsUpgrade ? (

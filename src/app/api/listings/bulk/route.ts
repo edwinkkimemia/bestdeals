@@ -9,9 +9,20 @@ import { resolveCounty, townsFor } from "@/lib/kenya";
 import { parseCSV } from "@/lib/csv";
 
 const MAX_ROWS = 200;
-const CONDITIONS = ["new", "like_new", "used_good", "used_fair", "refurbished"] as const;
+const CONDITIONS = [
+  "new",
+  "like_new",
+  "used_good",
+  "used_fair",
+  "refurbished",
+] as const;
 const TYPES = ["product", "classified", "service"] as const;
-const TX = ["buy_online", "contact_seller", "request_quote", "enquiry"] as const;
+const TX = [
+  "buy_online",
+  "contact_seller",
+  "request_quote",
+  "enquiry",
+] as const;
 const BANNED = ["counterfeit", "stolen", "pyramid", "quick loan"];
 
 /**
@@ -24,12 +35,22 @@ export async function POST(req: NextRequest) {
   const gate = await requireVerifiedSeller();
   if (!gate.ok) return gate.response;
   const user = gate.seller;
-  const rl = rateLimit(clientKey(req, `bulk:${user.id}`), { limit: 5, windowMs: 3600_000 });
-  if (!rl.ok) return NextResponse.json({ error: "Too many bulk uploads. Try again later." }, { status: 429 });
+  const rl = rateLimit(clientKey(req, `bulk:${user.id}`), {
+    limit: 5,
+    windowMs: 3600_000,
+  });
+  if (!rl.ok)
+    return NextResponse.json(
+      { error: "Too many bulk uploads. Try again later." },
+      { status: 429 },
+    );
 
   const plan = await getSellerPlan(user.id);
   if (plan.planId !== "gold") {
-    return NextResponse.json({ error: goldRequiredMessage("Bulk CSV upload"), code: "PLAN_GOLD" }, { status: 403 });
+    return NextResponse.json(
+      { error: goldRequiredMessage("Bulk CSV upload"), code: "PLAN_GOLD" },
+      { status: 403 },
+    );
   }
 
   const form = await req.formData().catch(() => null);
@@ -40,15 +61,36 @@ export async function POST(req: NextRequest) {
       : file instanceof Blob
         ? await file.text().catch(() => "")
         : "";
-  if (!text.trim()) return NextResponse.json({ error: "Attach a CSV file first." }, { status: 400 });
+  if (!text.trim())
+    return NextResponse.json(
+      { error: "Attach a CSV file first." },
+      { status: 400 },
+    );
 
   const rows = parseCSV(text);
-  if (rows.length < 2) return NextResponse.json({ error: "CSV needs a header row plus at least one listing row." }, { status: 400 });
+  if (rows.length < 2)
+    return NextResponse.json(
+      { error: "CSV needs a header row plus at least one listing row." },
+      { status: 400 },
+    );
   const header = rows[0].map((h) => h.trim().toLowerCase());
   const idx = (name: string) => header.indexOf(name);
-  for (const required of ["title", "description", "category", "price", "condition", "county", "town"]) {
+  for (const required of [
+    "title",
+    "description",
+    "category",
+    "price",
+    "condition",
+    "county",
+    "town",
+  ]) {
     if (idx(required) === -1) {
-      return NextResponse.json({ error: `Missing column: ${required}. Download the CSV template to see the format.` }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: `Missing column: ${required}. Download the CSV template to see the format.`,
+        },
+        { status: 400 },
+      );
     }
   }
   const data = rows.slice(1, MAX_ROWS + 1);
@@ -61,19 +103,31 @@ export async function POST(req: NextRequest) {
   for (let i = 0; i < data.length; i++) {
     const r = data[i];
     const lineNo = i + 2;
-    const cell = (name: string) => (idx(name) === -1 ? "" : (r[idx(name)] ?? "").trim());
+    const cell = (name: string) =>
+      idx(name) === -1 ? "" : (r[idx(name)] ?? "").trim();
     try {
       const categorySlug = cell("category");
       const category = categoryMap.get(categorySlug);
-      if (!category) throw new Error(`Unknown category "${categorySlug || "—"}".`);
+      if (!category)
+        throw new Error(`Unknown category "${categorySlug || "—"}".`);
       const subcategory = cell("subcategory");
-      if (subcategory && !category.subcategories.some((s) => s.toLowerCase() === subcategory.toLowerCase())) {
-        throw new Error(`Unknown subcategory "${subcategory}" for ${category.name}.`);
+      if (
+        subcategory &&
+        !category.subcategories.some(
+          (s) => s.toLowerCase() === subcategory.toLowerCase(),
+        )
+      ) {
+        throw new Error(
+          `Unknown subcategory "${subcategory}" for ${category.name}.`,
+        );
       }
       const county = resolveCounty(cell("county"));
-      if (county === "all") throw new Error(`Unknown county "${cell("county") || "—"}".`);
+      if (county === "all")
+        throw new Error(`Unknown county "${cell("county") || "—"}".`);
       const town = cell("town");
-      if (!townsFor(county).some((t) => t.toLowerCase() === town.toLowerCase())) {
+      if (
+        !townsFor(county).some((t) => t.toLowerCase() === town.toLowerCase())
+      ) {
         throw new Error(`"${town || "—"}" is not a listed town in ${county}.`);
       }
       const condition = cell("condition") || "new";
@@ -90,7 +144,8 @@ export async function POST(req: NextRequest) {
       }
       const price = Number(cell("price"));
       const stock = cell("stock") === "" ? 1 : Number(cell("stock"));
-      const compareAt = cell("compareat") === "" ? null : Number(cell("compareat"));
+      const compareAt =
+        cell("compareat") === "" ? null : Number(cell("compareat"));
       const parsed = listingSchemaFor(categories).safeParse({
         title: cell("title"),
         description: cell("description"),
@@ -102,16 +157,24 @@ export async function POST(req: NextRequest) {
         listingType,
         county,
         town,
-        negotiable: ["yes", "true", "1"].includes(cell("negotiable").toLowerCase()),
+        negotiable: ["yes", "true", "1"].includes(
+          cell("negotiable").toLowerCase(),
+        ),
         transactionMethod: txMethod,
         stock,
         images: [],
         attributes: {},
       });
-      if (!parsed.success) throw new Error(parsed.error.issues[0]?.message || "Invalid row.");
+      if (!parsed.success)
+        throw new Error(parsed.error.issues[0]?.message || "Invalid row.");
       const d = parsed.data;
-      if (d.compareAt && d.compareAt <= d.price) throw new Error("compareAt must be higher than price.");
-      if (BANNED.some((w) => `${d.title} ${d.description}`.toLowerCase().includes(w))) {
+      if (d.compareAt && d.compareAt <= d.price)
+        throw new Error("compareAt must be higher than price.");
+      if (
+        BANNED.some((w) =>
+          `${d.title} ${d.description}`.toLowerCase().includes(w),
+        )
+      ) {
         throw new Error("Flagged term — submit this row manually for review.");
       }
       const rec = await store.createListing({
@@ -136,24 +199,47 @@ export async function POST(req: NextRequest) {
       });
       created.push(rec.id);
     } catch (e) {
-      errors.push({ row: lineNo, error: e instanceof Error ? e.message : "Invalid row." });
+      errors.push({
+        row: lineNo,
+        error: e instanceof Error ? e.message : "Invalid row.",
+      });
     }
   }
   // Job record for progress polling (async-compatible: clients poll ?jobId=).
   const { uid } = await import("@/lib/utils");
   const jobId = uid("bulk");
-  await store.setSetting(`bulk:${jobId}`, { by: user.id, at: new Date().toISOString(), created: created.length, failed: errors.length, errors: errors.slice(0, 50) }).catch(() => {});
-  return NextResponse.json({ ok: true, jobId, created: created.length, failed: errors.length, ids: created, errors: errors.slice(0, 50) });
+  await store
+    .setSetting(`bulk:${jobId}`, {
+      by: user.id,
+      at: new Date().toISOString(),
+      created: created.length,
+      failed: errors.length,
+      errors: errors.slice(0, 50),
+    })
+    .catch(() => {});
+  return NextResponse.json({
+    ok: true,
+    jobId,
+    created: created.length,
+    failed: errors.length,
+    ids: created,
+    errors: errors.slice(0, 50),
+  });
 }
 
 /** Bulk job progress (poll after POST returns jobId). */
 export async function GET(req: NextRequest) {
   const { currentUser } = await import("@/lib/auth");
   const user = await currentUser().catch(() => null);
-  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const jobId = new URL(req.url).searchParams.get("jobId") || "";
-  if (!jobId) return NextResponse.json({ error: "jobId required." }, { status: 400 });
-  const job = await getStore().getSetting(`bulk:${jobId}`).catch(() => null);
-  if (!job) return NextResponse.json({ error: "Job not found." }, { status: 404 });
+  if (!jobId)
+    return NextResponse.json({ error: "jobId required." }, { status: 400 });
+  const job = await getStore()
+    .getSetting(`bulk:${jobId}`)
+    .catch(() => null);
+  if (!job)
+    return NextResponse.json({ error: "Job not found." }, { status: 404 });
   return NextResponse.json({ job });
 }

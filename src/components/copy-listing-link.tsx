@@ -7,7 +7,13 @@ import { useState } from "react";
  * the site origin at render time). For pending items the link previews for
  * the owner/admins and goes public automatically once approved.
  */
-export function CopyListingLink({ path, label = "Share" }: { path: string; label?: string }) {
+export function CopyListingLink({
+  path,
+  label = "Share",
+}: {
+  path: string;
+  label?: string;
+}) {
   const [copied, setCopied] = useState(false);
   return (
     <button

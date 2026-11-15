@@ -45,7 +45,9 @@ export async function getVapidKeys(storeOverride?: Store): Promise<VapidKeys> {
   if (cachedVapid) return cachedVapid;
 
   const store = storeOverride ?? getStore();
-  const saved = (await store.getSetting(VAPID_SETTING).catch(() => null)) as VapidKeys | null;
+  const saved = (await store
+    .getSetting(VAPID_SETTING)
+    .catch(() => null)) as VapidKeys | null;
   if (saved?.publicKey && saved.privateKey) {
     cachedVapid = saved;
     return saved;
@@ -70,17 +72,21 @@ export async function savePushSubscription(
   userId: string,
   subscription: PushSubscriptionInput,
   userAgent?: string | null,
-  storeOverride?: Store
+  storeOverride?: Store,
 ): Promise<void> {
   const store = storeOverride ?? getStore();
   const existing = await store.listSettings(SUB_PREFIX(userId)).catch(() => []);
   // Keep a handful of devices per account; the oldest registration drops out.
   if (existing.length >= 10) {
     const oldest = existing
-      .map((row) => ({ row, at: (row.value as StoredSubscription | null)?.createdAt ?? "" }))
+      .map((row) => ({
+        row,
+        at: (row.value as StoredSubscription | null)?.createdAt ?? "",
+      }))
       .sort((a, b) => a.at.localeCompare(b.at))
       .slice(0, existing.length - 9);
-    for (const { row } of oldest) await store.deleteSetting(row.key).catch(() => {});
+    for (const { row } of oldest)
+      await store.deleteSetting(row.key).catch(() => {});
   }
   await store.setSetting(subscriptionKey(userId, subscription.endpoint), {
     endpoint: subscription.endpoint,
@@ -91,10 +97,16 @@ export async function savePushSubscription(
   } satisfies StoredSubscription);
 }
 
-export async function removePushSubscription(userId: string, endpoint?: string, storeOverride?: Store): Promise<number> {
+export async function removePushSubscription(
+  userId: string,
+  endpoint?: string,
+  storeOverride?: Store,
+): Promise<number> {
   const store = storeOverride ?? getStore();
   if (endpoint) {
-    await store.deleteSetting(subscriptionKey(userId, endpoint)).catch(() => null);
+    await store
+      .deleteSetting(subscriptionKey(userId, endpoint))
+      .catch(() => null);
     return 1;
   }
   const rows = await store.listSettings(SUB_PREFIX(userId)).catch(() => []);
@@ -102,8 +114,15 @@ export async function removePushSubscription(userId: string, endpoint?: string, 
   return rows.length;
 }
 
-export async function countPushSubscriptions(userId: string, storeOverride?: Store): Promise<number> {
-  return (await (storeOverride ?? getStore()).listSettings(SUB_PREFIX(userId)).catch(() => [])).length;
+export async function countPushSubscriptions(
+  userId: string,
+  storeOverride?: Store,
+): Promise<number> {
+  return (
+    await (storeOverride ?? getStore())
+      .listSettings(SUB_PREFIX(userId))
+      .catch(() => [])
+  ).length;
 }
 
 export type PushPayload = {
@@ -121,7 +140,7 @@ export type PushPayload = {
 export async function sendPushToUser(
   userId: string,
   payload: PushPayload,
-  storeOverride?: Store
+  storeOverride?: Store,
 ): Promise<number> {
   if (!userId) return 0;
   const store = storeOverride ?? getStore();
@@ -132,7 +151,7 @@ export async function sendPushToUser(
   webpush.setVapidDetails(
     (process.env.VAPID_SUBJECT || DEFAULT_SUBJECT).trim(),
     vapid.publicKey,
-    vapid.privateKey
+    vapid.privateKey,
   );
 
   const body = JSON.stringify({
@@ -156,7 +175,7 @@ export async function sendPushToUser(
         await webpush.sendNotification(
           { endpoint: sub.endpoint, keys: sub.keys },
           body,
-          { TTL: 86400, urgency: "high", timeout: 3000 }
+          { TTL: 86400, urgency: "high", timeout: 3000 },
         );
         sent += 1;
       } catch (error) {
@@ -165,7 +184,7 @@ export async function sendPushToUser(
           await store.deleteSetting(row.key).catch(() => {});
         }
       }
-    })
+    }),
   );
   return sent;
 }

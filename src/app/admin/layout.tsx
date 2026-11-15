@@ -2,9 +2,16 @@ import { currentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { AdminSidebar } from "./sidebar";
 
-export const metadata = { title: "Admin Dashboard", robots: { index: false, follow: false } };
+export const metadata = {
+  title: "Admin Dashboard",
+  robots: { index: false, follow: false },
+};
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const user = await currentUser();
   if (!user) redirect("/auth/signin?next=/admin");
   if (user.role !== "ADMIN") redirect("/dashboard");

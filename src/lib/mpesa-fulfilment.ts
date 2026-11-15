@@ -33,12 +33,16 @@ export type MpesaFulfilmentRef = {
  */
 export async function fulfilLinkedPurchase(
   v: MpesaFulfilmentRef,
-  store: Store
+  store: Store,
 ): Promise<boolean> {
-  const refs = [...new Set([v.checkoutRequestId, v.orderRef].filter(Boolean))] as string[];
+  const refs = [
+    ...new Set([v.checkoutRequestId, v.orderRef].filter(Boolean)),
+  ] as string[];
   let link: PlanLink | null = null;
   for (const ref of refs) {
-    link = (await store.getSetting(`mpesa_link:${ref}`).catch(() => null)) as PlanLink | null;
+    link = (await store
+      .getSetting(`mpesa_link:${ref}`)
+      .catch(() => null)) as PlanLink | null;
     if (link && (link.promoId || link.planShop || link.planUser)) break;
     link = null;
   }
@@ -68,7 +72,8 @@ export async function fulfilLinkedPurchase(
     // The read path derives featured from live promos, but keep the stored
     // flag in sync for catalogue/search paths that read it directly.
     await store.setListingFeatured(promo.listingId, true).catch(() => {});
-    const activePromo = (await store.getPromotion(link.promoId).catch(() => null)) ?? promo;
+    const activePromo =
+      (await store.getPromotion(link.promoId).catch(() => null)) ?? promo;
     await recordPromotionInvoice(
       {
         promo: activePromo,
@@ -76,9 +81,12 @@ export async function fulfilLinkedPurchase(
         status: "paid",
         providerRef: v.providerRef,
       },
-      store
+      store,
     ).catch(() => null);
-    await sendInvoiceEmailById(invoicePromoId(promo.id), { reason: "paid", store }).catch(() => null);
+    await sendInvoiceEmailById(invoicePromoId(promo.id), {
+      reason: "paid",
+      store,
+    }).catch(() => null);
     if (promo.ownerId) {
       const { notifyUser } = await import("./notifications");
       await notifyUser({
@@ -102,13 +110,15 @@ export async function fulfilLinkedPurchase(
   const settleInvoice = async (invoiceId?: string) => {
     if (!invoiceId) return;
     await markInvoicePaid(invoiceId, v.providerRef, store).catch(() => null);
-    await sendInvoiceEmailById(invoiceId, { reason: "paid", store }).catch(() => null);
+    await sendInvoiceEmailById(invoiceId, { reason: "paid", store }).catch(
+      () => null,
+    );
   };
 
   if (link.planShop && link.planId) {
-    const pending = (await store.getSetting(pendingPlanKey(link.planShop)).catch(() => null)) as
-      | { amount?: number; invoiceId?: string }
-      | null;
+    const pending = (await store
+      .getSetting(pendingPlanKey(link.planShop))
+      .catch(() => null)) as { amount?: number; invoiceId?: string } | null;
     if (pending && !amountOk(pending.amount)) {
       await logAudit({
         action: "payment.amount_mismatch",
@@ -120,7 +130,8 @@ export async function fulfilLinkedPurchase(
     }
     await store.setShopPlan(link.planShop, link.planId).catch(() => {});
     const shop = await store.getShopBySlug(link.planShop).catch(() => null);
-    if (shop?.ownerId) await store.setUserPlan(shop.ownerId, "free").catch(() => {});
+    if (shop?.ownerId)
+      await store.setUserPlan(shop.ownerId, "free").catch(() => {});
     await store.setSetting(pendingPlanKey(link.planShop), null).catch(() => {});
     await settleInvoice(pending?.invoiceId);
     if (shop?.ownerId) {
@@ -144,10 +155,14 @@ export async function fulfilLinkedPurchase(
   }
 
   if (link.planUser && link.planId) {
-    const pending = (await store.getSetting(pendingSellerPlanKey(link.planUser)).catch(() => null)) as
-      | { amount?: string | number; invoiceId?: string }
-      | null;
-    const expected = typeof pending?.amount === "number" ? pending.amount : undefined;
+    const pending = (await store
+      .getSetting(pendingSellerPlanKey(link.planUser))
+      .catch(() => null)) as {
+      amount?: string | number;
+      invoiceId?: string;
+    } | null;
+    const expected =
+      typeof pending?.amount === "number" ? pending.amount : undefined;
     if (pending && !amountOk(expected)) {
       await logAudit({
         action: "payment.amount_mismatch",
@@ -172,13 +187,15 @@ export async function fulfilLinkedPurchase(
             shopName: shop.name,
             description: `${link.planId[0].toUpperCase()}${link.planId.slice(1)} shop plan - monthly subscription`,
           },
-          store
+          store,
         ).catch(() => null);
       }
     } else {
       await store.setUserPlan(link.planUser, link.planId).catch(() => {});
     }
-    await store.setSetting(pendingSellerPlanKey(link.planUser), null).catch(() => {});
+    await store
+      .setSetting(pendingSellerPlanKey(link.planUser), null)
+      .catch(() => {});
     await settleInvoice(pending?.invoiceId);
     const { notifyUser } = await import("./notifications");
     await notifyUser({
@@ -209,7 +226,12 @@ export type ReconcileResult = {
   pending: number;
   skipped: number;
   errors: number;
-  details: { ref: string; target: string; outcome: "activated" | "pending" | "skipped" | "error"; message?: string }[];
+  details: {
+    ref: string;
+    target: string;
+    outcome: "activated" | "pending" | "skipped" | "error";
+    message?: string;
+  }[];
 };
 
 /**
@@ -217,10 +239,20 @@ export type ReconcileResult = {
  * asks Daraja whether each STK push actually succeeded, and applies the linked
  * promotion/plan only when M-Pesa returns ResultCode 0. Safe to re-run.
  */
-export async function reconcilePendingMpesaLinks(store: Store, limit = 20): Promise<ReconcileResult> {
+export async function reconcilePendingMpesaLinks(
+  store: Store,
+  limit = 20,
+): Promise<ReconcileResult> {
   const rows = await store.listSettings("mpesa_link:").catch(() => []);
   const max = Math.max(1, Math.min(Math.round(limit), 50));
-  const out: ReconcileResult = { checked: 0, activated: 0, pending: 0, skipped: 0, errors: 0, details: [] };
+  const out: ReconcileResult = {
+    checked: 0,
+    activated: 0,
+    pending: 0,
+    skipped: 0,
+    errors: 0,
+    details: [],
+  };
 
   for (const row of rows.slice(0, max)) {
     out.checked += 1;
@@ -229,7 +261,12 @@ export async function reconcilePendingMpesaLinks(store: Store, limit = 20): Prom
     if (!row.value || typeof row.value !== "object") {
       await store.deleteSetting(row.key).catch(() => {});
       out.skipped += 1;
-      out.details.push({ ref, target: "", outcome: "skipped", message: "Empty link tombstone." });
+      out.details.push({
+        ref,
+        target: "",
+        outcome: "skipped",
+        message: "Empty link tombstone.",
+      });
       continue;
     }
     let target = "";
@@ -241,39 +278,59 @@ export async function reconcilePendingMpesaLinks(store: Store, limit = 20): Prom
       target = `promotion:${link.promoId}`;
       if (!promo) {
         out.skipped += 1;
-        out.details.push({ ref, target, outcome: "skipped", message: "Promotion not found." });
+        out.details.push({
+          ref,
+          target,
+          outcome: "skipped",
+          message: "Promotion not found.",
+        });
         continue;
       }
       if (promo.status !== "pending_payment") {
         await store.setSetting(row.key, null).catch(() => {});
         out.skipped += 1;
-        out.details.push({ ref, target, outcome: "skipped", message: `Promotion already ${promo.status}.` });
+        out.details.push({
+          ref,
+          target,
+          outcome: "skipped",
+          message: `Promotion already ${promo.status}.`,
+        });
         continue;
       }
       amount = promo.amount;
       pending = true;
     } else if (link.planShop && link.planId) {
-      const waiting = (await store.getSetting(pendingPlanKey(link.planShop)).catch(() => null)) as
-        | { amount?: number }
-        | null;
+      const waiting = (await store
+        .getSetting(pendingPlanKey(link.planShop))
+        .catch(() => null)) as { amount?: number } | null;
       target = `shop:${link.planShop}`;
       if (!waiting) {
         await store.setSetting(row.key, null).catch(() => {});
         out.skipped += 1;
-        out.details.push({ ref, target, outcome: "skipped", message: "No pending shop plan." });
+        out.details.push({
+          ref,
+          target,
+          outcome: "skipped",
+          message: "No pending shop plan.",
+        });
         continue;
       }
       amount = waiting.amount;
       pending = true;
     } else if (link.planUser && link.planId) {
-      const waiting = (await store.getSetting(pendingSellerPlanKey(link.planUser)).catch(() => null)) as
-        | { amount?: string | number }
-        | null;
+      const waiting = (await store
+        .getSetting(pendingSellerPlanKey(link.planUser))
+        .catch(() => null)) as { amount?: string | number } | null;
       target = `user:${link.planUser}`;
       if (!waiting) {
         await store.setSetting(row.key, null).catch(() => {});
         out.skipped += 1;
-        out.details.push({ ref, target, outcome: "skipped", message: "No pending seller plan." });
+        out.details.push({
+          ref,
+          target,
+          outcome: "skipped",
+          message: "No pending seller plan.",
+        });
         continue;
       }
       amount = typeof waiting.amount === "number" ? waiting.amount : undefined;
@@ -282,7 +339,12 @@ export async function reconcilePendingMpesaLinks(store: Store, limit = 20): Prom
 
     if (!pending) {
       out.skipped += 1;
-      out.details.push({ ref, target, outcome: "skipped", message: "No linked target." });
+      out.details.push({
+        ref,
+        target,
+        outcome: "skipped",
+        message: "No linked target.",
+      });
       continue;
     }
 
@@ -299,18 +361,32 @@ export async function reconcilePendingMpesaLinks(store: Store, limit = 20): Prom
     }
 
     const activated = await fulfilLinkedPurchase(
-      { checkoutRequestId: ref, orderRef: ref, amount, providerRef: `QUERY-${ref}` },
-      store
+      {
+        checkoutRequestId: ref,
+        orderRef: ref,
+        amount,
+        providerRef: `QUERY-${ref}`,
+      },
+      store,
     ).catch(() => false);
     if (activated) {
       await store
-        .setSetting(`mpesa_cb:QUERY-${ref}`, { at: new Date().toISOString(), target, amount })
+        .setSetting(`mpesa_cb:QUERY-${ref}`, {
+          at: new Date().toISOString(),
+          target,
+          amount,
+        })
         .catch(() => {});
       out.activated += 1;
       out.details.push({ ref, target, outcome: "activated" });
     } else {
       out.errors += 1;
-      out.details.push({ ref, target, outcome: "error", message: "Activation failed (amount/link mismatch)." });
+      out.details.push({
+        ref,
+        target,
+        outcome: "error",
+        message: "Activation failed (amount/link mismatch).",
+      });
     }
   }
 

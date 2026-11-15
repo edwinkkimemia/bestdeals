@@ -1,6 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { isAllowedListingImage, normalizeListingImages, parseImageLinks } from "../src/lib/image-urls.ts";
+import {
+  isAllowedListingImage,
+  normalizeListingImages,
+  parseImageLinks,
+} from "../src/lib/image-urls.ts";
 import { storeRecordToListing } from "../src/lib/live-listings.ts";
 
 describe("listing image URLs", () => {
@@ -16,17 +20,27 @@ describe("listing image URLs", () => {
 
   it("keeps serverless upload URLs instead of stripping them", () => {
     assert.deepEqual(
-      normalizeListingImages(["/api/files/2026-10/a.jpg", "/uploads/2026-10/b.jpg", "https://x/y.jpg", "/tmp/z.jpg"]),
-      ["/api/files/2026-10/a.jpg", "/uploads/2026-10/b.jpg", "https://x/y.jpg"]
+      normalizeListingImages([
+        "/api/files/2026-10/a.jpg",
+        "/uploads/2026-10/b.jpg",
+        "https://x/y.jpg",
+        "/tmp/z.jpg",
+      ]),
+      ["/api/files/2026-10/a.jpg", "/uploads/2026-10/b.jpg", "https://x/y.jpg"],
     );
     assert.equal(normalizeListingImages("nope").length, 0);
-    assert.equal(normalizeListingImages(new Array(10).fill("https://x/y.jpg")).length, 8);
+    assert.equal(
+      normalizeListingImages(new Array(10).fill("https://x/y.jpg")).length,
+      8,
+    );
   });
 
   it("parses the comma-separated links box", () => {
     assert.deepEqual(
-      parseImageLinks("https://a/x.jpg, /api/files/2026-10/b.jpg\n/not-allowed.jpg"),
-      ["https://a/x.jpg", "/api/files/2026-10/b.jpg"]
+      parseImageLinks(
+        "https://a/x.jpg, /api/files/2026-10/b.jpg\n/not-allowed.jpg",
+      ),
+      ["https://a/x.jpg", "/api/files/2026-10/b.jpg"],
     );
   });
 

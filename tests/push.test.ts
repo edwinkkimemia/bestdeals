@@ -18,15 +18,33 @@ const sub = (endpoint: string) => ({
 describe("web push subscriptions", () => {
   it("stores multiple devices, replaces duplicates and removes them", async () => {
     const store = freshDemoStore();
-    await savePushSubscription("u1", sub("https://push.example.com/one"), "Phone", store);
-    await savePushSubscription("u1", sub("https://push.example.com/two"), "Laptop", store);
+    await savePushSubscription(
+      "u1",
+      sub("https://push.example.com/one"),
+      "Phone",
+      store,
+    );
+    await savePushSubscription(
+      "u1",
+      sub("https://push.example.com/two"),
+      "Laptop",
+      store,
+    );
     assert.equal(await countPushSubscriptions("u1", store), 2);
 
     // Same endpoint updates rather than duplicating.
-    await savePushSubscription("u1", sub("https://push.example.com/one"), "Phone updated", store);
+    await savePushSubscription(
+      "u1",
+      sub("https://push.example.com/one"),
+      "Phone updated",
+      store,
+    );
     assert.equal(await countPushSubscriptions("u1", store), 2);
 
-    assert.equal(await removePushSubscription("u1", "https://push.example.com/one", store), 1);
+    assert.equal(
+      await removePushSubscription("u1", "https://push.example.com/one", store),
+      1,
+    );
     assert.equal(await countPushSubscriptions("u1", store), 1);
     assert.equal(await removePushSubscription("u1", undefined, store), 1);
     assert.equal(await countPushSubscriptions("u1", store), 0);
@@ -42,6 +60,9 @@ describe("web push subscriptions", () => {
 
   it("sends nothing when a user has no registered device", async () => {
     const store = freshDemoStore();
-    assert.equal(await sendPushToUser("nobody", { title: "Hello", body: "World" }, store), 0);
+    assert.equal(
+      await sendPushToUser("nobody", { title: "Hello", body: "World" }, store),
+      0,
+    );
   });
 });

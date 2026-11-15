@@ -1,6 +1,12 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { ADSENSE_CLIENT_ID, isPathAllowed, adsAllowedOn, adsEnabled, getAdsConsent } from "../src/lib/ads.ts";
+import {
+  ADSENSE_CLIENT_ID,
+  isPathAllowed,
+  adsAllowedOn,
+  adsEnabled,
+  getAdsConsent,
+} from "../src/lib/ads.ts";
 import { getAnalyticsConsent } from "../src/lib/consent.ts";
 
 describe("consent defaults (no browser storage in tests)", () => {
@@ -12,7 +18,10 @@ describe("consent defaults (no browser storage in tests)", () => {
 
 describe("ads route policy", () => {
   it("uses the configured publisher ID (with a production default)", () => {
-    assert.equal(ADSENSE_CLIENT_ID, process.env.NEXT_PUBLIC_ADSENSE_ID || "ca-pub-1165378217849279");
+    assert.equal(
+      ADSENSE_CLIENT_ID,
+      process.env.NEXT_PUBLIC_ADSENSE_ID || "ca-pub-1165378217849279",
+    );
     assert.equal(adsEnabled(), true);
     assert.equal(adsAllowedOn("/"), true);
   });
@@ -34,7 +43,19 @@ describe("ads route policy", () => {
     ]) {
       assert.equal(isPathAllowed(p), false, `expected no ads on ${p}`);
     }
-    for (const p of ["/", "/browse", "/browse/phones-tablets", "/search?q=x", "/product/a", "/blog", "/blog/a", "/shops", "/shops/a", "/location/nairobi", "/deals"]) {
+    for (const p of [
+      "/",
+      "/browse",
+      "/browse/phones-tablets",
+      "/search?q=x",
+      "/product/a",
+      "/blog",
+      "/blog/a",
+      "/shops",
+      "/shops/a",
+      "/location/nairobi",
+      "/deals",
+    ]) {
       assert.equal(isPathAllowed(p), true, `expected ads on ${p}`);
     }
   });

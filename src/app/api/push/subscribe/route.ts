@@ -20,24 +20,47 @@ const bodySchema = z.object({ subscription: subscriptionSchema });
 /** Save this browser's push endpoint for the signed-in account. */
 export async function POST(req: NextRequest) {
   const user = await currentUser().catch(() => null);
-  if (!user) return NextResponse.json({ error: "Sign in to enable notifications." }, { status: 401 });
+  if (!user)
+    return NextResponse.json(
+      { error: "Sign in to enable notifications." },
+      { status: 401 },
+    );
 
-  const rl = rateLimit(clientKey(req, `push:subscribe:${user.id}`), { limit: 20, windowMs: 3600_000 });
-  if (!rl.ok) return NextResponse.json({ error: "Too many subscription attempts. Try again later." }, { status: 429 });
+  const rl = rateLimit(clientKey(req, `push:subscribe:${user.id}`), {
+    limit: 20,
+    windowMs: 3600_000,
+  });
+  if (!rl.ok)
+    return NextResponse.json(
+      { error: "Too many subscription attempts. Try again later." },
+      { status: 429 },
+    );
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid push subscription." }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json(
+      { error: "Invalid push subscription." },
+      { status: 400 },
+    );
 
-  await savePushSubscription(user.id, parsed.data.subscription, req.headers.get("user-agent"));
+  await savePushSubscription(
+    user.id,
+    parsed.data.subscription,
+    req.headers.get("user-agent"),
+  );
   return NextResponse.json({ ok: true });
 }
 
 /** Remove one browser subscription, or every device when no endpoint is sent. */
 export async function DELETE(req: NextRequest) {
   const user = await currentUser().catch(() => null);
-  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const body = await req.json().catch(() => ({}));
-  const endpoint = typeof body?.endpoint === "string" ? body.endpoint.trim().slice(0, 3000) : "";
+  const endpoint =
+    typeof body?.endpoint === "string"
+      ? body.endpoint.trim().slice(0, 3000)
+      : "";
   const removed = await removePushSubscription(user.id, endpoint || undefined);
   return NextResponse.json({ ok: true, removed });
 }

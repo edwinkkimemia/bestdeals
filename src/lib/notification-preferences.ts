@@ -11,7 +11,7 @@ const key = (userId: string) => `notification_prefs:${userId}`;
 
 export async function getNotificationPrefs(
   userId: string,
-  storeOverride?: Store
+  storeOverride?: Store,
 ): Promise<NotificationPrefs> {
   if (!userId) return { ...DEFAULT_NOTIFICATION_PREFS };
   const store = storeOverride ?? getStore();
@@ -21,7 +21,7 @@ export async function getNotificationPrefs(
 
 export async function saveNotificationPrefs(
   userId: string,
-  prefs: Partial<Record<NotificationPrefType, boolean>>
+  prefs: Partial<Record<NotificationPrefType, boolean>>,
 ): Promise<NotificationPrefs> {
   const current = await getNotificationPrefs(userId);
   const next = normalizeNotificationPrefs({ ...current, ...prefs });
@@ -33,7 +33,7 @@ export async function saveNotificationPrefs(
 export async function pushEnabledFor(
   userId: string,
   type: NotificationPrefType,
-  storeOverride?: Store
+  storeOverride?: Store,
 ): Promise<boolean> {
   const prefs = await getNotificationPrefs(userId, storeOverride);
   return prefs[type] !== false;

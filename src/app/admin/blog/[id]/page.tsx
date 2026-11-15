@@ -5,15 +5,33 @@ import { getStore } from "@/lib/store";
 import { BlogForm } from "@/components/admin/blog-form";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Blog editor", robots: { index: false, follow: false } };
+export const metadata = {
+  title: "Blog editor",
+  robots: { index: false, follow: false },
+};
 
-export default async function AdminBlogEdit({ params }: { params: { id: string } }) {
+export default async function AdminBlogEdit({
+  params,
+}: {
+  params: { id: string };
+}) {
   if (params.id === "new") {
     return (
       <div>
-        <h1 className="section-title flex items-center gap-2"><Newspaper className="h-6 w-6 text-brand-600" /> New post</h1>
+        <h1 className="section-title flex items-center gap-2">
+          <Newspaper className="h-6 w-6 text-brand-600" /> New post
+        </h1>
         <div className="mt-4">
-          <BlogForm initial={{ slug: "", title: "", excerpt: null, coverUrl: null, bodyHtml: "", status: "draft" }} />
+          <BlogForm
+            initial={{
+              slug: "",
+              title: "",
+              excerpt: null,
+              coverUrl: null,
+              bodyHtml: "",
+              status: "draft",
+            }}
+          />
         </div>
       </div>
     );
@@ -23,9 +41,13 @@ export default async function AdminBlogEdit({ params }: { params: { id: string }
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="section-title flex items-center gap-2"><Newspaper className="h-6 w-6 text-brand-600" /> Edit post</h1>
+        <h1 className="section-title flex items-center gap-2">
+          <Newspaper className="h-6 w-6 text-brand-600" /> Edit post
+        </h1>
         {post.status === "published" && (
-          <Link href={`/blog/${post.slug}`} className="link-bd text-sm">View live →</Link>
+          <Link href={`/blog/${post.slug}`} className="link-bd text-sm">
+            View live →
+          </Link>
         )}
       </div>
       <div className="mt-4">

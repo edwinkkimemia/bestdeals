@@ -11,11 +11,15 @@ import {
 /** Public shop/storefront profile + catalogue + reviews. */
 export async function GET(req: NextRequest) {
   const slug = (req.nextUrl.searchParams.get("slug") || "").trim();
-  if (!slug) return NextResponse.json({ error: "Shop is required." }, { status: 400 });
+  if (!slug)
+    return NextResponse.json({ error: "Shop is required." }, { status: 400 });
 
   const demo = getShop(slug);
-  const stored = await storeRead((s) => s.getShopBySlug(slug), null).catch(() => null);
-  if (!demo && !stored) return NextResponse.json({ error: "Shop not found." }, { status: 404 });
+  const stored = await storeRead((s) => s.getShopBySlug(slug), null).catch(
+    () => null,
+  );
+  if (!demo && !stored)
+    return NextResponse.json({ error: "Shop not found." }, { status: 404 });
 
   const base = demo
     ? {
@@ -55,7 +59,7 @@ export async function GET(req: NextRequest) {
     storeRead((s) => s.listApprovedReviewsForShop(slug), []).catch(() => []),
   ]);
   const items = await withLiveVerification(
-    mergeStaticAndLive(demo ? shopListings(slug) : [], live)
+    mergeStaticAndLive(demo ? shopListings(slug) : [], live),
   ).catch(() => []);
 
   return NextResponse.json({
@@ -63,7 +67,9 @@ export async function GET(req: NextRequest) {
       ...shop,
       email: (stored as { email?: string | null } | null)?.email ?? null,
       website: (stored as { website?: string | null } | null)?.website ?? null,
-      socials: (stored as { socials?: Record<string, string> | null } | null)?.socials ?? null,
+      socials:
+        (stored as { socials?: Record<string, string> | null } | null)
+          ?.socials ?? null,
     },
     items,
     reviews,

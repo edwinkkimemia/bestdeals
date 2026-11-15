@@ -18,14 +18,21 @@ export const DELIVERY_LABELS: Record<DeliveryMethod, string> = {
 };
 
 /** Fee-payer logic (Jiji-style): seller-created deliveries are free to buyer. */
-export function deliveryFee(method: DeliveryMethod, opts?: { sellerPays?: boolean }): number {
+export function deliveryFee(
+  method: DeliveryMethod,
+  opts?: { sellerPays?: boolean },
+): number {
   if (opts?.sellerPays) return 0;
   return DELIVERY_DEFAULTS[method] ?? DELIVERY_DEFAULTS.standard;
 }
 
-export async function getDeliveryFees(): Promise<Record<DeliveryMethod, number>> {
+export async function getDeliveryFees(): Promise<
+  Record<DeliveryMethod, number>
+> {
   try {
-    const raw = (await getStore().getSetting("delivery_fees").catch(() => null)) as Record<string, unknown> | null;
+    const raw = (await getStore()
+      .getSetting("delivery_fees")
+      .catch(() => null)) as Record<string, unknown> | null;
     if (!raw) return { ...DELIVERY_DEFAULTS };
     return {
       standard: Number(raw.standard ?? DELIVERY_DEFAULTS.standard) || 0,
@@ -37,10 +44,19 @@ export async function getDeliveryFees(): Promise<Record<DeliveryMethod, number>>
   }
 }
 
-export async function setDeliveryFees(fees: { standard?: number; express?: number }): Promise<void> {
+export async function setDeliveryFees(fees: {
+  standard?: number;
+  express?: number;
+}): Promise<void> {
   const cur = await getDeliveryFees().catch(() => ({ ...DELIVERY_DEFAULTS }));
   await getStore().setSetting("delivery_fees", {
-    standard: Math.max(0, Math.min(100000, Math.round(fees.standard ?? cur.standard))),
-    express: Math.max(0, Math.min(100000, Math.round(fees.express ?? cur.express))),
+    standard: Math.max(
+      0,
+      Math.min(100000, Math.round(fees.standard ?? cur.standard)),
+    ),
+    express: Math.max(
+      0,
+      Math.min(100000, Math.round(fees.express ?? cur.express)),
+    ),
   });
 }

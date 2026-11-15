@@ -7,8 +7,13 @@ const ALG = "HS256";
 
 function secret(): Uint8Array {
   const s = process.env.AUTH_SECRET || "dev-only-secret-change-me-32chars!!";
-  if (process.env.NODE_ENV === "production" && (s.includes("change-me") || s.includes("dev-only") || s.length < 32)) {
-    throw new Error("AUTH_SECRET must be set to a random 32+ char value in production.");
+  if (
+    process.env.NODE_ENV === "production" &&
+    (s.includes("change-me") || s.includes("dev-only") || s.length < 32)
+  ) {
+    throw new Error(
+      "AUTH_SECRET must be set to a random 32+ char value in production.",
+    );
   }
   return new TextEncoder().encode(s);
 }
@@ -31,7 +36,10 @@ export async function hashPassword(pw: string): Promise<string> {
   return bcrypt.hash(pw, 12);
 }
 
-export async function verifyPassword(pw: string, hash: string): Promise<boolean> {
+export async function verifyPassword(
+  pw: string,
+  hash: string,
+): Promise<boolean> {
   return bcrypt.compare(pw, hash);
 }
 
@@ -43,7 +51,9 @@ export async function createSessionToken(user: SessionUser): Promise<string> {
     .sign(secret());
 }
 
-export async function readSessionToken(token: string): Promise<SessionUser | null> {
+export async function readSessionToken(
+  token: string,
+): Promise<SessionUser | null> {
   try {
     const { payload } = await jwtVerify(token, secret());
     return payload as unknown as SessionUser;

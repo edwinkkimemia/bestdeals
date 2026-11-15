@@ -3,7 +3,10 @@
 import { useEffect, useState } from "react";
 import { wmImageSrc } from "@/lib/watermark";
 
-type Props = Omit<React.ImgHTMLAttributes<HTMLImageElement>, "src" | "alt"> & { src: string; alt: string };
+type Props = Omit<React.ImgHTMLAttributes<HTMLImageElement>, "src" | "alt"> & {
+  src: string;
+  alt: string;
+};
 
 /**
  * Product photo served through the watermark endpoint, so the bytes the
@@ -29,14 +32,14 @@ export function WmImage({ src, alt, ...rest }: Props) {
       <span
         role="img"
         aria-label={alt}
-        className={`flex items-center justify-center bg-sand-100 text-xs font-semibold text-ink-400 ${rest.className ?? ""}`}
+        className={`flex items-center justify-center bg-neutral-200 text-xs font-semibold text-ink-400 ${rest.className ?? ""}`}
       >
         Chap
       </span>
     ) : (
       <span
         aria-hidden
-        className={`flex items-center justify-center bg-sand-100 text-xs font-semibold text-ink-400 ${rest.className ?? ""}`}
+        className={`flex items-center justify-center bg-neutral-200 text-xs font-semibold text-ink-400 ${rest.className ?? ""}`}
       >
         Chap
       </span>

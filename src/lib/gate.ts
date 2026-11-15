@@ -15,22 +15,32 @@ type GateNo = { ok: false; response: NextResponse };
 export async function requireVerifiedSeller(): Promise<GateOk | GateNo> {
   const denied = (error: string, status: number, code?: string) => ({
     ok: false as const,
-    response: NextResponse.json({ error, ...(code ? { code } : {}) }, { status }),
+    response: NextResponse.json(
+      { error, ...(code ? { code } : {}) },
+      { status },
+    ),
   });
   const user = await currentUser();
   if (!user) return denied("Sign in to list an item.", 401);
-  const fresh = await getStore().findUserById(user.id).catch(() => null);
+  const fresh = await getStore()
+    .findUserById(user.id)
+    .catch(() => null);
   const verified = fresh?.verified ?? user.verified;
   if (!verified) {
     return denied(
       "Verify your account before posting: submit your national ID and confirm your number at /dashboard/verify. Admin approval unlocks listing.",
       403,
-      "NOT_VERIFIED"
+      "NOT_VERIFIED",
     );
   }
   return {
     ok: true as const,
-    seller: { ...user, name: fresh?.name ?? user.name, phone: fresh?.phone ?? user.phone, verified: true },
+    seller: {
+      ...user,
+      name: fresh?.name ?? user.name,
+      phone: fresh?.phone ?? user.phone,
+      verified: true,
+    },
   };
 }
 
@@ -40,12 +50,14 @@ export async function requireVerifiedSeller(): Promise<GateOk | GateNo> {
  */
 export async function canManageListing(
   user: { id: string; role: string },
-  listing: { ownerId?: string; shopSlug?: string }
+  listing: { ownerId?: string; shopSlug?: string },
 ): Promise<boolean> {
   if (user.role === "ADMIN") return true;
   if (listing.ownerId && listing.ownerId === user.id) return true;
   if (listing.shopSlug) {
-    const members = await getStore().listShopMembers(listing.shopSlug).catch(() => []);
+    const members = await getStore()
+      .listShopMembers(listing.shopSlug)
+      .catch(() => []);
     if (members.some((m) => m.userId === user.id)) return true;
   }
   return false;

@@ -34,33 +34,61 @@ export const passwordResetSchema = z.object({
  * static catalogue.
  */
 export function listingSchemaFor(categories: Category[] = CATEGORIES) {
-  return z.object({
-    title: z.string().min(8, "Title needs at least 8 characters").max(120),
-    description: z.string().min(20, "Describe the item (min 20 chars)").max(1000, "Keep it under 1000 characters"),
-    categorySlug: z.string().min(1, "Choose a category"),
-    subcategory: z.string().max(60).optional().default(""),
-    price: z.coerce.number().int().min(1, "Enter a price in KES").max(500_000_000),
-    compareAt: z.coerce.number().int().min(0).max(500_000_000).optional().nullable(),
-    condition: z.enum(["new", "like_new", "used_good", "used_fair", "refurbished"]),
-    listingType: z.enum(["product", "classified", "service"]),
-    county: z.string().min(1, "Choose a county"),
-    town: z.string().min(1, "Choose a town"),
-    negotiable: z.boolean().default(false),
-    transactionMethod: z.enum(["buy_online", "contact_seller", "request_quote", "enquiry"]),
-    stock: z.coerce.number().int().min(0).max(100000).default(1),
-    // Absolute URLs or server-issued /uploads/* paths (relative refs can't use .url()).
-    images: z.array(z.string().min(1).max(500)).max(8).default([]),
-    attributes: z.record(z.string(), z.string()).default({}),
-  }).refine(
-    (d) => {
-      const sub = (d.subcategory ?? "").trim();
-      if (!sub) return true;
-      const cat = categories.find((c) => c.slug === d.categorySlug);
-      if (!cat) return false;
-      return cat.subcategories.some((s) => s.toLowerCase() === sub.toLowerCase());
-    },
-    { message: "Pick a subcategory from the list", path: ["subcategory"] }
-  );
+  return z
+    .object({
+      title: z.string().min(8, "Title needs at least 8 characters").max(120),
+      description: z
+        .string()
+        .min(20, "Describe the item (min 20 chars)")
+        .max(1000, "Keep it under 1000 characters"),
+      categorySlug: z.string().min(1, "Choose a category"),
+      subcategory: z.string().max(60).optional().default(""),
+      price: z.coerce
+        .number()
+        .int()
+        .min(1, "Enter a price in KES")
+        .max(500_000_000),
+      compareAt: z.coerce
+        .number()
+        .int()
+        .min(0)
+        .max(500_000_000)
+        .optional()
+        .nullable(),
+      condition: z.enum([
+        "new",
+        "like_new",
+        "used_good",
+        "used_fair",
+        "refurbished",
+      ]),
+      listingType: z.enum(["product", "classified", "service"]),
+      county: z.string().min(1, "Choose a county"),
+      town: z.string().min(1, "Choose a town"),
+      negotiable: z.boolean().default(false),
+      transactionMethod: z.enum([
+        "buy_online",
+        "contact_seller",
+        "request_quote",
+        "enquiry",
+      ]),
+      stock: z.coerce.number().int().min(0).max(100000).default(1),
+      // Absolute URLs or server-issued /uploads/* paths (relative refs can't use .url()).
+      images: z.array(z.string().min(1).max(500)).max(8).default([]),
+      attributes: z.record(z.string(), z.string()).default({}),
+    })
+    .refine(
+      (d) => {
+        const sub = (d.subcategory ?? "").trim();
+        if (!sub) return true;
+        const cat = categories.find((c) => c.slug === d.categorySlug);
+        if (!cat) return false;
+        return cat.subcategories.some(
+          (s) => s.toLowerCase() === sub.toLowerCase(),
+        );
+      },
+      { message: "Pick a subcategory from the list", path: ["subcategory"] },
+    );
 }
 
 export const listingSchema = listingSchemaFor();
@@ -94,7 +122,9 @@ export const checkoutSchema = z.object({
   paymentMethod: z.enum(["cod", "mpesa"]).default("cod"),
   idempotencyKey: z.string().max(80).optional().default(""),
   items: z
-    .array(z.object({ id: z.string(), qty: z.coerce.number().int().min(1).max(99) }))
+    .array(
+      z.object({ id: z.string(), qty: z.coerce.number().int().min(1).max(99) }),
+    )
     .min(1),
 });
 
@@ -110,7 +140,14 @@ export const reviewSchema = z.object({
 
 export const disputeSchema = z.object({
   orderId: z.string().min(1),
-  reason: z.enum(["not_received", "not_as_described", "damaged", "wrong_item", "payment_issue", "other"]),
+  reason: z.enum([
+    "not_received",
+    "not_as_described",
+    "damaged",
+    "wrong_item",
+    "payment_issue",
+    "other",
+  ]),
   details: z.string().max(2000).default(""),
   name: z.string().min(2).max(80),
   phone: z.string().regex(/^(\+254|0)[17]\d{8}$/),

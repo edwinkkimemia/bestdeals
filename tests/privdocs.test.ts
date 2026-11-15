@@ -1,6 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { isDbDocRef, dbDocKey, stageDbDoc, readDbDoc } from "../src/lib/privdocs.ts";
+import {
+  isDbDocRef,
+  dbDocKey,
+  stageDbDoc,
+  readDbDoc,
+} from "../src/lib/privdocs.ts";
 import { freshDemoStore } from "../src/lib/store.ts";
 
 describe("db doc refs", () => {
@@ -9,7 +14,9 @@ describe("db doc refs", () => {
     assert.equal(isDbDocRef("private:2026-10/abc.png"), false);
     assert.equal(isDbDocRef("https://x.co/i.png"), false);
     assert.equal(isDbDocRef(null), false);
-    assert.ok(dbDocKey("private:db/2026-10/abc123-id.png")?.startsWith("privdoc:"));
+    assert.ok(
+      dbDocKey("private:db/2026-10/abc123-id.png")?.startsWith("privdoc:"),
+    );
     assert.equal(dbDocKey("private:db/2026-10/../evil.png"), null);
     assert.equal(dbDocKey("private:db/x"), null);
     assert.equal(dbDocKey("private:2026-10/abc.png"), null);
@@ -39,20 +46,44 @@ describe("db doc refs", () => {
   it("rejects oversized, unowned-shape, or bad-mime payloads", async () => {
     const store = freshDemoStore();
     assert.equal(
-      await stageDbDoc(store, { name: "a.png", stamp: "2026-10", mime: "image/png", base64: "", by: "u1" }),
-      null
+      await stageDbDoc(store, {
+        name: "a.png",
+        stamp: "2026-10",
+        mime: "image/png",
+        base64: "",
+        by: "u1",
+      }),
+      null,
     );
     assert.equal(
-      await stageDbDoc(store, { name: "a.png", stamp: "2026-10", mime: "application/pdf", base64: "eA==", by: "u1" }),
-      null
+      await stageDbDoc(store, {
+        name: "a.png",
+        stamp: "2026-10",
+        mime: "application/pdf",
+        base64: "eA==",
+        by: "u1",
+      }),
+      null,
     );
     assert.equal(
-      await stageDbDoc(store, { name: "a.png", stamp: "2026-10", mime: "image/png", base64: "eA==", by: "" }),
-      null
+      await stageDbDoc(store, {
+        name: "a.png",
+        stamp: "2026-10",
+        mime: "image/png",
+        base64: "eA==",
+        by: "",
+      }),
+      null,
     );
     assert.equal(
-      await stageDbDoc(store, { name: "a.png", stamp: "2026-10", mime: "image/png", base64: "x".repeat(7_500_001), by: "u1" }),
-      null
+      await stageDbDoc(store, {
+        name: "a.png",
+        stamp: "2026-10",
+        mime: "image/png",
+        base64: "x".repeat(7_500_001),
+        by: "u1",
+      }),
+      null,
     );
   });
 });

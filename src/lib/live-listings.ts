@@ -21,7 +21,7 @@ type ListingType = Listing["listingType"];
 /** Map a store record to the catalogue shape used by all listing UI. */
 export function storeRecordToListing(s: ListingRecord): Listing {
   const listingType = (["product", "classified", "service"] as const).includes(
-    s.type as ListingType
+    s.type as ListingType,
   )
     ? (s.type as ListingType)
     : "product";
@@ -51,8 +51,7 @@ export function storeRecordToListing(s: ListingRecord): Listing {
     town: s.town,
     negotiable: s.negotiable,
     stock: s.stock,
-    images:
-      s.images && s.images.length > 0 ? s.images : ["/chaplogo.png"],
+    images: s.images && s.images.length > 0 ? s.images : ["/chaplogo.png"],
     sellerName: s.sellerName || "Seller",
     ownerId: s.ownerId,
     // Store listings are individual accounts unless they belong to a shop.
@@ -68,25 +67,17 @@ export function storeRecordToListing(s: ListingRecord): Listing {
 
 /** All admin-approved (`active`) seller listings, mapped for public UI. */
 export async function getLiveStoreListings(): Promise<Listing[]> {
-  const live = await storeRead(
-    (st) => st.listListingsByStatus("active"),
-    []
-  );
+  const live = await storeRead((st) => st.listListingsByStatus("active"), []);
   return withLiveVerification(live.map(storeRecordToListing));
 }
 
 /** Active listings for one shop (used by `/shops/[slug]` community branch). */
 export async function getLiveShopListings(
-  shopSlug: string
+  shopSlug: string,
 ): Promise<Listing[]> {
-  const items = await storeRead(
-    (st) => st.listListingsByShop(shopSlug),
-    []
-  );
+  const items = await storeRead((st) => st.listListingsByShop(shopSlug), []);
   return withLiveVerification(
-    items
-      .filter((l) => l.status === "active")
-      .map(storeRecordToListing)
+    items.filter((l) => l.status === "active").map(storeRecordToListing),
   );
 }
 
@@ -96,24 +87,17 @@ export async function getLiveShopListings(
  * scale (capped at 200 by the store) and safe on DB errors (null fallback).
  */
 export async function getLiveListingBySlug(
-  slugOrId: string
+  slugOrId: string,
 ): Promise<Listing | null> {
   const needle = decodeURIComponent(slugOrId).trim().toLowerCase();
   if (!needle) return null;
   // Fast path: exact id hit (covers dashboard-style ids too).
-  const direct = await storeRead(
-    (st) => st.getListing(slugOrId),
-    null
-  );
+  const direct = await storeRead((st) => st.getListing(slugOrId), null);
   if (direct && direct.status === "active") return storeRecordToListing(direct);
-  const live = await storeRead(
-    (st) => st.listListingsByStatus("active"),
-    []
-  );
+  const live = await storeRead((st) => st.listListingsByStatus("active"), []);
   const hit =
     live.find(
-      (l) =>
-        l.slug.toLowerCase() === needle || l.id.toLowerCase() === needle
+      (l) => l.slug.toLowerCase() === needle || l.id.toLowerCase() === needle,
     ) ?? null;
   return hit ? storeRecordToListing(hit) : null;
 }
@@ -144,15 +128,12 @@ const PREVIEW_STATUSES = [
  * `canPreviewListing` — never render non-active to strangers.
  */
 export async function getPreviewListingBySlug(
-  slugOrId: string
+  slugOrId: string,
 ): Promise<PreviewListing | null> {
   const needle = decodeURIComponent(slugOrId).trim().toLowerCase();
   if (!needle) return null;
   // Fast path: direct id hit (any status).
-  const direct = await storeRead(
-    (st) => st.getListing(slugOrId),
-    null
-  );
+  const direct = await storeRead((st) => st.getListing(slugOrId), null);
   if (direct) {
     return {
       listing: storeRecordToListing(direct),
@@ -166,19 +147,16 @@ export async function getPreviewListingBySlug(
   const settled = await Promise.all(
     PREVIEW_STATUSES.map((status) =>
       storeRead((st) => st.listListingsByStatus(status), []).catch(
-        () => [] as ListingRecord[]
-      )
-    )
+        () => [] as ListingRecord[],
+      ),
+    ),
   );
   const seen = new Set<string>();
   for (const batch of settled) {
     for (const r of batch) {
       if (seen.has(r.id)) continue;
       seen.add(r.id);
-      if (
-        r.slug.toLowerCase() === needle ||
-        r.id.toLowerCase() === needle
-      ) {
+      if (r.slug.toLowerCase() === needle || r.id.toLowerCase() === needle) {
         return {
           listing: storeRecordToListing(r),
           status: r.status,
@@ -199,7 +177,7 @@ export async function getPreviewListingBySlug(
  */
 export async function canPreviewListing(
   user: { id: string; role: string } | null,
-  preview: Pick<PreviewListing, "status" | "ownerId" | "shopSlug">
+  preview: Pick<PreviewListing, "status" | "ownerId" | "shopSlug">,
 ): Promise<boolean> {
   if (preview.status === "active") return true;
   if (!user) return false;
@@ -208,7 +186,7 @@ export async function canPreviewListing(
   if (preview.shopSlug) {
     const members = await storeRead(
       (st) => st.listShopMembers(preview.shopSlug as string),
-      []
+      [],
     ).catch(() => []);
     if (members.some((m) => m.userId === user.id)) return true;
   }
@@ -220,14 +198,21 @@ export async function canPreviewListing(
  * sellerName snapshot goes stale when sellers rename), then falls back to
  * the legacy display-name match.
  */
-export async function resolveSellerPhoto(l: Pick<Listing, "ownerId" | "sellerName">): Promise<string | null> {
+export async function resolveSellerPhoto(
+  l: Pick<Listing, "ownerId" | "sellerName">,
+): Promise<string | null> {
   if (l.ownerId) {
-    const byId = await storeRead((st) => st.findUserById(l.ownerId as string).then((u) => u?.photoUrl ?? null), null);
+    const byId = await storeRead(
+      (st) =>
+        st.findUserById(l.ownerId as string).then((u) => u?.photoUrl ?? null),
+      null,
+    );
     if (byId) return byId;
   }
   return storeRead(
-    (st) => st.findUserByDisplayName(l.sellerName).then((u) => u?.photoUrl ?? null),
-    null
+    (st) =>
+      st.findUserByDisplayName(l.sellerName).then((u) => u?.photoUrl ?? null),
+    null,
   );
 }
 
@@ -286,9 +271,13 @@ export type ShopTwin = {
  * in admin — the exact mismatch reported. Blank store fields fall back to
  * catalogue values; logo/cover trust the twin once it exists.
  */
-export function mergeShopDisplay(demo: ShopDisplay, stored: ShopTwin | null): ShopDisplay {
+export function mergeShopDisplay(
+  demo: ShopDisplay,
+  stored: ShopTwin | null,
+): ShopDisplay {
   if (!stored) return demo;
-  const text = (v: string | null | undefined, fb: string) => (v ?? "").trim() || fb;
+  const text = (v: string | null | undefined, fb: string) =>
+    (v ?? "").trim() || fb;
   return {
     ...demo,
     name: text(stored.name, demo.name),
@@ -315,7 +304,9 @@ export function mergeShopDisplay(demo: ShopDisplay, stored: ShopTwin | null): Sh
  * shop listings show the shop (logo, name, business badge) instead of the
  * owner's personal profile.
  */
-export async function resolveShopInfo(shopSlug?: string): Promise<ShopInfo | null> {
+export async function resolveShopInfo(
+  shopSlug?: string,
+): Promise<ShopInfo | null> {
   if (!shopSlug) return null;
   const stored = await storeRead((st) => st.getShopBySlug(shopSlug), null);
   const { getShop } = await import("@/data/catalog");
@@ -323,16 +314,34 @@ export async function resolveShopInfo(shopSlug?: string): Promise<ShopInfo | nul
   if (stored) {
     const base: ShopDisplay = demo
       ? {
-          slug: demo.slug, name: demo.name, description: demo.description,
-          businessCategory: demo.businessCategory, county: demo.county, town: demo.town,
-          phone: demo.phone, logo: demo.logo, cover: demo.cover, verified: demo.verified,
-          deliveryInfo: demo.deliveryInfo, hours: demo.hours, planId: "free",
+          slug: demo.slug,
+          name: demo.name,
+          description: demo.description,
+          businessCategory: demo.businessCategory,
+          county: demo.county,
+          town: demo.town,
+          phone: demo.phone,
+          logo: demo.logo,
+          cover: demo.cover,
+          verified: demo.verified,
+          deliveryInfo: demo.deliveryInfo,
+          hours: demo.hours,
+          planId: "free",
         }
       : {
-          slug: stored.slug, name: stored.name, description: stored.description ?? "",
-          businessCategory: stored.businessCategory ?? "", county: stored.county ?? "",
-          town: stored.town ?? "", phone: stored.phone ?? "", logo: null, cover: null,
-          verified: stored.verified ?? false, deliveryInfo: "", hours: "", planId: "free",
+          slug: stored.slug,
+          name: stored.name,
+          description: stored.description ?? "",
+          businessCategory: stored.businessCategory ?? "",
+          county: stored.county ?? "",
+          town: stored.town ?? "",
+          phone: stored.phone ?? "",
+          logo: null,
+          cover: null,
+          verified: stored.verified ?? false,
+          deliveryInfo: "",
+          hours: "",
+          planId: "free",
         };
     const v = mergeShopDisplay(base, stored);
     return {
@@ -362,7 +371,9 @@ export async function resolveShopInfo(shopSlug?: string): Promise<ShopInfo | nul
 }
 
 /** Canonical public path for a listing (used for share/copy links). */
-export function publicListingPath(l: Pick<Listing, "listingType" | "slug">): string {
+export function publicListingPath(
+  l: Pick<Listing, "listingType" | "slug">,
+): string {
   const seg =
     l.listingType === "classified"
       ? "/classifieds/"
@@ -379,7 +390,7 @@ export function publicListingPath(l: Pick<Listing, "listingType" | "slug">): str
  * catalogue hits must be checked by the caller first.
  */
 export async function resolveStoreDetail(
-  slugOrId: string
+  slugOrId: string,
 ): Promise<{ listing: Listing; previewStatus: string | null } | null> {
   const live = await getLiveListingBySlug(slugOrId);
   if (live) return { listing: live, previewStatus: null };
@@ -394,7 +405,7 @@ export async function resolveStoreDetail(
 /** Merge static + live without duplicates (live wins on id clash). */
 export function mergeStaticAndLive(
   staticItems: Listing[],
-  live: Listing[]
+  live: Listing[],
 ): Listing[] {
   if (live.length === 0) return staticItems;
   const seen = new Set(staticItems.map((l) => l.id));
@@ -414,21 +425,18 @@ export function mergeStaticAndLive(
  * One `listUsers` + one `listShops` call per invocation; safe fallback keeps
  * the static flags with a null plan.
  */
-export async function withLiveVerification<T extends Pick<Listing, "ownerId" | "sellerName" | "verified">>(
-  items: T[]
+export async function withLiveVerification<
+  T extends Pick<Listing, "ownerId" | "sellerName" | "verified">,
+>(
+  items: T[],
 ): Promise<(T & { planId: string | null; sellerSince: string | null })[]> {
   if (items.length === 0) return [];
   const [users, shops] = await Promise.all([
-    storeRead(
-      (st) => st.listUsers(),
-      []
-    ).catch(() => []),
-    storeRead(
-      (st) => st.listShops(),
-      []
-    ).catch(() => []),
+    storeRead((st) => st.listUsers(), []).catch(() => []),
+    storeRead((st) => st.listShops(), []).catch(() => []),
   ]);
-  const rank = (p: string | null) => PLAN_IDS.indexOf(normalizePlan(p ?? "free"));
+  const rank = (p: string | null) =>
+    PLAN_IDS.indexOf(normalizePlan(p ?? "free"));
   const byId = new Map(users.map((u) => [u.id, u]));
   const byName = new Map<string, (typeof users)[number]>();
   for (const u of users) {
@@ -447,7 +455,15 @@ export async function withLiveVerification<T extends Pick<Listing, "ownerId" | "
       shopPlanByOwner.set(owner, pid);
     }
   }
-  const effective = (user: (typeof users)[number] | undefined, ownerId?: string, shopSlug?: string): { verified: boolean | undefined; plan: string | null; since: string | null } => {
+  const effective = (
+    user: (typeof users)[number] | undefined,
+    ownerId?: string,
+    shopSlug?: string,
+  ): {
+    verified: boolean | undefined;
+    plan: string | null;
+    since: string | null;
+  } => {
     let verified: boolean | undefined;
     let plan: string | null = null;
     let since: string | null = null;
@@ -464,19 +480,34 @@ export async function withLiveVerification<T extends Pick<Listing, "ownerId" | "
   return items.map((l) => {
     const shopSlug = (l as { shopSlug?: string }).shopSlug;
     const basePlan = (l as { planId?: string | null }).planId ?? null;
-    const baseSince = (l as { sellerSince?: string | null }).sellerSince ?? null;
+    const baseSince =
+      (l as { sellerSince?: string | null }).sellerSince ?? null;
     if (l.ownerId && byId.has(l.ownerId)) {
       const e = effective(byId.get(l.ownerId), l.ownerId, shopSlug);
-      return { ...l, verified: e.verified ?? l.verified, planId: e.plan ?? basePlan, sellerSince: e.since ?? baseSince };
+      return {
+        ...l,
+        verified: e.verified ?? l.verified,
+        planId: e.plan ?? basePlan,
+        sellerSince: e.since ?? baseSince,
+      };
     }
     const hit = byName.get(l.sellerName.trim().toLowerCase());
     if (hit !== undefined) {
       const e = effective(hit, undefined, shopSlug);
-      return { ...l, verified: e.verified ?? l.verified, planId: e.plan ?? basePlan, sellerSince: e.since ?? baseSince };
+      return {
+        ...l,
+        verified: e.verified ?? l.verified,
+        planId: e.plan ?? basePlan,
+        sellerSince: e.since ?? baseSince,
+      };
     }
     if (shopSlug && planByShopSlug.has(shopSlug)) {
       const sp = planByShopSlug.get(shopSlug)!;
-      return { ...l, planId: rank(sp) > rank(basePlan) ? sp : basePlan, sellerSince: baseSince };
+      return {
+        ...l,
+        planId: rank(sp) > rank(basePlan) ? sp : basePlan,
+        sellerSince: baseSince,
+      };
     }
     return { ...l, planId: basePlan, sellerSince: baseSince };
   });
@@ -487,7 +518,7 @@ export async function withLiveVerification<T extends Pick<Listing, "ownerId" | "
  * call. Returns the main listing plus its rails with badges resolved.
  */
 export async function relatedWithLive(
-  main: Listing
+  main: Listing,
 ): Promise<{ main: Listing; fromOthers: Listing[]; fromSeller: Listing[] }> {
   const { LISTINGS } = await import("@/data/catalog");
   // Static + live merged: seller-posted products only exist in the store.
@@ -533,12 +564,14 @@ export type SellerProfileView = {
  * then account display/business name, then catalogue fallback (sellers with
  * listings but no registered account yet). Never exposes phone/email.
  */
-export async function resolveSellerProfile(slug: string): Promise<SellerProfileView | null> {
+export async function resolveSellerProfile(
+  slug: string,
+): Promise<SellerProfileView | null> {
   const needle = decodeURIComponent(slug).trim().toLowerCase();
   if (!needle) return null;
   const byId = await storeRead(
     (st) => st.findUserById(decodeURIComponent(slug).trim()).catch(() => null),
-    null
+    null,
   );
   if (byId) {
     return {
@@ -557,10 +590,12 @@ export async function resolveSellerProfile(slug: string): Promise<SellerProfileV
   }
   const users = await storeRead(
     (st) => st.listUsers().catch(() => []),
-    []
+    [],
   ).catch(() => []);
   const hit = users.find(
-    (u) => sellerSlug(u.name) === needle || (u.businessName && sellerSlug(u.businessName) === needle)
+    (u) =>
+      sellerSlug(u.name) === needle ||
+      (u.businessName && sellerSlug(u.businessName) === needle),
   );
   if (hit) {
     return {
@@ -596,23 +631,29 @@ export async function resolveSellerProfile(slug: string): Promise<SellerProfileV
 
 /** Public listings for a seller profile: live store items + catalogue, badges resolved. */
 export async function getSellerListings(
-  profile: Pick<SellerProfileView, "userId" | "name" | "businessName">
+  profile: Pick<SellerProfileView, "userId" | "name" | "businessName">,
 ): Promise<Listing[]> {
   const names = new Set(
-    [profile.name, profile.businessName].filter(Boolean).map((n) => (n as string).toLowerCase())
+    [profile.name, profile.businessName]
+      .filter(Boolean)
+      .map((n) => (n as string).toLowerCase()),
   );
   const live = await storeRead(
     (st) => st.listListingsByStatus("active"),
-    []
+    [],
   ).catch(() => []);
   const mine = live.filter(
     (l) =>
       (profile.userId && l.ownerId === profile.userId) ||
-      names.has((l.sellerName || "").toLowerCase())
+      names.has((l.sellerName || "").toLowerCase()),
   );
   const { LISTINGS } = await import("@/data/catalog");
-  const staticOnes = LISTINGS.filter((l) => names.has(l.sellerName.toLowerCase()));
-  return withLiveVerification(mergeStaticAndLive(staticOnes, mine.map(storeRecordToListing)));
+  const staticOnes = LISTINGS.filter((l) =>
+    names.has(l.sellerName.toLowerCase()),
+  );
+  return withLiveVerification(
+    mergeStaticAndLive(staticOnes, mine.map(storeRecordToListing)),
+  );
 }
 
 export type SellerContact = { phone: string; whatsapp: string };
@@ -624,11 +665,16 @@ export type SellerContact = { phone: string; whatsapp: string };
  */
 export function resolveSellerContact(
   listings: Pick<Listing, "sellerPhone">[],
-  shops: { phone?: string }[]
+  shops: { phone?: string }[],
 ): SellerContact | null {
-  const raw = shops.find((s) => s.phone)?.phone ?? listings.map((l) => l.sellerPhone).find(Boolean);
+  const raw =
+    shops.find((s) => s.phone)?.phone ??
+    listings.map((l) => l.sellerPhone).find(Boolean);
   if (!raw) return null;
   const digits = raw.replace(/\D/g, "");
   if (!digits) return null;
-  return { phone: raw, whatsapp: digits.startsWith("0") ? `254${digits.slice(1)}` : digits };
+  return {
+    phone: raw,
+    whatsapp: digits.startsWith("0") ? `254${digits.slice(1)}` : digits,
+  };
 }

@@ -10,13 +10,24 @@ import {
 
 describe("description Markdown renderer", () => {
   it("renders headings, ordered lists and quotes", () => {
-    assert.equal(toSafeHtml("## What's included\nCharger and case"), "<h2>What's included</h2><p>Charger and case</p>");
-    assert.equal(toSafeHtml("1. Charger\n2. Case"), "<ol><li>Charger</li><li>Case</li></ol>");
-    assert.equal(toSafeHtml("> Serious buyers only"), "<blockquote><p>Serious buyers only</p></blockquote>");
+    assert.equal(
+      toSafeHtml("## What's included\nCharger and case"),
+      "<h2>What's included</h2><p>Charger and case</p>",
+    );
+    assert.equal(
+      toSafeHtml("1. Charger\n2. Case"),
+      "<ol><li>Charger</li><li>Case</li></ol>",
+    );
+    assert.equal(
+      toSafeHtml("> Serious buyers only"),
+      "<blockquote><p>Serious buyers only</p></blockquote>",
+    );
   });
 
   it("keeps raw HTML and unsafe links inert", () => {
-    const html = toSafeHtml('<img src=x onerror=alert(1)> [click](javascript:alert(1))');
+    const html = toSafeHtml(
+      "<img src=x onerror=alert(1)> [click](javascript:alert(1))",
+    );
     assert.ok(!html.includes("<img"));
     assert.ok(!/href="javascript/i.test(html));
     assert.ok(html.includes("&lt;img"));
@@ -44,7 +55,12 @@ describe("description editor transforms", () => {
     const bullets = toggleLineStyle("one\ntwo", 0, 7, "bullet");
     assert.equal(bullets.value, "- one\n- two");
 
-    const unbulleted = toggleLineStyle(bullets.value, 0, bullets.value.length, "bullet");
+    const unbulleted = toggleLineStyle(
+      bullets.value,
+      0,
+      bullets.value.length,
+      "bullet",
+    );
     assert.equal(unbulleted.value, "one\ntwo");
 
     const numbered = toggleLineStyle("one\ntwo", 0, 7, "number");
@@ -72,7 +88,12 @@ describe("description editor transforms", () => {
     assert.equal(atCursor!.value, "See [link text](https://example.com/)");
     assert.deepEqual([atCursor!.start, atCursor!.end], [5, 14]);
 
-    const selected = insertMarkdownLink("See site", 4, 8, "https://example.com");
+    const selected = insertMarkdownLink(
+      "See site",
+      4,
+      8,
+      "https://example.com",
+    );
     assert.ok(selected);
     assert.equal(selected!.value, "See [site](https://example.com/)");
   });

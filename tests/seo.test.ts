@@ -16,7 +16,11 @@ import {
   topBrandsOf,
   topCountiesOf,
 } from "../src/lib/category-seo.ts";
-import { collectionJsonLd, productJsonLd, serviceJsonLd } from "../src/lib/seo.ts";
+import {
+  collectionJsonLd,
+  productJsonLd,
+  serviceJsonLd,
+} from "../src/lib/seo.ts";
 
 describe("county URL slugs", () => {
   it("makes stable slugs and resolves them back to the county", () => {
@@ -33,7 +37,9 @@ describe("county URL slugs", () => {
 describe("category landing helpers", () => {
   const category = categoryBySlug("phones-tablets")!;
   const phones = LISTINGS.filter((l) => l.categorySlug === "phones-tablets");
-  const phonesOnly = LISTINGS.filter((l) => l.categorySlug === "phones-tablets" && (l.attributes?.brand ?? ""));
+  const phonesOnly = LISTINGS.filter(
+    (l) => l.categorySlug === "phones-tablets" && (l.attributes?.brand ?? ""),
+  );
 
   it("builds readable category and subcategory URLs", () => {
     assert.equal(subcategorySlug("Smart TVs"), "smart-tvs");
@@ -41,7 +47,10 @@ describe("category landing helpers", () => {
     assert.equal(subcategoryBySlug(category, "smartwatches"), "Smartwatches");
     assert.equal(subcategoryBySlug(category, "not-real"), undefined);
     assert.equal(categoryPath(category), "/browse/phones-tablets");
-    assert.equal(categoryPath(category, "Smart TVs"), "/browse/phones-tablets/smart-tvs");
+    assert.equal(
+      categoryPath(category, "Smart TVs"),
+      "/browse/phones-tablets/smart-tvs",
+    );
   });
 
   it("derives market data from real listings", () => {
@@ -58,14 +67,26 @@ describe("category landing helpers", () => {
     const keywords = categoryKeywords(category, "Smartphones");
     assert.equal(new Set(keywords).size, keywords.length);
     assert.ok(keywords.includes("buy Smartphones in Kenya"));
-    const faqs = categoryFaqs(category, "Smartphones", 7, priceRangeOf(phones), topCountiesOf(phones));
+    const faqs = categoryFaqs(
+      category,
+      "Smartphones",
+      7,
+      priceRangeOf(phones),
+      topCountiesOf(phones),
+    );
     assert.equal(faqs.length, 5);
     assert.ok(faqs[0].a.includes("KES") || faqs[0].a.includes("Ksh"));
     assert.ok(faqs.some((f) => f.q.includes("How many smartphones")));
   });
 
   it("emits CollectionPage + ItemList + breadcrumb + FAQ structured data", () => {
-    const faqs = categoryFaqs(category, undefined, phones.length, priceRangeOf(phones), topCountiesOf(phones));
+    const faqs = categoryFaqs(
+      category,
+      undefined,
+      phones.length,
+      priceRangeOf(phones),
+      topCountiesOf(phones),
+    );
     const jsonLd = categoryJsonLd({
       category,
       description: "Compare phones across Kenya.",
@@ -81,7 +102,11 @@ describe("category landing helpers", () => {
       mainEntity: { "@type": string; itemListElement: { url: string }[] };
     };
     assert.equal(collection.mainEntity["@type"], "ItemList");
-    assert.ok(collection.mainEntity.itemListElement[0].url.startsWith("https://chap.co.ke/product/"));
+    assert.ok(
+      collection.mainEntity.itemListElement[0].url.startsWith(
+        "https://chap.co.ke/product/",
+      ),
+    );
   });
 
   it("keeps every category/subcategory pair valid for the sitemap", () => {
@@ -96,7 +121,9 @@ describe("category landing helpers", () => {
 });
 
 describe("listing structured data", () => {
-  const item = LISTINGS.find((l) => l.listingType === "product" && l.price > 0)!;
+  const item = LISTINGS.find(
+    (l) => l.listingType === "product" && l.price > 0,
+  )!;
 
   it("strips condition, stock, brand and seller into Product/Offer", () => {
     const schema = productSchema(item) as {
@@ -111,7 +138,10 @@ describe("listing structured data", () => {
     assert.ok(schema.itemCondition.startsWith("https://schema.org/"));
     assert.equal(schema.offers.price, item.price);
     assert.equal(schema.offers.availability, "https://schema.org/InStock");
-    assert.ok(schema.offers.seller.url.startsWith("/") || schema.offers.seller.url.startsWith("http"));
+    assert.ok(
+      schema.offers.seller.url.startsWith("/") ||
+        schema.offers.seller.url.startsWith("http"),
+    );
     assert.ok(schema.image.every((u) => u.startsWith("http")));
   });
 
@@ -151,6 +181,9 @@ describe("listing structured data", () => {
       url: "/browse/phones-tablets",
       items: [{ name: item.title, url: `/product/${item.slug}` }],
     }) as { mainEntity: { itemListElement: { url: string }[] } };
-    assert.equal(jsonLd.mainEntity.itemListElement[0].url, `https://chap.co.ke/product/${item.slug}`);
+    assert.equal(
+      jsonLd.mainEntity.itemListElement[0].url,
+      `https://chap.co.ke/product/${item.slug}`,
+    );
   });
 });

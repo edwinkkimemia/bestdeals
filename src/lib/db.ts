@@ -28,7 +28,10 @@ export function db(): unknown | null {
     _db = null;
     _loadError = (e as Error)?.message ?? String(e);
     // Loud: a broken client must never masquerade as a healthy database.
-    console.error("[db] Prisma client failed to load — ephemeral demo fallback:", _loadError);
+    console.error(
+      "[db] Prisma client failed to load — ephemeral demo fallback:",
+      _loadError,
+    );
   }
   return _db;
 }

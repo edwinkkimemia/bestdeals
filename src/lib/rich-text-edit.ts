@@ -17,7 +17,12 @@ function range(value: string, start: number, end: number) {
   return a <= b ? { start: a, end: b } : { start: b, end: a };
 }
 
-function finish(value: string, start: number, end: number, maxLength: number): RichEditResult {
+function finish(
+  value: string,
+  start: number,
+  end: number,
+  maxLength: number,
+): RichEditResult {
   const next = value.slice(0, Math.max(0, maxLength));
   return {
     value: next,
@@ -60,7 +65,7 @@ export function wrapSelection(
   before: string,
   after = before,
   placeholder = "text",
-  maxLength = 5000
+  maxLength = 5000,
 ): RichEditResult {
   const selectedRange = range(value, start, end);
   const s = selectedRange.start;
@@ -106,7 +111,7 @@ export function toggleLineStyle(
   start: number,
   end: number,
   style: LineStyle,
-  maxLength = 5000
+  maxLength = 5000,
 ): RichEditResult {
   const selectedRange = range(value, start, end);
   const s = selectedRange.start;
@@ -119,7 +124,8 @@ export function toggleLineStyle(
   const block = value.slice(lineStart, lineEnd);
   const lines = block.split("\n");
   const filled = lines.filter((line) => line.trim().length > 0);
-  const allStyled = filled.length > 0 && filled.every((line) => hasLineStyle(line, style));
+  const allStyled =
+    filled.length > 0 && filled.every((line) => hasLineStyle(line, style));
 
   let itemIndex = 0;
   const nextLines = lines.map((line) => {
@@ -133,14 +139,20 @@ export function toggleLineStyle(
   const nextBlock = nextLines.join("\n");
   const next = value.slice(0, lineStart) + nextBlock + value.slice(lineEnd);
   const blockEnd = lineStart + nextBlock.length;
-  return finish(next, s === e ? blockEnd : lineStart, s === e ? blockEnd : blockEnd, maxLength);
+  return finish(
+    next,
+    s === e ? blockEnd : lineStart,
+    s === e ? blockEnd : blockEnd,
+    maxLength,
+  );
 }
 
 /** Validate and normalise a user-entered link; only http(s) is accepted. */
 export function normalizeHttpUrl(raw: string): string | null {
   let text = raw.trim();
   if (!text) return null;
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(text)) text = `https://${text.replace(/^\/+/, "")}`;
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(text))
+    text = `https://${text.replace(/^\/+/, "")}`;
   try {
     const url = new URL(text);
     if (url.protocol !== "http:" && url.protocol !== "https:") return null;
@@ -157,7 +169,7 @@ export function insertMarkdownLink(
   end: number,
   rawUrl: string,
   placeholder = "link text",
-  maxLength = 5000
+  maxLength = 5000,
 ): RichEditResult | null {
   const url = normalizeHttpUrl(rawUrl);
   if (!url) return null;
@@ -165,7 +177,11 @@ export function insertMarkdownLink(
   const s = selectedRange.start;
   const e = selectedRange.end;
   const hadSelection = s !== e;
-  const fallback = placeholder.replace(/[\[\]\n]/g, " ").replace(/\s+/g, " ").trim() || "link text";
+  const fallback =
+    placeholder
+      .replace(/[\[\]\n]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim() || "link text";
   const label =
     value
       .slice(s, e)
@@ -181,6 +197,6 @@ export function insertMarkdownLink(
     next,
     hadSelection ? s + inserted.length : labelStart,
     hadSelection ? s + inserted.length : labelStart + label.length,
-    maxLength
+    maxLength,
   );
 }

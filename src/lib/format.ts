@@ -20,12 +20,20 @@ export function savings(prev: number | null, curr: number): number | null {
 /** Server-truth pricing: qty * unit, minus discount, plus delivery. Never trust client totals. */
 export function cartTotals(
   lines: { unitPrice: number; qty: number }[],
-  opts?: { discount?: number; deliveryFee?: number }
+  opts?: { discount?: number; deliveryFee?: number },
 ): { subtotal: number; discount: number; delivery: number; total: number } {
-  const subtotal = lines.reduce((s, l) => s + l.unitPrice * Math.max(0, l.qty), 0);
+  const subtotal = lines.reduce(
+    (s, l) => s + l.unitPrice * Math.max(0, l.qty),
+    0,
+  );
   const discount = Math.min(opts?.discount ?? 0, subtotal);
   const delivery = Math.max(0, opts?.deliveryFee ?? 0);
-  return { subtotal, discount, delivery, total: subtotal - discount + delivery };
+  return {
+    subtotal,
+    discount,
+    delivery,
+    total: subtotal - discount + delivery,
+  };
 }
 
 /** Commission owed to platform on a seller suborder. */
@@ -64,7 +72,11 @@ export function formatFull(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(+d)) return "";
   return (
-    d.toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" }) +
+    d.toLocaleDateString("en-KE", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    }) +
     ", " +
     d.toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit" })
   );

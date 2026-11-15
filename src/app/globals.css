@@ -3,11 +3,10 @@
 @tailwind utilities;
 
 /*
-  Chap (chap.co.ke) design tokens — sampled from public/chaplogo.png
-  Primary brand: royal blue            #0043D2 (brand-600)
-  Accent: signal red                   #F81124 (accent-500) — used sparingly
-  Backgrounds: white / warm neutral #FAF7F2 (sand-50)
-  Text: ink-900 headings, ink-700 body, ink-500 muted
+ Chap solid design system.
+ Flat surfaces, 1px borders, 4px max radius, no gradients, no glass.
+ Primary: royal blue #0043D2 · Accent red #F81124 (sparingly)
+ Surfaces: white / #F4F4F5 · Text: #111418 / #26292E / #5B6068
 */
 
 :root {
@@ -15,7 +14,7 @@
   --bd-brand-dark: #0033a6;
   --bd-accent: #f81124;
   --bd-bg: #ffffff;
-  --bd-bg-warm: #faf7f2;
+  --bd-bg-flat: #f4f4f5;
 }
 
 html {
@@ -24,9 +23,9 @@ html {
 
 body {
   background: var(--bd-bg);
-  color: #101812;
-  font-feature-settings: "ss01";
+  color: #111418;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 @layer components {
@@ -34,34 +33,37 @@ body {
     @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
   }
   .card {
-    @apply rounded-card border border-neutral-200 bg-white shadow-card;
+    @apply rounded border border-neutral-200 bg-white;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 disabled:opacity-50;
+    @apply inline-flex items-center justify-center gap-2 rounded bg-brand-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 disabled:opacity-50;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-300 bg-white px-5 py-2.5 text-sm font-semibold text-ink-900 transition hover:bg-sand-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded border border-neutral-300 bg-white px-5 py-2.5 text-sm font-bold text-ink-900 hover:border-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2;
   }
   .btn-accent {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-accent-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded bg-accent-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-accent-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2;
   }
   .btn-whatsapp {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#1EBE5B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded bg-[#1DA851] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#178A43] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1DA851] focus-visible:ring-offset-2;
   }
   .input-bd {
-    @apply w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/20;
+    @apply w-full rounded border border-neutral-300 bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-ink-900 focus:outline-none focus:ring-1 focus:ring-ink-900;
   }
   .label-bd {
-    @apply mb-1.5 block text-sm font-medium text-ink-900;
+    @apply mb-1.5 block text-sm font-bold text-ink-900;
   }
   .chip {
-    @apply inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-sand-50 px-2.5 py-1 text-xs font-medium text-ink-700;
+    @apply inline-flex items-center gap-1 rounded border border-neutral-200 bg-neutral-100 px-2.5 py-1 text-xs font-semibold text-ink-700;
   }
   .section-title {
-    @apply text-xl font-bold tracking-tight text-ink-900 sm:text-2xl;
+    @apply text-xl font-extrabold tracking-tight text-ink-900 sm:text-2xl;
+  }
+  .kicker {
+    @apply text-[11px] font-bold uppercase tracking-[0.14em] text-ink-500;
   }
   .link-bd {
-    @apply text-sm font-medium text-brand-700 hover:text-brand-600 hover:underline;
+    @apply text-sm font-bold text-brand-700 hover:text-brand-600 hover:underline;
   }
 }
 
@@ -73,27 +75,109 @@ body {
 }
 
 /* Sanitized listing/chat description rendered from the Markdown subset. */
-.rich-text { overflow-wrap: anywhere; }
-.rich-text > :first-child { margin-top: 0; }
-.rich-text > :last-child { margin-bottom: 0; }
-.rich-text p { margin: 0.45em 0; }
-.rich-text h2 { font-size: 1.05rem; font-weight: 800; color: #101812; margin: 0.8em 0 0.3em; }
-.rich-text h3 { font-size: 1rem; font-weight: 700; color: #101812; margin: 0.7em 0 0.25em; }
-.rich-text ul { list-style: disc; padding-left: 1.4em; margin: 0.45em 0; }
-.rich-text ol { list-style: decimal; padding-left: 1.4em; margin: 0.45em 0; }
-.rich-text li + li { margin-top: 0.15em; }
-.rich-text blockquote { border-left: 3px solid #0043d2; padding-left: 0.8em; color: #5b6a63; margin: 0.6em 0; }
-.rich-text code { border-radius: 0.35rem; background: #faf7f2; padding: 0.05rem 0.3rem; font-size: 0.9em; }
-.rich-text a { color: #0033a6; text-decoration: underline; }
+.rich-text {
+  overflow-wrap: anywhere;
+}
+.rich-text > :first-child {
+  margin-top: 0;
+}
+.rich-text > :last-child {
+  margin-bottom: 0;
+}
+.rich-text p {
+  margin: 0.45em 0;
+}
+.rich-text h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #111418;
+  margin: 0.8em 0 0.3em;
+}
+.rich-text h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111418;
+  margin: 0.7em 0 0.25em;
+}
+.rich-text ul {
+  list-style: disc;
+  padding-left: 1.4em;
+  margin: 0.45em 0;
+}
+.rich-text ol {
+  list-style: decimal;
+  padding-left: 1.4em;
+  margin: 0.45em 0;
+}
+.rich-text li + li {
+  margin-top: 0.15em;
+}
+.rich-text blockquote {
+  border-left: 3px solid #0043d2;
+  padding-left: 0.8em;
+  color: #5b6068;
+  margin: 0.6em 0;
+}
+.rich-text code {
+  border-radius: 3px;
+  background: #f4f4f5;
+  padding: 0.05rem 0.3rem;
+  font-size: 0.9em;
+}
+.rich-text a {
+  color: #0033a6;
+  text-decoration: underline;
+}
 
 /* Sanitized blog article body (rendered via dangerouslySetInnerHTML). */
-.blog-body h2 { font-size: 1.35rem; font-weight: 800; color: #101812; margin: 1.1em 0 0.45em; }
-.blog-body h3 { font-size: 1.15rem; font-weight: 700; color: #101812; margin: 1em 0 0.4em; }
-.blog-body h4 { font-size: 1rem; font-weight: 700; color: #101812; margin: 0.9em 0 0.35em; }
-.blog-body p { margin: 0.6em 0; }
-.blog-body ul { list-style: disc; padding-left: 1.5em; margin: 0.6em 0; }
-.blog-body ol { list-style: decimal; padding-left: 1.5em; margin: 0.6em 0; }
-.blog-body blockquote { border-left: 3px solid #0043d2; padding-left: 0.9em; color: #5b6a63; margin: 0.8em 0; }
-.blog-body a { color: #0033a6; text-decoration: underline; }
-.blog-body img { border-radius: 1rem; margin: 0.8em 0; max-width: 100%; }
-.blog-body hr { border: none; border-top: 1px solid #e7e5e4; margin: 1.2em 0; }
+.blog-body h2 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #111418;
+  margin: 1.1em 0 0.45em;
+}
+.blog-body h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #111418;
+  margin: 1em 0 0.4em;
+}
+.blog-body h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111418;
+  margin: 0.9em 0 0.35em;
+}
+.blog-body p {
+  margin: 0.6em 0;
+}
+.blog-body ul {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin: 0.6em 0;
+}
+.blog-body ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+  margin: 0.6em 0;
+}
+.blog-body blockquote {
+  border-left: 3px solid #0043d2;
+  padding-left: 0.9em;
+  color: #5b6068;
+  margin: 0.8em 0;
+}
+.blog-body a {
+  color: #0033a6;
+  text-decoration: underline;
+}
+.blog-body img {
+  border-radius: 4px;
+  margin: 0.8em 0;
+  max-width: 100%;
+}
+.blog-body hr {
+  border: none;
+  border-top: 1px solid #e4e4e7;
+  margin: 1.2em 0;
+}

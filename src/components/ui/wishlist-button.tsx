@@ -14,7 +14,15 @@ export function getWishlist(): string[] {
   }
 }
 
-export function WishlistButton({ id, title, className }: { id: string; title?: string; className?: string }) {
+export function WishlistButton({
+  id,
+  title,
+  className,
+}: {
+  id: string;
+  title?: string;
+  className?: string;
+}) {
   const [active, setActive] = useState(false);
   useEffect(() => {
     setActive(getWishlist().includes(id));
@@ -22,13 +30,19 @@ export function WishlistButton({ id, title, className }: { id: string; title?: s
   return (
     <button
       type="button"
-      aria-label={active ? `Remove ${title ?? "item"} from saved searches` : `Save ${title ?? "item"} to saved searches`}
+      aria-label={
+        active
+          ? `Remove ${title ?? "item"} from saved searches`
+          : `Save ${title ?? "item"} to saved searches`
+      }
       aria-pressed={active}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
         const list = getWishlist();
-        const next = list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+        const next = list.includes(id)
+          ? list.filter((x) => x !== id)
+          : [...list, id];
         localStorage.setItem(KEY, JSON.stringify(next));
         setActive(next.includes(id));
         window.dispatchEvent(new Event("bd:wishlist"));
@@ -40,9 +54,9 @@ export function WishlistButton({ id, title, className }: { id: string; title?: s
         }).catch(() => {});
       }}
       className={cn(
-        "flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow transition hover:scale-105",
+        "flex h-8 w-8 items-center justify-center rounded border border-neutral-200 bg-white transition",
         active ? "text-red-600" : "text-ink-500",
-        className
+        className,
       )}
     >
       <Heart className={cn("h-4 w-4", active && "fill-red-600")} />

@@ -17,7 +17,7 @@ export function isRedisConfigured(): boolean {
 
 export function rateLimit(
   key: string,
-  opts: { limit: number; windowMs: number }
+  opts: { limit: number; windowMs: number },
 ): { ok: boolean; remaining: number; resetAfterMs: number } {
   const now = Date.now();
   prune(now);
@@ -26,9 +26,18 @@ export function rateLimit(
     buckets.set(key, { count: 1, resetAt: now + opts.windowMs });
     return { ok: true, remaining: opts.limit - 1, resetAfterMs: opts.windowMs };
   }
-  if (b.count >= opts.limit) return { ok: false, remaining: 0, resetAfterMs: Math.max(0, b.resetAt - now) };
+  if (b.count >= opts.limit)
+    return {
+      ok: false,
+      remaining: 0,
+      resetAfterMs: Math.max(0, b.resetAt - now),
+    };
   b.count += 1;
-  return { ok: true, remaining: opts.limit - b.count, resetAfterMs: Math.max(0, b.resetAt - now) };
+  return {
+    ok: true,
+    remaining: opts.limit - b.count,
+    resetAfterMs: Math.max(0, b.resetAt - now),
+  };
 }
 
 /** Test hook: clear all buckets. */
@@ -40,7 +49,7 @@ export function resetRateLimits(): void {
 export function rateLimitHeaders(
   limit: number,
   remaining: number,
-  resetAfterMs: number
+  resetAfterMs: number,
 ): Record<string, string> {
   return {
     "RateLimit-Limit": String(limit),

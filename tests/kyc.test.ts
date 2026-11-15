@@ -12,17 +12,29 @@ async function setup(kind: "id" | "business") {
   const s = freshDemoStore();
   const tag = uid();
   const user = await s.createUser({
-    name: `Kyc ${tag}`, email: `kyc-${tag}@x.co.ke`, phone: "0712345678",
-    role: "SELLER", verified: false, passwordHash: "h",
+    name: `Kyc ${tag}`,
+    email: `kyc-${tag}@x.co.ke`,
+    phone: "0712345678",
+    role: "SELLER",
+    verified: false,
+    passwordHash: "h",
   });
   const shop = await s.createShop({
-    slug: `kyc-shop-${tag}`, name: "Kyc Shop", description: "A shop awaiting business KYC.",
-    businessCategory: "General retail", county: "Nairobi", town: "CBD",
-    phone: "0712345678", ownerId: user.id,
+    slug: `kyc-shop-${tag}`,
+    name: "Kyc Shop",
+    description: "A shop awaiting business KYC.",
+    businessCategory: "General retail",
+    county: "Nairobi",
+    town: "CBD",
+    phone: "0712345678",
+    ownerId: user.id,
   });
   const v = await s.createVerification({
-    userId: user.id, kind, phone: "0712345678",
-    docPath: "private:2026/id.png", fileName: "id.png",
+    userId: user.id,
+    kind,
+    phone: "0712345678",
+    docPath: "private:2026/id.png",
+    fileName: "id.png",
   });
   return { s, user, shop, v };
 }

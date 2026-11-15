@@ -4,7 +4,12 @@ import { currentUser } from "@/lib/auth";
 import { requireVerifiedSeller } from "@/lib/gate";
 import { getStore } from "@/lib/store";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
-import { getSellerPlan, countLiveListings, planAllowsListings, limitMessage } from "@/lib/plans";
+import {
+  getSellerPlan,
+  countLiveListings,
+  planAllowsListings,
+  limitMessage,
+} from "@/lib/plans";
 import { normalizeListingImages } from "@/lib/image-urls";
 import { categorySelectionError, getCategories } from "@/lib/categories";
 
@@ -16,13 +21,17 @@ export async function POST(req: NextRequest) {
   const store = getStore();
   // Retries (double-click, dropped response) carry the same key from the form.
   // Return the original listing instead of creating a second one.
-  const createKey = (req.headers.get("idempotency-key") ?? "").trim().slice(0, 100);
+  const createKey = (req.headers.get("idempotency-key") ?? "")
+    .trim()
+    .slice(0, 100);
   if (createKey) {
-    const prior = (await store.getSetting(`listing:create:${user.id}:${createKey}`).catch(() => null)) as
-      | { listingId?: string }
-      | null;
+    const prior = (await store
+      .getSetting(`listing:create:${user.id}:${createKey}`)
+      .catch(() => null)) as { listingId?: string } | null;
     if (prior?.listingId) {
-      const existing = await store.getListing(prior.listingId).catch(() => null);
+      const existing = await store
+        .getListing(prior.listingId)
+        .catch(() => null);
       if (existing) {
         return NextResponse.json({
           ok: true,
@@ -34,14 +43,24 @@ export async function POST(req: NextRequest) {
       }
     }
   }
-  const rl = rateLimit(clientKey(req, `list:${user.id}`), { limit: 10, windowMs: 3600_000 });
-  if (!rl.ok) return NextResponse.json({ error: "Listing limit reached for now. Try again later." }, { status: 429 });
+  const rl = rateLimit(clientKey(req, `list:${user.id}`), {
+    limit: 10,
+    windowMs: 3600_000,
+  });
+  if (!rl.ok)
+    return NextResponse.json(
+      { error: "Listing limit reached for now. Try again later." },
+      { status: 429 },
+    );
 
   // Plan allowance: Free 5 · Silver 30 · Gold unlimited live listings.
   const plan = await getSellerPlan(user.id);
   const live = await countLiveListings(user.id);
   if (!planAllowsListings(plan.planId, live)) {
-    return NextResponse.json({ error: limitMessage(plan.planId, live), code: "PLAN_LIMIT" }, { status: 403 });
+    return NextResponse.json(
+      { error: limitMessage(plan.planId, live), code: "PLAN_LIMIT" },
+      { status: 403 },
+    );
   }
 
   const body = await req.json().catch(() => ({}));
@@ -50,22 +69,37 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     return NextResponse.json(
-      { error: issue?.message || "Check the form and try again.", field: issue?.path?.[0] ?? null },
-      { status: 400 }
+      {
+        error: issue?.message || "Check the form and try again.",
+        field: issue?.path?.[0] ?? null,
+      },
+      { status: 400 },
     );
   }
   const d = parsed.data;
-  const categoryError = await categorySelectionError(d.categorySlug, d.subcategory);
+  const categoryError = await categorySelectionError(
+    d.categorySlug,
+    d.subcategory,
+  );
   if (categoryError) {
     return NextResponse.json(
-      { error: categoryError, field: categoryError.toLowerCase().includes("subcategory") ? "subcategory" : "categorySlug" },
-      { status: 400 }
+      {
+        error: categoryError,
+        field: categoryError.toLowerCase().includes("subcategory")
+          ? "subcategory"
+          : "categorySlug",
+      },
+      { status: 400 },
     );
   }
   if (d.compareAt && d.compareAt <= d.price) {
     return NextResponse.json(
-      { error: "Previous price must be higher than the current price, or left empty.", field: "compareAt" },
-      { status: 400 }
+      {
+        error:
+          "Previous price must be higher than the current price, or left empty.",
+        field: "compareAt",
+      },
+      { status: 400 },
     );
   }
   // Banned-word pre-screen (full moderation queue in admin)
@@ -73,8 +107,12 @@ export async function POST(req: NextRequest) {
   const hay = `${d.title} ${d.description}`.toLowerCase();
   if (banned.some((w) => hay.includes(w))) {
     return NextResponse.json(
-      { error: "This listing needs manual review due to a flagged term. Our team will check it.", field: "description" },
-      { status: 422 }
+      {
+        error:
+          "This listing needs manual review due to a flagged term. Our team will check it.",
+        field: "description",
+      },
+      { status: 422 },
     );
   }
   const rec = await store.createListing({
@@ -118,13 +156,19 @@ export async function POST(req: NextRequest) {
       link: `/dashboard/listings/${rec.id}`,
     });
   } catch {}
-  return NextResponse.json({ ok: true, id: rec.id, status: "pending", message: "Saved and queued for moderation." });
+  return NextResponse.json({
+    ok: true,
+    id: rec.id,
+    status: "pending",
+    message: "Saved and queued for moderation.",
+  });
 }
 
 /** Seller's own listings (used by the dashboard). */
 export async function GET() {
   const user = await currentUser();
-  if (!user) return NextResponse.json({ error: "Sign in first." }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Sign in first." }, { status: 401 });
   const items = await getStore().listListingsByOwner(user.id);
   return NextResponse.json({ items });
 }

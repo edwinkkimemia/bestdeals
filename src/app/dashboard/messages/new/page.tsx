@@ -25,9 +25,15 @@ function NewMessageInner() {
   // id must still be sent so the server can pin the real owner.
   const listingParam = sp.get("listing") ?? "";
   const listing = getListing(listingParam);
-  const shopSlug = !listing && !listingParam.trim() ? (sp.get("shop") ?? "") : "";
-  const toUser = !listing && !listingParam.trim() && !shopSlug ? (sp.get("user") ?? "") : "";
-  const [resolved, setResolved] = useState<{ title: string; seller: string; price?: number } | null>(null);
+  const shopSlug =
+    !listing && !listingParam.trim() ? (sp.get("shop") ?? "") : "";
+  const toUser =
+    !listing && !listingParam.trim() && !shopSlug ? (sp.get("user") ?? "") : "";
+  const [resolved, setResolved] = useState<{
+    title: string;
+    seller: string;
+    price?: number;
+  } | null>(null);
 
   // Store-listing context for the header (catalogue hits render instantly).
   useEffect(() => {
@@ -36,11 +42,20 @@ function NewMessageInner() {
       return;
     }
     let live = true;
-    fetch(`/api/listings/resolve?ids=${encodeURIComponent(listingParam.trim())}`)
+    fetch(
+      `/api/listings/resolve?ids=${encodeURIComponent(listingParam.trim())}`,
+    )
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
-        const it = j?.items?.[0] as { title?: string; seller?: string; price?: number } | undefined;
-        if (live && it?.title) setResolved({ title: it.title, seller: it.seller ?? "Seller", price: it.price });
+        const it = j?.items?.[0] as
+          | { title?: string; seller?: string; price?: number }
+          | undefined;
+        if (live && it?.title)
+          setResolved({
+            title: it.title,
+            seller: it.seller ?? "Seller",
+            price: it.price,
+          });
       })
       .catch(() => {});
     return () => {
@@ -73,23 +88,45 @@ function NewMessageInner() {
 
   return (
     <div>
-      <Link href="/dashboard/messages" className="link-bd inline-flex items-center gap-1 text-sm"><ChevronLeft className="h-4 w-4" /> Inbox</Link>
+      <Link
+        href="/dashboard/messages"
+        className="link-bd inline-flex items-center gap-1 text-sm"
+      >
+        <ChevronLeft className="h-4 w-4" /> Inbox
+      </Link>
       <h1 className="section-title mt-1">Message seller</h1>
       {aboutTitle ? (
-        <p className="mt-1 text-sm text-ink-500">About: <strong>{aboutTitle}</strong> — {aboutSeller}</p>
+        <p className="mt-1 text-sm text-ink-500">
+          About: <strong>{aboutTitle}</strong> — {aboutSeller}
+        </p>
       ) : shopSlug ? (
-        <p className="mt-1 text-sm text-ink-500">About shop: <strong>{shopSlug}</strong> — the owner will reply here.</p>
+        <p className="mt-1 text-sm text-ink-500">
+          About shop: <strong>{shopSlug}</strong> — the owner will reply here.
+        </p>
       ) : toUser ? (
-        <p className="mt-1 text-sm text-ink-500">Direct message — delivered straight to the seller&apos;s inbox.</p>
+        <p className="mt-1 text-sm text-ink-500">
+          Direct message — delivered straight to the seller&apos;s inbox.
+        </p>
       ) : listingParam ? (
-        <p className="mt-1 text-sm text-ink-500">About this listing — the seller will reply here.</p>
+        <p className="mt-1 text-sm text-ink-500">
+          About this listing — the seller will reply here.
+        </p>
       ) : (
         <p className="mt-1 text-sm text-ink-500">Start a general enquiry.</p>
       )}
       <div className="card mt-4 space-y-3 p-5">
-        <p className="text-xs text-ink-400">You chat as your signed-in account.</p>
-        <ChatComposer onSend={send} initialText={draft} placeholder={`Hi! Is "${aboutTitle ?? "this"}" still available?`} />
-        <p className="text-xs text-ink-400">Spam-protected & rate-limited. Keep chats on Chap until you&apos;re confident.</p>
+        <p className="text-xs text-ink-400">
+          You chat as your signed-in account.
+        </p>
+        <ChatComposer
+          onSend={send}
+          initialText={draft}
+          placeholder={`Hi! Is "${aboutTitle ?? "this"}" still available?`}
+        />
+        <p className="text-xs text-ink-400">
+          Spam-protected & rate-limited. Keep chats on Chap until you&apos;re
+          confident.
+        </p>
       </div>
     </div>
   );

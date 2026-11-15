@@ -12,12 +12,26 @@ import { PlansSection } from "../sections/plans";
 
 export const dynamic = "force-dynamic";
 
-const SECTIONS = ["listings", "verifications", "users", "shops", "orders", "disputes", "reports", "reviews", "promotions", "plans"] as const;
+const SECTIONS = [
+  "listings",
+  "verifications",
+  "users",
+  "shops",
+  "orders",
+  "disputes",
+  "reports",
+  "reviews",
+  "promotions",
+  "plans",
+] as const;
 export function generateStaticParams() {
   return SECTIONS.map((section) => ({ section }));
 }
 
-export const metadata = { title: "Admin section", robots: { index: false, follow: false } };
+export const metadata = {
+  title: "Admin section",
+  robots: { index: false, follow: false },
+};
 
 /**
  * Thin router — each section lives in ./sections/* as a proper table

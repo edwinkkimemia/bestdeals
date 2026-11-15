@@ -3,18 +3,31 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import { join, basename } from "path";
 import { rateLimit, clientKey } from "@/lib/rate-limit";
 import { uploadsBaseDir, wmCacheDir } from "@/lib/storage";
-import { watermarkBuffer, sniffContentType, wmCacheKey } from "@/lib/watermark-server";
+import {
+  watermarkBuffer,
+  sniffContentType,
+  wmCacheKey,
+} from "@/lib/watermark-server";
 
 const MAX_FETCH = 8 * 1024 * 1024;
 
-function respond(buf: Buffer, name: string, asAttachment: boolean, immutable: boolean) {
+function respond(
+  buf: Buffer,
+  name: string,
+  asAttachment: boolean,
+  immutable: boolean,
+) {
   const safe = `chap-${basename(name).replace(/[^A-Za-z0-9._-]/g, "_") || "photo.jpg"}`;
   // NextResponse with Buffer: pass a Uint8Array copy for correct typing.
   return new NextResponse(new Uint8Array(buf), {
     headers: {
       "Content-Type": sniffContentType(buf),
-      ...(asAttachment ? { "Content-Disposition": `attachment; filename="${safe}"` } : {}),
-      "Cache-Control": immutable ? "public, max-age=31536000, immutable" : "public, max-age=86400",
+      ...(asAttachment
+        ? { "Content-Disposition": `attachment; filename="${safe}"` }
+        : {}),
+      "Cache-Control": immutable
+        ? "public, max-age=31536000, immutable"
+        : "public, max-age=86400",
     },
   });
 }
@@ -27,10 +40,18 @@ function respond(buf: Buffer, name: string, asAttachment: boolean, immutable: bo
 export async function GET(req: NextRequest) {
   // Generous limit: product grids fire one request per photo (misses are
   // disk-cached after first composite, hits are plain file serves).
-  const rl = rateLimit(clientKey(req, "img:dl"), { limit: 300, windowMs: 60_000 });
-  if (!rl.ok) return NextResponse.json({ error: "Too many downloads. Try again shortly." }, { status: 429 });
+  const rl = rateLimit(clientKey(req, "img:dl"), {
+    limit: 300,
+    windowMs: 60_000,
+  });
+  if (!rl.ok)
+    return NextResponse.json(
+      { error: "Too many downloads. Try again shortly." },
+      { status: 429 },
+    );
   const src = (new URL(req.url).searchParams.get("src") ?? "").trim();
-  if (!src) return NextResponse.json({ error: "Missing image." }, { status: 400 });
+  if (!src)
+    return NextResponse.json({ error: "Missing image." }, { status: 400 });
   // Inline by default so the URL works as an <img> src (right-click saves
   // the watermarked bytes); ?dl=1 forces a download attachment instead.
   const asAttachment = new URL(req.url).searchParams.get("dl") === "1";
@@ -49,21 +70,38 @@ export async function GET(req: NextRequest) {
       // DB-backed durable images survive redeploys — read from the store.
       if (src.startsWith("/api/files/db/")) {
         const { dbPubImageKey } = await import("@/lib/pubimages");
-        if (!dbPubImageKey(src)) return NextResponse.json({ error: "Invalid image path." }, { status: 400 });
+        if (!dbPubImageKey(src))
+          return NextResponse.json(
+            { error: "Invalid image path." },
+            { status: 400 },
+          );
         const { getStore } = await import("@/lib/store");
         const { readDbPubImage } = await import("@/lib/pubimages");
         const hit = await readDbPubImage(getStore(), src).catch(() => null);
-        if (!hit) return NextResponse.json({ error: "Could not read image." }, { status: 422 });
+        if (!hit)
+          return NextResponse.json(
+            { error: "Could not read image." },
+            { status: 422 },
+          );
         buf = hit.bytes;
         name = basename(src);
       } else {
-        const rel = src.replace(/^\/uploads\//, "").replace(/^\/api\/files\//, "");
+        const rel = src
+          .replace(/^\/uploads\//, "")
+          .replace(/^\/api\/files\//, "");
         if (!rel || rel.includes("..") || /[^A-Za-z0-9._/-]/.test(rel)) {
-          return NextResponse.json({ error: "Invalid image path." }, { status: 400 });
+          return NextResponse.json(
+            { error: "Invalid image path." },
+            { status: 400 },
+          );
         }
         const base = uploadsBaseDir();
         const file = join(base, rel);
-        if (!file.startsWith(base)) return NextResponse.json({ error: "Invalid image path." }, { status: 400 });
+        if (!file.startsWith(base))
+          return NextResponse.json(
+            { error: "Invalid image path." },
+            { status: 400 },
+          );
         buf = await readFile(file);
         name = basename(rel);
         // Uploads are stored clean — the single mark is applied below on serve.
@@ -73,11 +111,20 @@ export async function GET(req: NextRequest) {
       const timer = setTimeout(() => ctrl.abort(), 10_000);
       try {
         const r = await fetch(src, { signal: ctrl.signal });
-        if (!r.ok) return NextResponse.json({ error: "Could not fetch image." }, { status: 422 });
+        if (!r.ok)
+          return NextResponse.json(
+            { error: "Could not fetch image." },
+            { status: 422 },
+          );
         const ct = r.headers.get("content-type") ?? "";
-        if (!ct.startsWith("image/")) return NextResponse.json({ error: "Not an image." }, { status: 422 });
+        if (!ct.startsWith("image/"))
+          return NextResponse.json({ error: "Not an image." }, { status: 422 });
         const ab = await r.arrayBuffer();
-        if (ab.byteLength > MAX_FETCH) return NextResponse.json({ error: "Image too large." }, { status: 413 });
+        if (ab.byteLength > MAX_FETCH)
+          return NextResponse.json(
+            { error: "Image too large." },
+            { status: 413 },
+          );
         buf = Buffer.from(ab);
         try {
           name = basename(new URL(src).pathname) || name;
@@ -86,12 +133,22 @@ export async function GET(req: NextRequest) {
         clearTimeout(timer);
       }
     } else {
-      return NextResponse.json({ error: "Only site uploads and https image links can be downloaded." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Only site uploads and https image links can be downloaded." },
+        { status: 400 },
+      );
     }
   } catch {
-    return NextResponse.json({ error: "Could not read image." }, { status: 422 });
+    return NextResponse.json(
+      { error: "Could not read image." },
+      { status: 422 },
+    );
   }
-  if (!buf) return NextResponse.json({ error: "Could not read image." }, { status: 422 });
+  if (!buf)
+    return NextResponse.json(
+      { error: "Could not read image." },
+      { status: 422 },
+    );
 
   const stamped = await watermarkBuffer(buf);
   // Persist for future hits — best-effort, never fails the response.

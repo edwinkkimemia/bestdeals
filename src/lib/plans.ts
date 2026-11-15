@@ -29,7 +29,10 @@ export function planAllowsListings(plan: PlanId, liveCount: number): boolean {
  * applied immediately) from upgrades (require payment first). Rank follows
  * price: free < silver < gold.
  */
-export function planChangeKind(current: PlanId, target: PlanId): "same" | "upgrade" | "downgrade" {
+export function planChangeKind(
+  current: PlanId,
+  target: PlanId,
+): "same" | "upgrade" | "downgrade" {
   const a = PLAN_IDS.indexOf(current);
   const b = PLAN_IDS.indexOf(target);
   if (b === a) return "same";
@@ -54,7 +57,11 @@ export const PLAN_ANALYTICS_DAYS: Record<PlanId, number> = {
   gold: 90,
 };
 
-export type SellerPlan = { planId: PlanId; shopSlug?: string; shopName?: string };
+export type SellerPlan = {
+  planId: PlanId;
+  shopSlug?: string;
+  shopName?: string;
+};
 
 /**
  * Resolve a seller's single effective plan. Once a seller owns a shop, that
@@ -102,7 +109,8 @@ export async function getSellerPlan(userId: string): Promise<SellerPlan> {
 }
 
 /** Storage key for a pending personal-plan checkout. */
-export const pendingSellerPlanKey = (userId: string) => `seller_plan_pending:${userId}`;
+export const pendingSellerPlanKey = (userId: string) =>
+  `seller_plan_pending:${userId}`;
 
 /**
  * Plan tier a live-listing count calls for: ≤5 free, 6–30 silver, 31+ gold.
@@ -135,10 +143,13 @@ export type PlanAuditRow = {
 export function auditPlanRows(
   users: { id: string; name: string; email: string; planId?: string | null }[],
   shops: { slug: string; name: string; ownerId?: string; planId?: string }[],
-  counts: { ownerId: string; count: number }[]
+  counts: { ownerId: string; count: number }[],
 ): PlanAuditRow[] {
   const countOf = new Map(counts.map((c) => [c.ownerId, c.count]));
-  const shopsByOwner = new Map<string, { slug: string; name: string; planId?: string }[]>();
+  const shopsByOwner = new Map<
+    string,
+    { slug: string; name: string; planId?: string }[]
+  >();
   for (const s of shops) {
     if (!s.ownerId) continue;
     const list = shopsByOwner.get(s.ownerId) ?? [];
@@ -151,9 +162,10 @@ export function auditPlanRows(
     const owned = shopsByOwner.get(u.id) ?? [];
     // Shop owners have one plan: the storefront's. Personal plans only apply
     // to sellers with no shop, so a dormant upgrade can't mask a shop limit.
-    const effectivePlan = owned.length > 0
-      ? normalizePlan(owned[0].planId)
-      : normalizePlan(u.planId);
+    const effectivePlan =
+      owned.length > 0
+        ? normalizePlan(owned[0].planId)
+        : normalizePlan(u.planId);
     return {
       userId: u.id,
       name: u.name,
@@ -161,18 +173,23 @@ export function auditPlanRows(
       liveCount,
       effectivePlan,
       expectedPlan,
-      needsUpgrade: PLAN_IDS.indexOf(expectedPlan) > PLAN_IDS.indexOf(effectivePlan),
-      target: owned.length > 0
-        ? { kind: "shop" as const, slug: owned[0].slug, name: owned[0].name }
-        : { kind: "personal" as const },
+      needsUpgrade:
+        PLAN_IDS.indexOf(expectedPlan) > PLAN_IDS.indexOf(effectivePlan),
+      target:
+        owned.length > 0
+          ? { kind: "shop" as const, slug: owned[0].slug, name: owned[0].name }
+          : { kind: "personal" as const },
     };
   });
 }
 
 /** Count listings that occupy a plan slot (everything except rejected/sold/expired). */
 export async function countLiveListings(ownerId: string): Promise<number> {
-  const mine = await getStore().listListingsByOwner(ownerId).catch(() => []);
-  return mine.filter((l) => !["rejected", "sold", "expired"].includes(l.status)).length;
+  const mine = await getStore()
+    .listListingsByOwner(ownerId)
+    .catch(() => []);
+  return mine.filter((l) => !["rejected", "sold", "expired"].includes(l.status))
+    .length;
 }
 
 export function limitMessage(plan: PlanId, live: number): string {

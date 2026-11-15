@@ -8,7 +8,8 @@ describe("county geolocation", () => {
     assert.equal(COUNTY_CENTROIDS.length, KENYA_COUNTIES.length);
     const names = new Set(COUNTY_CENTROIDS.map((c) => c.county));
     assert.equal(names.size, COUNTY_CENTROIDS.length);
-    for (const county of KENYA_COUNTIES) assert.ok(names.has(county.county), `${county.county} missing`);
+    for (const county of KENYA_COUNTIES)
+      assert.ok(names.has(county.county), `${county.county} missing`);
   });
 
   it("resolves known coordinates to the nearest county", () => {

@@ -6,9 +6,22 @@ import {
   clearLoginFailures,
   resetLoginGuard,
 } from "../src/lib/login-guard.ts";
-import { createPurposeToken, readPurposeToken, hashFingerprint } from "../src/lib/auth-tokens.ts";
-import { BOOST_PRODUCTS, boostProductById, SHOP_PLANS, planListings } from "../src/data/catalog.ts";
-import { promoIsLive, promoDisplayStatus, freshDemoStore } from "../src/lib/store.ts";
+import {
+  createPurposeToken,
+  readPurposeToken,
+  hashFingerprint,
+} from "../src/lib/auth-tokens.ts";
+import {
+  BOOST_PRODUCTS,
+  boostProductById,
+  SHOP_PLANS,
+  planListings,
+} from "../src/data/catalog.ts";
+import {
+  promoIsLive,
+  promoDisplayStatus,
+  freshDemoStore,
+} from "../src/lib/store.ts";
 
 describe("login-guard", () => {
   it("locks an account after 5 failures, leaves others alone", () => {
@@ -39,7 +52,12 @@ describe("login-guard", () => {
 
 describe("auth-tokens", () => {
   it("round-trips purpose tokens and rejects mismatched purpose", async () => {
-    const t = await createPurposeToken({ purpose: "password-reset", userId: "u1", email: "a@x.co.ke", fingerprint: "fp1" });
+    const t = await createPurposeToken({
+      purpose: "password-reset",
+      userId: "u1",
+      email: "a@x.co.ke",
+      fingerprint: "fp1",
+    });
     const d = await readPurposeToken(t, "password-reset");
     assert.equal(d?.userId, "u1");
     assert.equal(d?.email, "a@x.co.ke");
@@ -51,13 +69,22 @@ describe("auth-tokens", () => {
     const fpOld = hashFingerprint("hash-one");
     const fpNew = hashFingerprint("hash-two");
     assert.notEqual(fpOld, fpNew);
-    const t = await createPurposeToken({ purpose: "password-reset", userId: "u1", email: "a@x.co.ke", fingerprint: fpOld });
+    const t = await createPurposeToken({
+      purpose: "password-reset",
+      userId: "u1",
+      email: "a@x.co.ke",
+      fingerprint: fpOld,
+    });
     const d = await readPurposeToken(t, "password-reset");
     assert.equal(d?.fingerprint, fpOld);
     assert.notEqual(d?.fingerprint, fpNew);
   });
   it("round-trips email-verify tokens", async () => {
-    const t = await createPurposeToken({ purpose: "email-verify", userId: "u9", email: "b@x.co.ke" });
+    const t = await createPurposeToken({
+      purpose: "email-verify",
+      userId: "u9",
+      email: "b@x.co.ke",
+    });
     const d = await readPurposeToken(t, "email-verify");
     assert.equal(d?.userId, "u9");
     assert.equal(await readPurposeToken(t, "password-reset"), null);
@@ -67,29 +94,91 @@ describe("auth-tokens", () => {
 describe("promotion-expiry", () => {
   it("treats active boosts past their window as expired", () => {
     const now = Date.now();
-    assert.equal(promoIsLive({ status: "active", endsAt: new Date(now + 1000).toISOString() }, now), true);
-    assert.equal(promoIsLive({ status: "active", endsAt: new Date(now - 1000).toISOString() }, now), false);
-    assert.equal(promoIsLive({ status: "pending_payment", endsAt: new Date(now + 1000).toISOString() }, now), false);
     assert.equal(
-      promoDisplayStatus({ id: "p", listingId: "l", kind: "featured", days: 7, amount: 249, status: "active", startsAt: "", endsAt: new Date(now - 1000).toISOString(), createdAt: "" }, now),
-      "expired"
+      promoIsLive(
+        { status: "active", endsAt: new Date(now + 1000).toISOString() },
+        now,
+      ),
+      true,
+    );
+    assert.equal(
+      promoIsLive(
+        { status: "active", endsAt: new Date(now - 1000).toISOString() },
+        now,
+      ),
+      false,
+    );
+    assert.equal(
+      promoIsLive(
+        {
+          status: "pending_payment",
+          endsAt: new Date(now + 1000).toISOString(),
+        },
+        now,
+      ),
+      false,
+    );
+    assert.equal(
+      promoDisplayStatus(
+        {
+          id: "p",
+          listingId: "l",
+          kind: "featured",
+          days: 7,
+          amount: 249,
+          status: "active",
+          startsAt: "",
+          endsAt: new Date(now - 1000).toISOString(),
+          createdAt: "",
+        },
+        now,
+      ),
+      "expired",
     );
   });
 
   it("sweeps lapsed boosts and unfeatures the listing", async () => {
     const store = freshDemoStore();
-    const user = await store.createUser({ name: "Seller", email: "s@x.co.ke", phone: "0712345678", role: "SELLER", verified: true, passwordHash: "h" });
-    const listing = await store.createListing({
-      title: "Test phone", description: "A phone for testing boosts", type: "product", price: 10000,
-      compareAt: null, condition: "new", txMethod: "buy_online", negotiable: false, stock: 1,
-      county: "Nairobi", town: "CBD", images: ["https://x.co/i.jpg"], attributes: {},
-      ownerId: user.id, sellerName: user.name, categorySlug: "phones-tablets",
+    const user = await store.createUser({
+      name: "Seller",
+      email: "s@x.co.ke",
+      phone: "0712345678",
+      role: "SELLER",
+      verified: true,
+      passwordHash: "h",
     });
-    const promo = await store.createPromotion({ listingId: listing.id, ownerId: user.id, kind: "featured", days: 7, amount: 249 });
+    const listing = await store.createListing({
+      title: "Test phone",
+      description: "A phone for testing boosts",
+      type: "product",
+      price: 10000,
+      compareAt: null,
+      condition: "new",
+      txMethod: "buy_online",
+      negotiable: false,
+      stock: 1,
+      county: "Nairobi",
+      town: "CBD",
+      images: ["https://x.co/i.jpg"],
+      attributes: {},
+      ownerId: user.id,
+      sellerName: user.name,
+      categorySlug: "phones-tablets",
+    });
+    const promo = await store.createPromotion({
+      listingId: listing.id,
+      ownerId: user.id,
+      kind: "featured",
+      days: 7,
+      amount: 249,
+    });
     await store.setPromotionStatus(promo.id, "active");
     // Backdate the window into the past (simulates 7 days passing).
-    (store as unknown as { promotions: Map<string, { endsAt: string }> }).promotions.get(promo.id)!.endsAt =
-      new Date(Date.now() - 1000).toISOString();
+    (
+      store as unknown as { promotions: Map<string, { endsAt: string }> }
+    ).promotions.get(promo.id)!.endsAt = new Date(
+      Date.now() - 1000,
+    ).toISOString();
 
     assert.equal((await store.getPromotion(promo.id))?.status, "expired");
     assert.equal((await store.getListing(listing.id))?.featured, false);
@@ -100,17 +189,44 @@ describe("promotion-expiry", () => {
 
   it("reactivating a lapsed boost restarts its window", async () => {
     const store = freshDemoStore();
-    const user = await store.createUser({ name: "Seller", email: "s2@x.co.ke", phone: "0712345678", role: "SELLER", verified: true, passwordHash: "h" });
-    const listing = await store.createListing({
-      title: "Test laptop", description: "A laptop for testing boosts", type: "product", price: 50000,
-      compareAt: null, condition: "new", txMethod: "buy_online", negotiable: false, stock: 1,
-      county: "Nairobi", town: "CBD", images: [], attributes: {},
-      ownerId: user.id, sellerName: user.name,
+    const user = await store.createUser({
+      name: "Seller",
+      email: "s2@x.co.ke",
+      phone: "0712345678",
+      role: "SELLER",
+      verified: true,
+      passwordHash: "h",
     });
-    const promo = await store.createPromotion({ listingId: listing.id, ownerId: user.id, kind: "featured", days: 7, amount: 249 });
+    const listing = await store.createListing({
+      title: "Test laptop",
+      description: "A laptop for testing boosts",
+      type: "product",
+      price: 50000,
+      compareAt: null,
+      condition: "new",
+      txMethod: "buy_online",
+      negotiable: false,
+      stock: 1,
+      county: "Nairobi",
+      town: "CBD",
+      images: [],
+      attributes: {},
+      ownerId: user.id,
+      sellerName: user.name,
+    });
+    const promo = await store.createPromotion({
+      listingId: listing.id,
+      ownerId: user.id,
+      kind: "featured",
+      days: 7,
+      amount: 249,
+    });
     await store.setPromotionStatus(promo.id, "active");
-    (store as unknown as { promotions: Map<string, { endsAt: string }> }).promotions.get(promo.id)!.endsAt =
-      new Date(Date.now() - 1000).toISOString();
+    (
+      store as unknown as { promotions: Map<string, { endsAt: string }> }
+    ).promotions.get(promo.id)!.endsAt = new Date(
+      Date.now() - 1000,
+    ).toISOString();
     const re = await store.activatePromotion(promo.id);
     assert.equal(re?.status, "active");
     assert.ok(new Date(re!.endsAt).getTime() > Date.now());

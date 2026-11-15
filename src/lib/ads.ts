@@ -6,7 +6,9 @@
  */
 
 export const DEFAULT_ADSENSE_CLIENT_ID = "ca-pub-1165378217849279";
-export const ADSENSE_CLIENT_ID = (process.env.NEXT_PUBLIC_ADSENSE_ID || DEFAULT_ADSENSE_CLIENT_ID).trim();
+export const ADSENSE_CLIENT_ID = (
+  process.env.NEXT_PUBLIC_ADSENSE_ID || DEFAULT_ADSENSE_CLIENT_ID
+).trim();
 
 export function adsEnabled(): boolean {
   return ADSENSE_CLIENT_ID.startsWith("ca-pub-");

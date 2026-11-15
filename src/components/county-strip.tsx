@@ -29,12 +29,19 @@ export function CountyStrip({
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-bold">{title}</h2>
         {viewAllHref && (
-          <Link href={viewAllHref} className="shrink-0 text-xs font-semibold text-brand-700 hover:underline">
+          <Link
+            href={viewAllHref}
+            className="shrink-0 text-xs font-semibold text-brand-700 hover:underline"
+          >
             {viewAllLabel}
           </Link>
         )}
       </div>
-      <div className="mt-2 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1" role="list" aria-label={title}>
+      <div
+        className="mt-2 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1"
+        role="list"
+        aria-label={title}
+      >
         {counties.map((c) => {
           const count = c.count ?? 0;
           return (
@@ -42,7 +49,7 @@ export function CountyStrip({
               key={c.county}
               href={`/location/${countySlug(c.county)}`}
               role="listitem"
-              className="group w-28 shrink-0 snap-start overflow-hidden rounded-xl border border-neutral-200 bg-white transition hover:border-brand-600 sm:w-32"
+              className="group w-28 shrink-0 snap-start overflow-hidden rounded border border-neutral-200 bg-white transition hover:border-brand-600 sm:w-32"
             >
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -50,9 +57,9 @@ export function CountyStrip({
                   src={c.image}
                   alt=""
                   loading="lazy"
-                  className="h-14 w-full object-cover transition duration-300 group-hover:scale-105 sm:h-16"
+                  className="h-14 w-full object-cover sm:h-16"
                 />
-                <span className="absolute bottom-1.5 left-1.5 flex h-6 w-6 items-center justify-center rounded-md bg-white/95 text-brand-700 shadow">
+                <span className="absolute bottom-1.5 left-1.5 flex h-6 w-6 items-center justify-center rounded-md bg-white text-brand-700 shadow">
                   <MapPin className="h-3.5 w-3.5" />
                 </span>
                 {count > 0 && (

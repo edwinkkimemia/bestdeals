@@ -45,31 +45,55 @@ describe("preview + share helpers", () => {
   });
 
   it("builds canonical public paths per type", () => {
-    assert.equal(publicListingPath({ listingType: "product", slug: "a" }), "/product/a");
-    assert.equal(publicListingPath({ listingType: "classified", slug: "b" }), "/classifieds/b");
-    assert.equal(publicListingPath({ listingType: "service", slug: "c" }), "/services/c");
+    assert.equal(
+      publicListingPath({ listingType: "product", slug: "a" }),
+      "/product/a",
+    );
+    assert.equal(
+      publicListingPath({ listingType: "classified", slug: "b" }),
+      "/classifieds/b",
+    );
+    assert.equal(
+      publicListingPath({ listingType: "service", slug: "c" }),
+      "/services/c",
+    );
   });
 
   it("lets everyone see active, restricts pending to owner/admin", async () => {
     assert.equal(await canPreviewListing(null, { status: "active" }), true);
-    assert.equal(await canPreviewListing(null, { status: "pending", ownerId: "owner1" }), false);
     assert.equal(
-      await canPreviewListing({ id: "owner1", role: "SELLER" }, { status: "pending", ownerId: "owner1" }),
-      true
+      await canPreviewListing(null, { status: "pending", ownerId: "owner1" }),
+      false,
     );
     assert.equal(
-      await canPreviewListing({ id: "stranger", role: "SELLER" }, { status: "pending", ownerId: "owner1" }),
-      false
+      await canPreviewListing(
+        { id: "owner1", role: "SELLER" },
+        { status: "pending", ownerId: "owner1" },
+      ),
+      true,
     );
     assert.equal(
-      await canPreviewListing({ id: "admin1", role: "ADMIN" }, { status: "rejected", ownerId: "owner1" }),
-      true
+      await canPreviewListing(
+        { id: "stranger", role: "SELLER" },
+        { status: "pending", ownerId: "owner1" },
+      ),
+      false,
+    );
+    assert.equal(
+      await canPreviewListing(
+        { id: "admin1", role: "ADMIN" },
+        { status: "rejected", ownerId: "owner1" },
+      ),
+      true,
     );
   });
 
   it("merges static + live without duplicates", () => {
     const l = storeRecordToListing({ ...base, status: "active" });
-    const merged = mergeStaticAndLive([{ ...l, id: "static1", slug: "static-1" }], [l, { ...l, id: "static1", slug: "static-1" }]);
+    const merged = mergeStaticAndLive(
+      [{ ...l, id: "static1", slug: "static-1" }],
+      [l, { ...l, id: "static1", slug: "static-1" }],
+    );
     assert.equal(merged.length, 2);
   });
 });

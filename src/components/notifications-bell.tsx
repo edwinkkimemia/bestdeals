@@ -48,7 +48,9 @@ export function NotificationsBell() {
 
   const load = useCallback(async () => {
     try {
-      const r = await fetch("/api/notifications?limit=8", { cache: "no-store" });
+      const r = await fetch("/api/notifications?limit=8", {
+        cache: "no-store",
+      });
       if (!r.ok) return;
       const j = await r.json();
       setItems(j.items ?? []);
@@ -72,7 +74,8 @@ export function NotificationsBell() {
   useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -83,7 +86,7 @@ export function NotificationsBell() {
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open ]);
+  }, [open]);
 
   const markAll = async () => {
     try {
@@ -93,7 +96,9 @@ export function NotificationsBell() {
         body: JSON.stringify({ action: "read-all" }),
       });
     } catch {}
-    setItems((prev) => prev.map((n) => ({ ...n, readAt: new Date().toISOString() })));
+    setItems((prev) =>
+      prev.map((n) => ({ ...n, readAt: new Date().toISOString() })),
+    );
     setUnread(0);
     window.dispatchEvent(new Event("bd:notifications"));
   };
@@ -108,7 +113,11 @@ export function NotificationsBell() {
           body: JSON.stringify({ action: "read", id: n.id }),
         });
       } catch {}
-      setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x)));
+      setItems((prev) =>
+        prev.map((x) =>
+          x.id === n.id ? { ...x, readAt: new Date().toISOString() } : x,
+        ),
+      );
       setUnread((u) => Math.max(0, u - 1));
       window.dispatchEvent(new Event("bd:notifications"));
     }
@@ -123,10 +132,12 @@ export function NotificationsBell() {
           setOpen((v) => !v);
           if (!open) load();
         }}
-        aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
+        aria-label={
+          unread > 0 ? `Notifications, ${unread} unread` : "Notifications"
+        }
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="relative rounded-lg p-2 hover:bg-sand-100"
+        className="relative rounded p-2 hover:bg-neutral-200"
       >
         <Bell className="h-5 w-5" />
         {unread > 0 && (
@@ -139,12 +150,18 @@ export function NotificationsBell() {
         <div
           role="dialog"
           aria-label="Notifications"
-          className="absolute right-0 top-full z-50 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-lg"
+          className="absolute right-0 top-full z-50 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded border border-neutral-200 bg-white shadow-lg"
         >
           <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5">
-            <p className="text-sm font-bold">Notifications{unread > 0 ? ` (${unread})` : ""}</p>
+            <p className="text-sm font-bold">
+              Notifications{unread > 0 ? ` (${unread})` : ""}
+            </p>
             {unread > 0 && (
-              <button type="button" onClick={markAll} className="link-bd text-xs">
+              <button
+                type="button"
+                onClick={markAll}
+                className="link-bd text-xs"
+              >
                 Mark all as read
               </button>
             )}
@@ -152,8 +169,12 @@ export function NotificationsBell() {
           {items.length === 0 ? (
             <div className="px-4 py-8 text-center">
               <Bell className="mx-auto h-8 w-8 text-ink-300" />
-              <p className="mt-2 text-sm font-bold">You&apos;re all caught up</p>
-              <p className="mt-1 text-xs text-ink-500">Messages, listing reviews and order updates land here.</p>
+              <p className="mt-2 text-sm font-bold">
+                You&apos;re all caught up
+              </p>
+              <p className="mt-1 text-xs text-ink-500">
+                Messages, listing reviews and order updates land here.
+              </p>
             </div>
           ) : (
             <ul className="max-h-96 divide-y divide-neutral-100 overflow-y-auto">
@@ -162,24 +183,37 @@ export function NotificationsBell() {
                   <button
                     type="button"
                     onClick={() => openItem(n)}
-                    className="flex w-full items-start gap-2.5 px-4 py-3 text-left hover:bg-sand-50"
+                    className="flex w-full items-start gap-2.5 px-4 py-3 text-left hover:bg-neutral-100"
                   >
                     <span
                       className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                        n.readAt ? "bg-sand-100 text-ink-400" : "bg-brand-50 text-brand-700"
+                        n.readAt
+                          ? "bg-neutral-200 text-ink-400"
+                          : "bg-brand-50 text-brand-700"
                       }`}
                     >
                       <TypeIcon type={n.type} />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-start gap-1.5">
-                        <span className={`flex-1 truncate text-sm ${n.readAt ? "font-medium" : "font-bold"}`}>
+                        <span
+                          className={`flex-1 truncate text-sm ${n.readAt ? "font-medium" : "font-bold"}`}
+                        >
                           {n.title}
                         </span>
-                        {!n.readAt && <span aria-label="Unread" className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent-500" />}
+                        {!n.readAt && (
+                          <span
+                            aria-label="Unread"
+                            className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent-500"
+                          />
+                        )}
                       </span>
-                      <span className="block truncate text-xs text-ink-500">{n.body}</span>
-                      <span className="mt-0.5 block text-[11px] text-ink-400">{timeAgo(n.createdAt)}</span>
+                      <span className="block truncate text-xs text-ink-500">
+                        {n.body}
+                      </span>
+                      <span className="mt-0.5 block text-[11px] text-ink-400">
+                        {timeAgo(n.createdAt)}
+                      </span>
                     </span>
                   </button>
                 </li>
@@ -189,7 +223,7 @@ export function NotificationsBell() {
           <Link
             href="/dashboard/notifications"
             onClick={() => setOpen(false)}
-            className="block border-t border-neutral-100 bg-sand-50/60 px-4 py-2.5 text-center text-sm font-bold text-brand-700 hover:bg-sand-100"
+            className="block border-t border-neutral-100 bg-neutral-100 px-4 py-2.5 text-center text-sm font-bold text-brand-700 hover:bg-neutral-200"
           >
             View all notifications →
           </Link>

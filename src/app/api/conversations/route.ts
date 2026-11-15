@@ -11,31 +11,53 @@ const startSchema = z.object({
   listingId: z.string().min(1).max(80).default("general"),
   message: z.string().min(1).max(2000),
   name: z.string().min(2).max(80).optional(),
-  phone: z.string().regex(/^(\+254|0)[17]\d{8}$/).optional(),
+  phone: z
+    .string()
+    .regex(/^(\+254|0)[17]\d{8}$/)
+    .optional(),
   /** Direct message to a specific account (e.g. from a seller profile page). */
   toUserId: z.string().min(1).max(80).optional(),
 });
 
 /** Start a conversation (signed-in only) about a listing, shop or user. */
 export async function POST(req: NextRequest) {
-  const rl = rateLimit(clientKey(req, "convo:new"), { limit: 10, windowMs: 3600_000 });
-  if (!rl.ok) return NextResponse.json({ error: "Too many new chats. Wait a bit." }, { status: 429 });
+  const rl = rateLimit(clientKey(req, "convo:new"), {
+    limit: 10,
+    windowMs: 3600_000,
+  });
+  if (!rl.ok)
+    return NextResponse.json(
+      { error: "Too many new chats. Wait a bit." },
+      { status: 429 },
+    );
   const parsed = startSchema.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: "Write a message (max 2000 chars)." }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json(
+      { error: "Write a message (max 2000 chars)." },
+      { status: 400 },
+    );
   const d = parsed.data;
 
   const user = await currentUser().catch(() => null);
-  if (!user) return NextResponse.json({ error: "Sign in to chat." }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Sign in to chat." }, { status: 401 });
   const name = user.name;
   const phone = user.phone;
 
   const plain = d.message.trim();
-  if (!plain) return NextResponse.json({ error: "Message can't be empty." }, { status: 400 });
+  if (!plain)
+    return NextResponse.json(
+      { error: "Message can't be empty." },
+      { status: 400 },
+    );
 
   const store = getStore();
   const { getListing, getShop } = await import("@/data/catalog");
   const catalog = getListing(d.listingId);
-  const stored = !catalog && d.listingId !== "general" && !d.listingId.startsWith("shop:") ? await store.getListing(d.listingId) : null;
+  const stored =
+    !catalog && d.listingId !== "general" && !d.listingId.startsWith("shop:")
+      ? await store.getListing(d.listingId)
+      : null;
   // Shop chats (`shop:<slug>` from storefront Message buttons) resolve the real shop name.
   let shopName: string | undefined;
   let shopPhone: string | undefined;
@@ -46,18 +68,28 @@ export async function POST(req: NextRequest) {
     shopName = storedShop?.name ?? demoShop?.name;
     shopPhone = storedShop?.phone ?? demoShop?.phone;
   }
-  const title = shopName ? `Shop enquiry: ${shopName}` : (catalog?.title ?? stored?.title ?? "General enquiry");
-  const seller = shopName ?? catalog?.sellerName ?? stored?.sellerName ?? "Seller";
+  const title = shopName
+    ? `Shop enquiry: ${shopName}`
+    : (catalog?.title ?? stored?.title ?? "General enquiry");
+  const seller =
+    shopName ?? catalog?.sellerName ?? stored?.sellerName ?? "Seller";
   // Product context belongs in the message itself: one buyer–seller thread can
   // now cover several listings, so the seller must see which item this is.
-  const listingTitle = !shopName && d.listingId !== "general" ? (catalog?.title ?? stored?.title) : undefined;
-  const listingPrice = !shopName && d.listingId !== "general" ? (catalog?.price ?? stored?.price) : undefined;
+  const listingTitle =
+    !shopName && d.listingId !== "general"
+      ? (catalog?.title ?? stored?.title)
+      : undefined;
+  const listingPrice =
+    !shopName && d.listingId !== "general"
+      ? (catalog?.price ?? stored?.price)
+      : undefined;
   const contextLine = listingTitle
     ? `${listingTitle}${listingPrice && listingPrice > 0 ? ` — ${formatKES(listingPrice)}` : ""}`
     : "";
-  const messageBody = contextLine && !plain.toLowerCase().includes(listingTitle!.toLowerCase())
-    ? `${contextLine}\n\n${plain}`
-    : plain;
+  const messageBody =
+    contextLine && !plain.toLowerCase().includes(listingTitle!.toLowerCase())
+      ? `${contextLine}\n\n${plain}`
+      : plain;
 
   const viewerId = user.id;
   const viewerIds = [viewerId, `phone:${user.phone}`, `seller:${user.name}`];
@@ -66,8 +98,16 @@ export async function POST(req: NextRequest) {
   let directName: string | undefined;
   if (d.toUserId) {
     const target = await store.findUserById(d.toUserId).catch(() => null);
-    if (!target) return NextResponse.json({ error: "That seller no longer exists." }, { status: 404 });
-    if (target.id === user.id) return NextResponse.json({ error: "You can't message yourself." }, { status: 400 });
+    if (!target)
+      return NextResponse.json(
+        { error: "That seller no longer exists." },
+        { status: 404 },
+      );
+    if (target.id === user.id)
+      return NextResponse.json(
+        { error: "You can't message yourself." },
+        { status: 400 },
+      );
     sellerId = target.id;
     directName = target.businessName || target.name;
   }
@@ -89,18 +129,26 @@ export async function POST(req: NextRequest) {
         if (s?.ownerId && s.ownerId !== viewerId) sellerId = s.ownerId;
         if (!sellerId && s) {
           const members = await store.listShopMembers(slug).catch(() => []);
-          const owner = members.find((m) => m.role === "owner" && m.userId !== viewerId) ?? members.find((m) => m.userId !== viewerId);
+          const owner =
+            members.find((m) => m.role === "owner" && m.userId !== viewerId) ??
+            members.find((m) => m.userId !== viewerId);
           if (owner) sellerId = owner.userId;
         }
       } else {
-        const l = stored ?? (await store.getListing(d.listingId).catch(() => null));
+        const l =
+          stored ?? (await store.getListing(d.listingId).catch(() => null));
         if (l?.ownerId && l.ownerId !== viewerId) sellerId = l.ownerId;
         if (!sellerId && l?.shopSlug) {
           const s = await store.getShopBySlug(l.shopSlug).catch(() => null);
           if (s?.ownerId && s.ownerId !== viewerId) sellerId = s.ownerId;
           if (!sellerId) {
-            const members = await store.listShopMembers(l.shopSlug).catch(() => []);
-            const owner = members.find((m) => m.role === "owner" && m.userId !== viewerId) ?? members.find((m) => m.userId !== viewerId);
+            const members = await store
+              .listShopMembers(l.shopSlug)
+              .catch(() => []);
+            const owner =
+              members.find(
+                (m) => m.role === "owner" && m.userId !== viewerId,
+              ) ?? members.find((m) => m.userId !== viewerId);
             if (owner) sellerId = owner.userId;
           }
         }
@@ -108,13 +156,22 @@ export async function POST(req: NextRequest) {
     } catch {}
   }
   if (sellerId && sellerId === viewerId) {
-    return NextResponse.json({ error: "You can't message yourself." }, { status: 400 });
+    return NextResponse.json(
+      { error: "You can't message yourself." },
+      { status: 400 },
+    );
   }
   // Blocked participants can't open new threads with each other on the same listing.
   try {
-    const blocked = ((await store.getSetting(`blocked:${viewerId}`).catch(() => null)) as string[] | null) ?? [];
+    const blocked =
+      ((await store.getSetting(`blocked:${viewerId}`).catch(() => null)) as
+        | string[]
+        | null) ?? [];
     if (sellerId && blocked.includes(sellerId)) {
-      return NextResponse.json({ error: "You blocked this seller." }, { status: 403 });
+      return NextResponse.json(
+        { error: "You blocked this seller." },
+        { status: 403 },
+      );
     }
   } catch {}
   // WhatsApp-style: one buyer–seller thread. A new product continues the
@@ -136,17 +193,24 @@ export async function POST(req: NextRequest) {
         existing.buyerId === sellerId &&
         viewerIds.includes(existing.sellerId);
       if (d.listingId !== "general") {
-        await store.updateConversationContext(existing.id, {
-          listingId: d.listingId,
-          listingTitle: title,
-          ...(sellerId && !reversed ? { sellerId } : {}),
-        }).catch(() => {});
+        await store
+          .updateConversationContext(existing.id, {
+            listingId: d.listingId,
+            listingTitle: title,
+            ...(sellerId && !reversed ? { sellerId } : {}),
+          })
+          .catch(() => {});
       } else if (!existing.sellerId && sellerId && !reversed) {
-        await store.updateConversationContext(existing.id, { sellerId }).catch(() => {});
+        await store
+          .updateConversationContext(existing.id, { sellerId })
+          .catch(() => {});
       }
       await store.addMessage({
-        conversationId: existing.id, senderId: viewerId, senderLabel: name,
-        body: messageBody, bodyHtml: toSafeHtml(messageBody),
+        conversationId: existing.id,
+        senderId: viewerId,
+        senderLabel: name,
+        body: messageBody,
+        bodyHtml: toSafeHtml(messageBody),
       });
       if (sellerId && sellerId !== viewerId) {
         try {
@@ -165,13 +229,19 @@ export async function POST(req: NextRequest) {
   } catch {}
   const convo = await store.createConversation({
     listingId: d.listingId,
-    listingTitle: directName && d.listingId === "general" ? "Direct message" : title,
+    listingTitle:
+      directName && d.listingId === "general" ? "Direct message" : title,
     sellerName: directName ?? seller,
     sellerId,
     buyerId: viewerId,
     buyerName: name,
     buyerPhone: phone,
-    firstMessage: { senderId: viewerId, senderLabel: name, body: messageBody, bodyHtml: toSafeHtml(messageBody) },
+    firstMessage: {
+      senderId: viewerId,
+      senderLabel: name,
+      body: messageBody,
+      bodyHtml: toSafeHtml(messageBody),
+    },
   });
   if (sellerId && sellerId !== viewerId) {
     try {
@@ -185,23 +255,34 @@ export async function POST(req: NextRequest) {
       });
     } catch {}
   }
-  notifyLater({ channel: "sms", to: phone, message: `Chap: chat opened with ${seller} — "${toExcerpt(messageBody, 80)}"` });
+  notifyLater({
+    channel: "sms",
+    to: phone,
+    message: `Chap: chat opened with ${seller} — "${toExcerpt(messageBody, 80)}"`,
+  });
   return NextResponse.json({ ok: true, id: convo.id });
 }
 
 /** My inbox — signed-in only. */
 export async function GET() {
   const user = await currentUser().catch(() => null);
-  if (!user) return NextResponse.json({ error: "Sign in to chat." }, { status: 401 });
+  if (!user)
+    return NextResponse.json({ error: "Sign in to chat." }, { status: 401 });
   const store = getStore();
-  let items = await store.listConversations({ userId: user.id, phone: user.phone, sellerName: user.name });
+  let items = await store.listConversations({
+    userId: user.id,
+    phone: user.phone,
+    sellerName: user.name,
+  });
   // Consolidate any duplicate buyer–seller threads created before chat reuse
   // was marketplace-wide. Messages are moved into the most recently active
   // thread, so history stays in one conversation.
   const groups = new Map<string, typeof items>();
   for (const c of items) {
-    const partyA = c.buyerId ?? (c.buyerPhone ? `phone:${c.buyerPhone}` : "unknown");
-    const partyB = c.sellerId ?? `name:${(c.sellerName ?? "unknown").toLowerCase()}`;
+    const partyA =
+      c.buyerId ?? (c.buyerPhone ? `phone:${c.buyerPhone}` : "unknown");
+    const partyB =
+      c.sellerId ?? `name:${(c.sellerName ?? "unknown").toLowerCase()}`;
     // Pair key is order-independent: A→B and B→A are the same conversation.
     const [first, second] = [partyA, partyB].sort();
     const key = `${first}::${second}`;
@@ -214,10 +295,20 @@ export async function GET() {
     if (group.length < 2) continue;
     group.sort((a, b) => +new Date(b.lastAt ?? 0) - +new Date(a.lastAt ?? 0));
     const [keep, ...dupes] = group;
-    await store.mergeConversations(keep.id, dupes.map((d) => d.id)).catch(() => {});
+    await store
+      .mergeConversations(
+        keep.id,
+        dupes.map((d) => d.id),
+      )
+      .catch(() => {});
     mergedAny = true;
   }
-  if (mergedAny) items = await store.listConversations({ userId: user.id, phone: user.phone, sellerName: user.name });
+  if (mergedAny)
+    items = await store.listConversations({
+      userId: user.id,
+      phone: user.phone,
+      sellerName: user.name,
+    });
   // Heal legacy threads stored as "Seller" before shop-chat naming existed.
   const { resolveThreadSeller } = await import("@/lib/chat-access");
   for (const c of items) {
@@ -226,7 +317,8 @@ export async function GET() {
       const h = await resolveThreadSeller(store, c).catch(() => null);
       if (h && h.name.toLowerCase() !== "seller") {
         c.sellerName = h.name;
-        if ((c.listingTitle || "") === "General enquiry") c.listingTitle = `Shop enquiry: ${h.name}`;
+        if ((c.listingTitle || "") === "General enquiry")
+          c.listingTitle = `Shop enquiry: ${h.name}`;
       }
     }
   }

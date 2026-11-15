@@ -7,7 +7,9 @@ export async function GET() {
   const user = await currentUser().catch(() => null);
   if (!user) return NextResponse.json({ user: null }, { status: 401 });
   // Fresh row so client profile screens have bio/photo after an edit.
-  const fresh = await getStore().findUserById(user.id).catch(() => null);
+  const fresh = await getStore()
+    .findUserById(user.id)
+    .catch(() => null);
   return NextResponse.json({
     user: {
       id: user.id,

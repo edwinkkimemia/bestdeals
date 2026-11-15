@@ -5,12 +5,22 @@ import { Badge } from "@/components/ui/badge";
  * mobile, consistent empty state. Used by admin sections, order history,
  * verification documents — anywhere rows beat cards.
  */
-export function DataTable({ columns, children, empty }: { columns: string[]; children: React.ReactNode; empty?: string }) {
-  const hasRows = Array.isArray(children) ? children.length > 0 : Boolean(children);
+export function DataTable({
+  columns,
+  children,
+  empty,
+}: {
+  columns: string[];
+  children: React.ReactNode;
+  empty?: string;
+}) {
+  const hasRows = Array.isArray(children)
+    ? children.length > 0
+    : Boolean(children);
   return (
     <div className="card mt-4 overflow-x-auto p-0">
       <table className="w-full min-w-[760px] border-collapse text-sm">
-        <thead className="sticky top-0 bg-sand-50">
+        <thead className="sticky top-0 bg-neutral-100">
           <tr>
             {columns.map((c) => (
               <th
@@ -28,7 +38,10 @@ export function DataTable({ columns, children, empty }: { columns: string[]; chi
             children
           ) : (
             <tr>
-              <td colSpan={columns.length} className="px-3 py-8 text-center text-sm text-ink-500">
+              <td
+                colSpan={columns.length}
+                className="px-3 py-8 text-center text-sm text-ink-500"
+              >
                 {empty ?? "Nothing here ✓"}
               </td>
             </tr>
@@ -40,8 +53,16 @@ export function DataTable({ columns, children, empty }: { columns: string[]; chi
 }
 
 /** Table cell with sensible defaults (top-aligned, padded). */
-export function Td({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-3 py-2.5 align-top ${className ?? ""}`}>{children}</td>;
+export function Td({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <td className={`px-3 py-2.5 align-top ${className ?? ""}`}>{children}</td>
+  );
 }
 
 const TONE: Record<string, "green" | "amber" | "red" | "blue" | "neutral"> = {
@@ -76,7 +97,11 @@ export function StatusChip({ status }: { status: string }) {
 export function fmtDate(iso?: string | null): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" });
+    return new Date(iso).toLocaleDateString("en-KE", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
   } catch {
     return String(iso).slice(0, 10);
   }

@@ -19,7 +19,9 @@ export function StaticInfo({
   className?: string;
 }) {
   return (
-    <ul className={`grid gap-x-6 gap-y-1.5 text-xs leading-relaxed text-ink-500 sm:grid-cols-3 ${className}`}>
+    <ul
+      className={`grid gap-x-6 gap-y-1.5 text-xs leading-relaxed text-ink-500 sm:grid-cols-3 ${className}`}
+    >
       {items.map((item, i) => (
         <li key={item.title} className="flex gap-1.5">
           <span aria-hidden className="shrink-0 font-bold text-brand-600">

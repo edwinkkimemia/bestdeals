@@ -68,7 +68,8 @@ type SellerAggregate = {
   keywords: string[];
 };
 
-const norm = (value: string | null | undefined) => (value ?? "").trim().toLowerCase();
+const norm = (value: string | null | undefined) =>
+  (value ?? "").trim().toLowerCase();
 
 function tokensFor(q?: string): string[] {
   return (q ?? "").toLowerCase().split(/\s+/).filter(Boolean);
@@ -97,7 +98,7 @@ function entityScore(
   tokens: string[],
   verified: boolean,
   planId: string,
-  listingsCount: number
+  listingsCount: number,
 ): number {
   const hay = haystack.toLowerCase();
   const n = norm(name);
@@ -117,11 +118,13 @@ function entityScore(
 
 function sellerLocationMatches(
   seller: SellerAggregate,
-  params: EntitySearchParams
+  params: EntitySearchParams,
 ): boolean {
   const county = params.county ?? "all";
   if (county !== "all") {
-    const hasCounty = [...seller.counties.keys()].some((c) => countyMatches(c, county));
+    const hasCounty = [...seller.counties.keys()].some((c) =>
+      countyMatches(c, county),
+    );
     if (!hasCounty) return false;
   }
   const town = norm(params.town);
@@ -165,7 +168,11 @@ function toSellerResult(seller: SellerAggregate): SellerSearchResult {
   };
 }
 
-function toShopResult(display: ShopDisplay, ownerId?: string, createdAt?: string): ShopSearchResult {
+function toShopResult(
+  display: ShopDisplay,
+  ownerId?: string,
+  createdAt?: string,
+): ShopSearchResult {
   return {
     slug: display.slug,
     name: display.name,
@@ -190,14 +197,19 @@ function toShopResult(display: ShopDisplay, ownerId?: string, createdAt?: string
  * storefront never appears twice. Individual sellers without a shop (and
  * business sellers who have not opened one) appear in `sellers`.
  */
-export async function searchEntities(params: EntitySearchParams): Promise<EntitySearchResults> {
+export async function searchEntities(
+  params: EntitySearchParams,
+): Promise<EntitySearchResults> {
   const [users, storedShops, live] = await Promise.all([
     storeRead((store) => store.listUsers(), [] as UserRecord[]),
     storeRead((store) => store.listShops(), []),
     storeRead((store) => store.listListingsByStatus("active"), []),
   ]);
 
-  const allListings = mergeStaticAndLive(LISTINGS, live.map(storeRecordToListing));
+  const allListings = mergeStaticAndLive(
+    LISTINGS,
+    live.map(storeRecordToListing),
+  );
   const usersById = new Map(users.map((user) => [user.id, user]));
   const usersByName = new Map<string, UserRecord>();
   for (const user of users) {
@@ -226,9 +238,12 @@ export async function searchEntities(params: EntitySearchParams): Promise<Entity
         hours: demo.hours,
         planId: "free",
       },
-      twin
+      twin,
     );
-    shops.set(display.slug, toShopResult(display, twin?.ownerId, twin?.createdAt));
+    shops.set(
+      display.slug,
+      toShopResult(display, twin?.ownerId, twin?.createdAt),
+    );
   }
 
   for (const stored of storedShops) {
@@ -248,17 +263,29 @@ export async function searchEntities(params: EntitySearchParams): Promise<Entity
       hours: stored.hours ?? "",
       planId: normalizePlan(stored.planId),
     };
-    shops.set(stored.slug, toShopResult(mergeShopDisplay(display, stored), stored.ownerId, stored.createdAt));
+    shops.set(
+      stored.slug,
+      toShopResult(
+        mergeShopDisplay(display, stored),
+        stored.ownerId,
+        stored.createdAt,
+      ),
+    );
   }
 
   const shopKeywords = new Map<string, string[]>();
   const shopListingCounts = new Map<string, number>();
   for (const listing of allListings) {
     if (!listing.shopSlug) continue;
-    shopListingCounts.set(listing.shopSlug, (shopListingCounts.get(listing.shopSlug) ?? 0) + 1);
+    shopListingCounts.set(
+      listing.shopSlug,
+      (shopListingCounts.get(listing.shopSlug) ?? 0) + 1,
+    );
     const keywords = shopKeywords.get(listing.shopSlug) ?? [];
     if (keywords.length < 200) {
-      keywords.push(`${listing.title} ${listing.categorySlug} ${listing.subcategory ?? ""}`);
+      keywords.push(
+        `${listing.title} ${listing.categorySlug} ${listing.subcategory ?? ""}`,
+      );
     }
     shopKeywords.set(listing.shopSlug, keywords);
   }
@@ -280,7 +307,9 @@ export async function searchEntities(params: EntitySearchParams): Promise<Entity
         key,
         user,
         name: user?.name ?? sellerName,
-        sellerKind: user?.sellerKind ?? (listing.sellerType === "business" ? "business" : "individual"),
+        sellerKind:
+          user?.sellerKind ??
+          (listing.sellerType === "business" ? "business" : "individual"),
         listingVerified: false,
         listingsCount: 0,
         counties: new Map(),
@@ -296,11 +325,15 @@ export async function searchEntities(params: EntitySearchParams): Promise<Entity
     bump(seller.towns, listing.town);
     if (listing.shopSlug) seller.shopSlugs.add(listing.shopSlug);
     if (seller.keywords.length < 200) {
-      seller.keywords.push(`${listing.title} ${listing.categorySlug} ${listing.subcategory ?? ""}`);
+      seller.keywords.push(
+        `${listing.title} ${listing.categorySlug} ${listing.subcategory ?? ""}`,
+      );
     }
   }
 
-  const shopOwnerIds = new Set(storedShops.map((shop) => shop.ownerId).filter(Boolean));
+  const shopOwnerIds = new Set(
+    storedShops.map((shop) => shop.ownerId).filter(Boolean),
+  );
   const shopNames = new Set([...shops.values()].map((shop) => norm(shop.name)));
   const tokens = tokensFor(params.q);
 
@@ -312,7 +345,11 @@ export async function searchEntities(params: EntitySearchParams): Promise<Entity
       // a stale shopSlug must not make a seller disappear from search.
       if ([...seller.shopSlugs].some((slug) => shops.has(slug))) return false;
       if (shopNames.has(norm(seller.name))) return false;
-      if (seller.user?.businessName && shopNames.has(norm(seller.user.businessName))) return false;
+      if (
+        seller.user?.businessName &&
+        shopNames.has(norm(seller.user.businessName))
+      )
+        return false;
       if (!sellerLocationMatches(seller, params)) return false;
       return matchesTokens(sellerHaystack(seller), tokens);
     })
@@ -327,11 +364,13 @@ export async function searchEntities(params: EntitySearchParams): Promise<Entity
           tokens,
           Boolean(seller.user?.verified || seller.listingVerified),
           normalizePlan(seller.user?.planId),
-          seller.listingsCount
+          seller.listingsCount,
         ),
       };
     })
-    .sort((a, b) => b.score - a.score || a.seller.name.localeCompare(b.seller.name))
+    .sort(
+      (a, b) => b.score - a.score || a.seller.name.localeCompare(b.seller.name),
+    )
     .map((entry) => entry.seller);
 
   const county = params.county ?? "all";
@@ -374,7 +413,7 @@ export async function searchEntities(params: EntitySearchParams): Promise<Entity
           tokens,
           shop.verified,
           shop.planId,
-          shop.listingsCount
+          shop.listingsCount,
         ),
       };
     })

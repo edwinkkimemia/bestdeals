@@ -16,13 +16,16 @@ export type NotificationLike = {
 
 const BURST_MS = 5 * 60_000;
 
-export function dedupeNotifications<T extends NotificationLike>(items: T[]): T[] {
+export function dedupeNotifications<T extends NotificationLike>(
+  items: T[],
+): T[] {
   const seenAt = new Map<string, number>();
   return items.filter((n) => {
     const key = `${n.type}|${n.title}|${n.body}|${n.link ?? ""}`;
     const at = new Date(n.createdAt).getTime();
     const prev = seenAt.get(key);
-    if (prev !== undefined && (n.type === "listing" || prev - at < BURST_MS)) return false;
+    if (prev !== undefined && (n.type === "listing" || prev - at < BURST_MS))
+      return false;
     seenAt.set(key, at);
     return true;
   });

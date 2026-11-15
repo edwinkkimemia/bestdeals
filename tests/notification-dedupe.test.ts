@@ -1,6 +1,9 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { dedupeNotifications, type NotificationLike } from "../src/lib/notification-dedupe.ts";
+import {
+  dedupeNotifications,
+  type NotificationLike,
+} from "../src/lib/notification-dedupe.ts";
 
 const row = (over: Partial<NotificationLike> = {}): NotificationLike => ({
   type: "listing",
@@ -22,14 +25,38 @@ describe("notification de-duplication", () => {
 
   it("only collapses identical chat messages inside a five-minute burst", () => {
     const burst = [
-      row({ type: "message", title: "New message from Admin", body: "how much", link: "/dashboard/messages/1", createdAt: "2026-01-01T00:03:00.000Z" }),
-      row({ type: "message", title: "New message from Admin", body: "how much", link: "/dashboard/messages/1", createdAt: "2026-01-01T00:00:00.000Z" }),
+      row({
+        type: "message",
+        title: "New message from Admin",
+        body: "how much",
+        link: "/dashboard/messages/1",
+        createdAt: "2026-01-01T00:03:00.000Z",
+      }),
+      row({
+        type: "message",
+        title: "New message from Admin",
+        body: "how much",
+        link: "/dashboard/messages/1",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
     ];
     assert.equal(dedupeNotifications(burst).length, 1);
 
     const later = [
-      row({ type: "message", title: "New message from Admin", body: "how much", link: "/dashboard/messages/1", createdAt: "2026-01-01T00:10:00.000Z" }),
-      row({ type: "message", title: "New message from Admin", body: "how much", link: "/dashboard/messages/1", createdAt: "2026-01-01T00:00:00.000Z" }),
+      row({
+        type: "message",
+        title: "New message from Admin",
+        body: "how much",
+        link: "/dashboard/messages/1",
+        createdAt: "2026-01-01T00:10:00.000Z",
+      }),
+      row({
+        type: "message",
+        title: "New message from Admin",
+        body: "how much",
+        link: "/dashboard/messages/1",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
     ];
     assert.equal(dedupeNotifications(later).length, 2);
   });

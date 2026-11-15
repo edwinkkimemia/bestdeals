@@ -4,9 +4,16 @@ import { getStore } from "@/lib/store";
 import { DashboardSidebar } from "./sidebar";
 import { PaymentStatusRefresh } from "@/components/payment-status-refresh";
 
-export const metadata = { title: "Seller Dashboard", robots: { index: false, follow: false } };
+export const metadata = {
+  title: "Seller Dashboard",
+  robots: { index: false, follow: false },
+};
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const user = await currentUser();
   if (!user) redirect("/auth/signin?next=/dashboard");
   const store = getStore();

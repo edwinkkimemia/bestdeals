@@ -531,9 +531,11 @@ model ListingView {
   sessionId String?
   referrer  String?
   userAgent String?
+  platform  String   @default("web")
   createdAt DateTime @default(now())
 
   @@index([listingId, createdAt])
+  @@index([platform, createdAt])
   @@index([createdAt])
 }
 

@@ -13,7 +13,10 @@ export type ReservedLine = { storeId: string; qty: number };
 const keyFor = (orderId: string) => `order_stock:${orderId}`;
 
 /** Record what a successful checkout decremented (called after all decrements land). */
-export async function recordReservation(orderId: string, lines: ReservedLine[]): Promise<void> {
+export async function recordReservation(
+  orderId: string,
+  lines: ReservedLine[],
+): Promise<void> {
   if (lines.length === 0) return;
   await getStore()
     .setSetting(keyFor(orderId), lines)
@@ -24,13 +27,16 @@ export async function recordReservation(orderId: string, lines: ReservedLine[]):
 export async function restoreReservedStock(orderId: string): Promise<void> {
   const store = getStore();
   const key = keyFor(orderId);
-  const lines = (await store.getSetting(key).catch(() => null)) as ReservedLine[] | null;
+  const lines = (await store.getSetting(key).catch(() => null)) as
+    | ReservedLine[]
+    | null;
   if (!lines || lines.length === 0) return;
   for (const l of lines) {
     if (!l?.storeId || !(l.qty > 0)) continue;
     try {
       const cur = await store.getListing(l.storeId);
-      if (cur) await store.updateListing(l.storeId, { stock: cur.stock + l.qty });
+      if (cur)
+        await store.updateListing(l.storeId, { stock: cur.stock + l.qty });
     } catch {}
   }
   await store.deleteSetting(key).catch(() => {});

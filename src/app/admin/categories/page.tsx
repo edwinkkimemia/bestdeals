@@ -5,11 +5,17 @@ import { storeRead } from "@/lib/store";
 import { CategoryManager } from "./category-manager";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Categories", robots: { index: false, follow: false } };
+export const metadata = {
+  title: "Categories",
+  robots: { index: false, follow: false },
+};
 
 export default async function AdminCategoriesPage() {
   const { categories, hidden } = await getCategoryAdminData();
-  const live = await storeRead((store) => store.listListingsByStatus("active"), []);
+  const live = await storeRead(
+    (store) => store.listListingsByStatus("active"),
+    [],
+  );
   const counts: Record<string, number> = {};
   for (const listing of [...LISTINGS, ...live]) {
     const slug = listing.categorySlug;

@@ -30,12 +30,21 @@ const getCategoryData = cache(async (slug: string) => {
   return { category, items, total };
 });
 
-export async function generateMetadata({ params }: { params: { category: string } }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: { category: string };
+}): Promise<Metadata> {
   const data = await getCategoryData(params.category);
   if (!data) return { title: "Category" };
   const { category, items, total } = data;
   const prices = priceRangeOf(items);
-  const description = categoryMetaDescription(category, undefined, total, prices).slice(0, 160);
+  const description = categoryMetaDescription(
+    category,
+    undefined,
+    total,
+    prices,
+  ).slice(0, 160);
   const title = `${category.name} in Kenya — prices, sellers & deals`;
   const url = `https://chap.co.ke/browse/${category.slug}`;
   return {
@@ -59,11 +68,17 @@ export async function generateMetadata({ params }: { params: { category: string 
       images: [category.image],
     },
     // Thin-inventory guard: empty categories stay browsable but out of the index.
-    ...(total === 0 ? { robots: { index: false, follow: true } } : { robots: { index: true, follow: true } }),
+    ...(total === 0
+      ? { robots: { index: false, follow: true } }
+      : { robots: { index: true, follow: true } }),
   };
 }
 
-export default async function CategoryPage({ params }: { params: { category: string } }) {
+export default async function CategoryPage({
+  params,
+}: {
+  params: { category: string };
+}) {
   const data = await getCategoryData(params.category);
   if (!data) notFound();
   const { category, total } = data;
@@ -72,7 +87,12 @@ export default async function CategoryPage({ params }: { params: { category: str
   const prices = priceRangeOf(items);
   const brands = topBrandsOf(items);
   const faqs = categoryFaqs(category, undefined, total, prices, counties);
-  const description = categoryMetaDescription(category, undefined, total, prices);
+  const description = categoryMetaDescription(
+    category,
+    undefined,
+    total,
+    prices,
+  );
 
   return (
     <CategoryLanding

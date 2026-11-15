@@ -3,18 +3,28 @@ import { readFile } from "fs/promises";
 import { join } from "path";
 import { uploadsBaseDir } from "@/lib/storage";
 
-const TYPES: Record<string, string> = { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp" };
+const TYPES: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+};
 
 /**
  * Warm-instance cache for DB-backed images: every view otherwise pays a full
  * settings-row read + base64 decode (shop logos/covers render raw, not via
  * the watermark endpoint's disk cache). Bounded and TTL'd; safe to lose.
  */
-const dbCache = new Map<string, { bytes: Uint8Array<ArrayBuffer>; mime: string; exp: number }>();
+const dbCache = new Map<
+  string,
+  { bytes: Uint8Array<ArrayBuffer>; mime: string; exp: number }
+>();
 const DB_CACHE_MAX = 50;
 const DB_CACHE_TTL_MS = 10 * 60_000;
 
-function dbCacheGet(url: string): { bytes: Uint8Array<ArrayBuffer>; mime: string } | null {
+function dbCacheGet(
+  url: string,
+): { bytes: Uint8Array<ArrayBuffer>; mime: string } | null {
   const hit = dbCache.get(url);
   if (!hit) return null;
   if (Date.now() > hit.exp) {
@@ -40,15 +50,20 @@ function dbCacheSet(url: string, bytes: Uint8Array<ArrayBuffer>, mime: string) {
  * redeploys (see src/lib/pubimages.ts); plain `/api/files/<stamp>/<name>`
  * URLs remain ephemeral /tmp reads for backwards compatibility.
  */
-export async function GET(_req: NextRequest, { params }: { params: { path: string[] } }) {
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { path: string[] } },
+) {
   const parts = params.path ?? [];
   // Anything under /api/files/db/ that isn't exactly the 3-segment staged
   // shape is rejected up front — never a disk probe.
   if (parts[0] === "db") {
-    if (parts.length !== 3) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    if (parts.length !== 3)
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
     const url = `/api/files/db/${parts[1]}/${parts[2]}`;
     const { dbPubImageKey } = await import("@/lib/pubimages");
-    if (!dbPubImageKey(url)) return NextResponse.json({ error: "Not found." }, { status: 404 });
+    if (!dbPubImageKey(url))
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
     try {
       const cached = dbCacheGet(url);
       if (cached) {
@@ -62,7 +77,8 @@ export async function GET(_req: NextRequest, { params }: { params: { path: strin
       const { getStore } = await import("@/lib/store");
       const { readDbPubImage } = await import("@/lib/pubimages");
       const hit = await readDbPubImage(getStore(), url);
-      if (!hit) return NextResponse.json({ error: "Not found." }, { status: 404 });
+      if (!hit)
+        return NextResponse.json({ error: "Not found." }, { status: 404 });
       const bytes = new Uint8Array(hit.bytes);
       dbCacheSet(url, bytes, hit.mime);
       return new NextResponse(bytes, {
@@ -75,7 +91,12 @@ export async function GET(_req: NextRequest, { params }: { params: { path: strin
       return NextResponse.json({ error: "Not found." }, { status: 404 });
     }
   }
-  if (parts.length !== 2 || parts.some((p) => !/^[a-zA-Z0-9][a-zA-Z0-9\-_.]*$/.test(p) || p.includes(".."))) {
+  if (
+    parts.length !== 2 ||
+    parts.some(
+      (p) => !/^[a-zA-Z0-9][a-zA-Z0-9\-_.]*$/.test(p) || p.includes(".."),
+    )
+  ) {
     return NextResponse.json({ error: "Not found." }, { status: 404 });
   }
   try {

@@ -1,7 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { wmImageSrc } from "../src/lib/watermark.ts";
-import { isAllowedListingImage, normalizeListingImages } from "../src/lib/image-urls.ts";
+import {
+  isAllowedListingImage,
+  normalizeListingImages,
+} from "../src/lib/image-urls.ts";
 
 describe("watermark URL coverage", () => {
   it("routes every stored upload form through the watermark endpoint", () => {
@@ -13,7 +16,7 @@ describe("watermark URL coverage", () => {
     ]) {
       assert.ok(
         wmImageSrc(src).startsWith("/api/images/download?src="),
-        `${src} should be watermarked`
+        `${src} should be watermarked`,
       );
     }
   });
@@ -32,13 +35,16 @@ describe("watermark URL coverage", () => {
         "/api/files/2026-10/b.jpg",
         "/uploads/2026-10/c.jpg",
         "https://x/y.jpg",
-      ]
+      ],
     );
   });
 
   it("still passes brand assets and data URIs through unwatermarked", () => {
     assert.equal(wmImageSrc("/chaplogo.png"), "/chaplogo.png");
-    assert.equal(wmImageSrc("data:image/png;base64,xx"), "data:image/png;base64,xx");
+    assert.equal(
+      wmImageSrc("data:image/png;base64,xx"),
+      "data:image/png;base64,xx",
+    );
     assert.equal(isAllowedListingImage("/chaplogo.png"), false);
   });
 });

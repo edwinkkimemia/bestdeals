@@ -83,7 +83,13 @@ const MAP: Record<string, LucideIcon> = {
 export const CATEGORY_ICON_NAMES = Object.keys(MAP);
 
 /** Category icon by the `icon` key stored in the catalogue. Falls back to a grid. */
-export function CategoryIcon({ name, className }: { name: string; className?: string }) {
+export function CategoryIcon({
+  name,
+  className,
+}: {
+  name: string;
+  className?: string;
+}) {
   const Icon = MAP[name] ?? LayoutGrid;
   return <Icon className={className} aria-hidden />;
 }

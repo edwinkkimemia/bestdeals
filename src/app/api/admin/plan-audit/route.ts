@@ -13,7 +13,8 @@ async function requireAdmin() {
 /** Admin-only: every account's live-listing count vs effective plan. */
 export async function GET() {
   const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: "Admin only." }, { status: 403 });
+  if (!user)
+    return NextResponse.json({ error: "Admin only." }, { status: 403 });
   const store = getStore();
   const [users, shops, counts] = await Promise.all([
     store.listUsers().catch(() => []),
@@ -37,21 +38,36 @@ export async function GET() {
  */
 export async function POST(req: NextRequest) {
   const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: "Admin only." }, { status: 403 });
+  if (!user)
+    return NextResponse.json({ error: "Admin only." }, { status: 403 });
   const body = await req.json().catch(() => ({}));
   const userId = String(body.userId || body.id || "").trim();
-  if (!userId) return NextResponse.json({ error: "Provide userId." }, { status: 400 });
+  if (!userId)
+    return NextResponse.json({ error: "Provide userId." }, { status: 400 });
   const store = getStore();
   const target = await store.findUserById(userId).catch(() => null);
-  if (!target) return NextResponse.json({ error: "User not found." }, { status: 404 });
+  if (!target)
+    return NextResponse.json({ error: "User not found." }, { status: 404 });
   const [owned, counts] = await Promise.all([
     store.listShopsByOwner(userId).catch(() => []),
     store.countLiveListingsByOwner().catch(() => []),
   ]);
   const [row] = auditPlanRows(
-    [{ id: target.id, name: target.name, email: target.email, planId: target.planId }],
-    owned.map((s) => ({ slug: s.slug, name: s.name, ownerId: userId, planId: (s as { planId?: string }).planId })),
-    counts.filter((c) => c.ownerId === userId)
+    [
+      {
+        id: target.id,
+        name: target.name,
+        email: target.email,
+        planId: target.planId,
+      },
+    ],
+    owned.map((s) => ({
+      slug: s.slug,
+      name: s.name,
+      ownerId: userId,
+      planId: (s as { planId?: string }).planId,
+    })),
+    counts.filter((c) => c.ownerId === userId),
   );
   if (!row.needsUpgrade) {
     return NextResponse.json({ ok: true, unchanged: true, row });
@@ -71,5 +87,14 @@ export async function POST(req: NextRequest) {
     entityId: userId,
     reason: `${row.effectivePlan}->${row.expectedPlan} (${row.liveCount} live, via ${row.target.kind}${row.target.kind === "shop" ? `:${row.target.slug}` : ""})`,
   }).catch(() => {});
-  return NextResponse.json({ ok: true, assigned: row.expectedPlan, effectivePlan: effective?.planId ?? row.expectedPlan, row: { ...row, effectivePlan: effective?.planId ?? row.expectedPlan, needsUpgrade: false } });
+  return NextResponse.json({
+    ok: true,
+    assigned: row.expectedPlan,
+    effectivePlan: effective?.planId ?? row.expectedPlan,
+    row: {
+      ...row,
+      effectivePlan: effective?.planId ?? row.expectedPlan,
+      needsUpgrade: false,
+    },
+  });
 }

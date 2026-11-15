@@ -49,13 +49,15 @@ export function CategoryLanding({
         trail={[
           { href: "/", label: "Home" },
           { href: "/browse", label: "Browse" },
-          ...(subcategory ? [{ href: categoryPath(category), label: category.name }] : []),
+          ...(subcategory
+            ? [{ href: categoryPath(category), label: category.name }]
+            : []),
           { label },
         ]}
       />
 
       <section className="card mt-2 overflow-hidden">
-        <div className="relative bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 px-5 py-7 text-white sm:px-8">
+        <div className="relative bg-ink-900 px-5 py-7 text-white sm:px-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={category.image}
@@ -72,22 +74,23 @@ export function CategoryLanding({
             </h1>
             <p className="mt-2 max-w-3xl text-sm text-white/90">{intro}</p>
             <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold">
-              <span className="rounded-full bg-white/15 px-3 py-1">
+              <span className="rounded bg-white/15 px-3 py-1">
                 {total.toLocaleString()} live listing{total === 1 ? "" : "s"}
               </span>
               {prices && (
-                <span className="rounded-full bg-white/15 px-3 py-1">
+                <span className="rounded bg-white/15 px-3 py-1">
                   {formatKES(prices.min)} – {formatKES(prices.max)}
                 </span>
               )}
               {counties[0] && (
-                <span className="rounded-full bg-white/15 px-3 py-1">
+                <span className="rounded bg-white/15 px-3 py-1">
                   Popular in {counties[0].county}
                 </span>
               )}
               {items.some((l) => l.verified) && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1">
-                  <BadgeCheck className="h-3.5 w-3.5" /> Verified sellers available
+                <span className="inline-flex items-center gap-1 rounded bg-white/15 px-3 py-1">
+                  <BadgeCheck className="h-3.5 w-3.5" /> Verified sellers
+                  available
                 </span>
               )}
             </div>
@@ -95,10 +98,13 @@ export function CategoryLanding({
         </div>
       </section>
 
-      <nav className="mt-4 flex flex-wrap gap-2" aria-label={`${category.name} subcategories`}>
+      <nav
+        className="mt-4 flex flex-wrap gap-2"
+        aria-label={`${category.name} subcategories`}
+      >
         <Link
           href={categoryPath(category)}
-          className={`chip hover:border-brand-600 ${subcategory ? "" : "!border-brand-600 !text-brand-700"}`}
+          className={`chip hover:border-ink-900 ${subcategory ? "" : "!border-brand-600 !text-brand-700"}`}
         >
           All {category.name}
         </Link>
@@ -106,7 +112,7 @@ export function CategoryLanding({
           <Link
             key={s}
             href={categoryPath(category, s)}
-            className="chip hover:border-brand-600 hover:text-brand-700"
+            className="chip hover:border-ink-900 hover:text-brand-700"
           >
             {s}
           </Link>
@@ -117,8 +123,11 @@ export function CategoryLanding({
         <div className="card mt-6 p-8 text-center">
           <p className="font-bold">No {label.toLowerCase()} listings yet</p>
           <p className="mt-1 text-sm text-ink-500">
-            Be the first to <Link href="/sell" className="link-bd">list an item here</Link> — new
-            listings are reviewed and appear quickly.
+            Be the first to{" "}
+            <Link href="/sell" className="link-bd">
+              list an item here
+            </Link>{" "}
+            — new listings are reviewed and appear quickly.
           </p>
         </div>
       ) : (
@@ -134,16 +143,20 @@ export function CategoryLanding({
 
       <section className="mt-10" aria-labelledby="market-title">
         <h2 id="market-title" className="flex items-center gap-2 font-bold">
-          <TrendingUp className="h-4 w-4 text-brand-600" /> {label} market snapshot
+          <TrendingUp className="h-4 w-4 text-brand-600" /> {label} market
+          snapshot
         </h2>
         <div className="mt-3 grid gap-3 sm:grid-cols-3">
           <div className="card p-4">
             <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ink-400">
               <Package className="h-3.5 w-3.5" /> Supply
             </p>
-            <p className="mt-2 text-2xl font-extrabold">{total.toLocaleString()}</p>
+            <p className="mt-2 text-2xl font-extrabold">
+              {total.toLocaleString()}
+            </p>
             <p className="text-sm text-ink-500">
-              live {label.toLowerCase()} listing{total === 1 ? "" : "s"} from sellers across Kenya
+              live {label.toLowerCase()} listing{total === 1 ? "" : "s"} from
+              sellers across Kenya
             </p>
           </div>
           <div className="card p-4">
@@ -151,7 +164,9 @@ export function CategoryLanding({
               <TrendingUp className="h-3.5 w-3.5" /> Price range
             </p>
             <p className="mt-2 text-2xl font-extrabold">
-              {prices ? `${formatKES(prices.min)} – ${formatKES(prices.max)}` : "Varies"}
+              {prices
+                ? `${formatKES(prices.min)} – ${formatKES(prices.max)}`
+                : "Varies"}
             </p>
             <p className="text-sm text-ink-500">
               {prices
@@ -166,13 +181,18 @@ export function CategoryLanding({
             <ul className="mt-2 space-y-1 text-sm">
               {counties.slice(0, 4).map((c) => (
                 <li key={c.county}>
-                  <Link href={`/location/${countySlug(c.county)}`} className="link-bd">
+                  <Link
+                    href={`/location/${countySlug(c.county)}`}
+                    className="link-bd"
+                  >
                     {c.county}
                   </Link>{" "}
                   <span className="text-ink-400">({c.count})</span>
                 </li>
               ))}
-              {counties.length === 0 && <li className="text-ink-500">Countrywide delivery available</li>}
+              {counties.length === 0 && (
+                <li className="text-ink-500">Countrywide delivery available</li>
+              )}
             </ul>
           </div>
         </div>
@@ -182,9 +202,18 @@ export function CategoryLanding({
         <div className="card p-5">
           <h2 className="font-bold">Buying {label.toLowerCase()} on Chap</h2>
           <ul className="mt-3 space-y-2 text-sm text-ink-700">
-            <li>Compare condition, warranty and total delivery cost — not just the headline price.</li>
-            <li>Check the seller&apos;s ✓ verification badge, shop page and reviews before paying.</li>
-            <li>Use buy-online checkout or agree a safe public meet-up; never share your M-Pesa PIN.</li>
+            <li>
+              Compare condition, warranty and total delivery cost — not just the
+              headline price.
+            </li>
+            <li>
+              Check the seller&apos;s ✓ verification badge, shop page and
+              reviews before paying.
+            </li>
+            <li>
+              Use buy-online checkout or agree a safe public meet-up; never
+              share your M-Pesa PIN.
+            </li>
           </ul>
           {brands.length > 0 && (
             <p className="mt-3 text-sm text-ink-500">
@@ -192,7 +221,12 @@ export function CategoryLanding({
               {brands.slice(0, 6).map((b, i) => (
                 <span key={b}>
                   {i > 0 && " · "}
-                  <Link href={`/search?q=${encodeURIComponent(b)}`} className="link-bd">{b}</Link>
+                  <Link
+                    href={`/search?q=${encodeURIComponent(b)}`}
+                    className="link-bd"
+                  >
+                    {b}
+                  </Link>
                 </span>
               ))}
             </p>
@@ -221,8 +255,9 @@ export function CategoryLanding({
       </section>
 
       <p className="mt-8 text-xs text-ink-400">
-        Prices are in Kenyan shillings (KES). Listings are posted by sellers and reviewed by Chap;
-        always confirm item details with the seller before paying.
+        Prices are in Kenyan shillings (KES). Listings are posted by sellers and
+        reviewed by Chap; always confirm item details with the seller before
+        paying.
       </p>
     </div>
   );

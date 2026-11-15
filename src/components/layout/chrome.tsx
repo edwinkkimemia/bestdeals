@@ -47,7 +47,11 @@ export function Chrome({
   return (
     <>
       {announcement && <AnnouncementBar text={announcement} />}
-      <Header user={user} categories={categories} initialCounty={initialCounty} />
+      <Header
+        user={user}
+        categories={categories}
+        initialCounty={initialCounty}
+      />
       <main className="min-h-[60vh]">{children}</main>
       {footer}
       <BottomNav />

@@ -6,7 +6,11 @@
  */
 import type { Store } from "./store";
 
-export async function applyVerificationApproval(store: Store, verificationId: string, adminId: string) {
+export async function applyVerificationApproval(
+  store: Store,
+  verificationId: string,
+  adminId: string,
+) {
   await store.decideVerification(verificationId, true, adminId);
   const all = await store.listVerifications().catch(() => []);
   const v = all.find((x) => x.id === verificationId) ?? null;

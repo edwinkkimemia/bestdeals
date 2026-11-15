@@ -2,7 +2,14 @@ import { describe, it, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { s3Get, isS3Configured } from "../src/lib/storage.ts";
 
-const KEYS = ["S3_BUCKET", "S3_REGION", "S3_ACCESS_KEY", "S3_SECRET_KEY", "S3_ENDPOINT", "UPLOAD_DRIVER"] as const;
+const KEYS = [
+  "S3_BUCKET",
+  "S3_REGION",
+  "S3_ACCESS_KEY",
+  "S3_SECRET_KEY",
+  "S3_ENDPOINT",
+  "UPLOAD_DRIVER",
+] as const;
 const saved: Record<string, string | undefined> = {};
 for (const k of KEYS) saved[k] = process.env[k];
 delete process.env.UPLOAD_DRIVER;
@@ -29,8 +36,15 @@ describe("s3Get (private verification docs)", () => {
     s3Env();
     assert.equal(isS3Configured(), true);
     let seen: { url: string; method?: string; auth?: string } = { url: "" };
-    globalThis.fetch = (async (url: unknown, init?: { method?: string; headers?: Record<string, string> }) => {
-      seen = { url: String(url), method: init?.method, auth: init?.headers?.Authorization };
+    globalThis.fetch = (async (
+      url: unknown,
+      init?: { method?: string; headers?: Record<string, string> },
+    ) => {
+      seen = {
+        url: String(url),
+        method: init?.method,
+        auth: init?.headers?.Authorization,
+      };
       return new Response(new Uint8Array([1, 2, 3]), { status: 200 });
     }) as typeof fetch;
     const buf = await s3Get("private/2026-10/doc123-id.jpg");
@@ -43,13 +57,18 @@ describe("s3Get (private verification docs)", () => {
 
   it("returns null on 404 instead of throwing", async () => {
     s3Env();
-    globalThis.fetch = (async () => new Response("nope", { status: 404 })) as typeof fetch;
+    globalThis.fetch = (async () =>
+      new Response("nope", { status: 404 })) as typeof fetch;
     assert.equal(await s3Get("private/2026-10/gone.jpg"), null);
   });
 
   it("throws on transport errors", async () => {
     s3Env();
-    globalThis.fetch = (async () => new Response("denied", { status: 403 })) as typeof fetch;
-    await assert.rejects(() => s3Get("private/2026-10/x.jpg"), /S3 download failed \(403\)/);
+    globalThis.fetch = (async () =>
+      new Response("denied", { status: 403 })) as typeof fetch;
+    await assert.rejects(
+      () => s3Get("private/2026-10/x.jpg"),
+      /S3 download failed \(403\)/,
+    );
   });
 });

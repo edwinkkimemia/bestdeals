@@ -18,7 +18,9 @@ const user = (over: Partial<UserRecord> = {}): UserRecord => ({
   ...over,
 });
 
-const verification = (over: Partial<VerificationRecord> = {}): VerificationRecord => ({
+const verification = (
+  over: Partial<VerificationRecord> = {},
+): VerificationRecord => ({
   id: "ver1",
   userId: "u1",
   kind: "business",
@@ -42,7 +44,10 @@ describe("attachVerificationUsers", () => {
   });
 
   it("marks rows from deleted accounts with a null user", () => {
-    const [row] = attachVerificationUsers([verification({ userId: "gone" })], [user()]);
+    const [row] = attachVerificationUsers(
+      [verification({ userId: "gone" })],
+      [user()],
+    );
     assert.equal(row.user, null);
   });
 

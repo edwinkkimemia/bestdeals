@@ -20,19 +20,21 @@ import {
 // Live inventory changes constantly; keep the landing page fresh.
 export const dynamic = "force-dynamic";
 
-const getSubcategoryData = cache(async (categorySlug: string, subSlug: string) => {
-  const category = await getCategoryBySlug(categorySlug);
-  if (!category) return null;
-  const subcategory = subcategoryBySlug(category, subSlug);
-  if (!subcategory) return null;
-  const { items, total } = await searchAll({
-    category: category.slug,
-    subcategory,
-    sort: "relevance",
-    perPage: 48,
-  });
-  return { category, subcategory, items, total };
-});
+const getSubcategoryData = cache(
+  async (categorySlug: string, subSlug: string) => {
+    const category = await getCategoryBySlug(categorySlug);
+    if (!category) return null;
+    const subcategory = subcategoryBySlug(category, subSlug);
+    if (!subcategory) return null;
+    const { items, total } = await searchAll({
+      category: category.slug,
+      subcategory,
+      sort: "relevance",
+      perPage: 48,
+    });
+    return { category, subcategory, items, total };
+  },
+);
 
 export async function generateMetadata({
   params,
@@ -43,7 +45,12 @@ export async function generateMetadata({
   if (!data) return { title: "Category" };
   const { category, subcategory, items, total } = data;
   const prices = priceRangeOf(items);
-  const description = categoryMetaDescription(category, subcategory, total, prices).slice(0, 160);
+  const description = categoryMetaDescription(
+    category,
+    subcategory,
+    total,
+    prices,
+  ).slice(0, 160);
   const title = `${subcategory} in Kenya — ${category.name}`;
   const path = categoryPath(category, subcategory);
   return {
@@ -66,7 +73,9 @@ export async function generateMetadata({
       description,
       images: [category.image],
     },
-    ...(total === 0 ? { robots: { index: false, follow: true } } : { robots: { index: true, follow: true } }),
+    ...(total === 0
+      ? { robots: { index: false, follow: true } }
+      : { robots: { index: true, follow: true } }),
   };
 }
 
@@ -83,7 +92,12 @@ export default async function SubcategoryPage({
   const prices = priceRangeOf(items);
   const brands = topBrandsOf(items);
   const faqs = categoryFaqs(category, subcategory, total, prices, counties);
-  const description = categoryMetaDescription(category, subcategory, total, prices);
+  const description = categoryMetaDescription(
+    category,
+    subcategory,
+    total,
+    prices,
+  );
 
   return (
     <CategoryLanding
@@ -96,7 +110,13 @@ export default async function SubcategoryPage({
       brands={brands}
       intro={categoryIntro(category, subcategory, total)}
       faqs={faqs}
-      jsonLd={categoryJsonLd({ category, subcategory, description, items, faqs })}
+      jsonLd={categoryJsonLd({
+        category,
+        subcategory,
+        description,
+        items,
+        faqs,
+      })}
     />
   );
 }

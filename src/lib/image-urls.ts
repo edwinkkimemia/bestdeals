@@ -14,14 +14,18 @@ export function isAllowedListingImage(u: string): boolean {
     typeof u === "string" &&
     u.length >= 1 &&
     u.length <= 2000 &&
-    (u.startsWith("https://") || u.startsWith("/uploads/") || u.startsWith("/api/files/"))
+    (u.startsWith("https://") ||
+      u.startsWith("/uploads/") ||
+      u.startsWith("/api/files/"))
   );
 }
 
 /** Filter + cap a raw image list for storage (max 8). */
 export function normalizeListingImages(images: unknown): string[] {
   if (!Array.isArray(images)) return [];
-  return images.filter((u): u is string => isAllowedListingImage(u)).slice(0, 8);
+  return images
+    .filter((u): u is string => isAllowedListingImage(u))
+    .slice(0, 8);
 }
 
 /** Parse the comma/newline-separated links box in the sell/edit form. */

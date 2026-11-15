@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Archivo } from "next/font/google";
 import "./globals.css";
 import { Chrome } from "@/components/layout/chrome";
 import { Footer } from "@/components/layout/footer";
@@ -12,7 +12,11 @@ import { getCategories } from "@/lib/categories";
 import { CATEGORIES } from "@/data/catalog";
 import { websiteJsonLd } from "@/lib/seo";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const inter = Archivo({
+  subsets: ["latin"],
+  variable: "--font-archivo",
+  weight: ["500", "600", "700", "800"],
+});
 
 export const viewport: Viewport = {
   themeColor: "#0043D2",
@@ -36,24 +40,39 @@ export const metadata: Metadata = {
     locale: "en_KE",
     siteName: "chap.co.ke",
     title: "chap.co.ke — Everything You Need. All in One Place.",
-    description: "Shop products, classifieds, business shops and local services across Kenya.",
-    images: [{ url: "/chaplogo.png", width: 1147, height: 287, alt: "chap.co.ke — Kenya's marketplace" }],
+    description:
+      "Shop products, classifieds, business shops and local services across Kenya.",
+    images: [
+      {
+        url: "/chaplogo.png",
+        width: 1147,
+        height: 287,
+        alt: "chap.co.ke — Kenya's marketplace",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "chap.co.ke — Kenya's Marketplace for Everything",
-    description: "Shop products, classifieds, business shops and local services across Kenya.",
+    description:
+      "Shop products, classifieds, business shops and local services across Kenya.",
     images: ["/chaplogo.png"],
   },
   robots: { index: true, follow: true },
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const user = await currentUser().catch(() => null);
   const categories = await getCategories().catch(() => CATEGORIES);
   const savedCounty = user
     ? await storeRead(async (s) => {
-        const value = await s.getSetting(`location:${user.id}`).catch(() => null);
+        const value = await s
+          .getSetting(`location:${user.id}`)
+          .catch(() => null);
         return typeof value === "string" ? value : null;
       }, null)
     : null;
@@ -72,7 +91,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={`${inter.variable} font-sans`}>
         {adsEnabled() && (
           <>
-            <script dangerouslySetInnerHTML={{ __html: "window.adsbygoogle=window.adsbygoogle||[];window.adsbygoogle.requestNonPersonalizedAds=1;" }} />
+            <script
+              dangerouslySetInnerHTML={{
+                __html:
+                  "window.adsbygoogle=window.adsbygoogle||[];window.adsbygoogle.requestNonPersonalizedAds=1;",
+              }}
+            />
             <script
               async
               src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`}
@@ -80,7 +104,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             />
           </>
         )}
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd()) }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd()) }}
+        />
         <CartProvider>
           <Chrome
             user={user ? { name: user.name, role: user.role } : null}

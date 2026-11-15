@@ -34,19 +34,36 @@ export function dbDocKey(ref: string): string | null {
   return `privdoc:${inner}`;
 }
 
-export type StagedDoc = { mime: string; base64: string; by: string; at: string };
+export type StagedDoc = {
+  mime: string;
+  base64: string;
+  by: string;
+  at: string;
+};
 
 /** Persist an uploaded private doc; returns the `private:db/…` ref. */
 export async function stageDbDoc(
   store: Store,
-  opts: { name: string; stamp: string; mime: string; base64: string; by: string }
+  opts: {
+    name: string;
+    stamp: string;
+    mime: string;
+    base64: string;
+    by: string;
+  },
 ): Promise<string | null> {
   if (!opts.by || !opts.base64 || opts.base64.length > MAX_B64) return null;
-  if (!["image/jpeg", "image/png", "image/webp"].includes(opts.mime)) return null;
+  if (!["image/jpeg", "image/png", "image/webp"].includes(opts.mime))
+    return null;
   const ref = `${DB_DOC_PREFIX}${opts.stamp}/${opts.name}`;
   const key = dbDocKey(ref);
   if (!key) return null;
-  const doc: StagedDoc = { mime: opts.mime, base64: opts.base64, by: opts.by, at: new Date().toISOString() };
+  const doc: StagedDoc = {
+    mime: opts.mime,
+    base64: opts.base64,
+    by: opts.by,
+    at: new Date().toISOString(),
+  };
   await store.setSetting(key, doc);
   return ref;
 }
@@ -54,11 +71,13 @@ export async function stageDbDoc(
 /** Load a staged doc (ownership is checked by the caller). */
 export async function readDbDoc(
   store: Store,
-  ref: string
+  ref: string,
 ): Promise<{ mime: string; bytes: Buffer; by: string } | null> {
   const key = dbDocKey(ref);
   if (!key) return null;
-  const rec = (await store.getSetting(key).catch(() => null)) as StagedDoc | null;
+  const rec = (await store
+    .getSetting(key)
+    .catch(() => null)) as StagedDoc | null;
   if (!rec || typeof rec.base64 !== "string" || !rec.base64) return null;
   let bytes: Buffer;
   try {
@@ -67,5 +86,9 @@ export async function readDbDoc(
     return null;
   }
   if (bytes.length === 0) return null;
-  return { mime: rec.mime || "image/jpeg", bytes, by: typeof rec.by === "string" ? rec.by : "" };
+  return {
+    mime: rec.mime || "image/jpeg",
+    bytes,
+    by: typeof rec.by === "string" ? rec.by : "",
+  };
 }

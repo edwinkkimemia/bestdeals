@@ -5,40 +5,96 @@ import { getStore } from "@/lib/store";
 
 /** Step 1: initiate provider payment for a reserved order. */
 export async function POST(req: NextRequest) {
-  const rl = rateLimit(clientKey(req, "pay:init"), { limit: 10, windowMs: 60_000 });
-  if (!rl.ok) return NextResponse.json({ error: "Too many payment attempts." }, { status: 429 });
+  const rl = rateLimit(clientKey(req, "pay:init"), {
+    limit: 10,
+    windowMs: 60_000,
+  });
+  if (!rl.ok)
+    return NextResponse.json(
+      { error: "Too many payment attempts." },
+      { status: 429 },
+    );
   const body = await req.json().catch(() => ({}));
-  const { orderId, method, phone, promoId, planShop, planId } = body as { orderId?: string; method?: string; phone?: string; promoId?: string; planShop?: string; planId?: string };
-  if (!orderId || !phone) return NextResponse.json({ error: "Order and phone are required." }, { status: 400 });
-  if (!/^(\+254|0)[17]\d{8}$/.test(phone)) return NextResponse.json({ error: "Use a valid Kenyan phone e.g. 0712345678." }, { status: 400 });
+  const { orderId, method, phone, promoId, planShop, planId } = body as {
+    orderId?: string;
+    method?: string;
+    phone?: string;
+    promoId?: string;
+    planShop?: string;
+    planId?: string;
+  };
+  if (!orderId || !phone)
+    return NextResponse.json(
+      { error: "Order and phone are required." },
+      { status: 400 },
+    );
+  if (!/^(\+254|0)[17]\d{8}$/.test(phone))
+    return NextResponse.json(
+      { error: "Use a valid Kenyan phone e.g. 0712345678." },
+      { status: 400 },
+    );
   if (method === "card") {
-    return NextResponse.json({ ok: false, status: "pending", message: "Card payments are not available yet — please choose M-Pesa or cash on delivery." });
+    return NextResponse.json({
+      ok: false,
+      status: "pending",
+      message:
+        "Card payments are not available yet — please choose M-Pesa or cash on delivery.",
+    });
   }
   if (method === "cod") {
-    return NextResponse.json({ ok: true, status: "pending_cod", message: "Cash on delivery selected. Pay the courier on arrival." });
+    return NextResponse.json({
+      ok: true,
+      status: "pending_cod",
+      message: "Cash on delivery selected. Pay the courier on arrival.",
+    });
   }
   // Amount always comes from the server-side order — never the browser.
   const order = await getStore().getOrder(orderId);
-  if (!order) return NextResponse.json({ error: "Order not found." }, { status: 404 });
+  if (!order)
+    return NextResponse.json({ error: "Order not found." }, { status: 404 });
   if (order.paymentStatus === "paid") {
-    return NextResponse.json({ ok: true, status: "paid", message: "Order already paid." });
+    return NextResponse.json({
+      ok: true,
+      status: "paid",
+      message: "Order already paid.",
+    });
   }
-  const result = await initiateSTKPush({ orderId, amount: order.total, phone, method: "mpesa", label: promoId ? "boost" : planId ? "plan" : "order" });
+  const result = await initiateSTKPush({
+    orderId,
+    amount: order.total,
+    phone,
+    method: "mpesa",
+    label: promoId ? "boost" : planId ? "plan" : "order",
+  });
   if (result.status === "processing" && result.providerRef) {
-    await getStore().setOrderPayment(orderId, "processing").catch(() => {});
+    await getStore()
+      .setOrderPayment(orderId, "processing")
+      .catch(() => {});
     // Link promo/plan activation to the Daraja request id for the callback.
     if (promoId || (planShop && planId)) {
-      await getStore().setSetting(`mpesa_link:${result.providerRef}`, { promoId, planShop, planId }).catch(() => {});
+      await getStore()
+        .setSetting(`mpesa_link:${result.providerRef}`, {
+          promoId,
+          planShop,
+          planId,
+        })
+        .catch(() => {});
     }
   }
-  return NextResponse.json({ ok: result.ok, status: result.status, message: result.message, providerRef: result.providerRef });
+  return NextResponse.json({
+    ok: result.ok,
+    status: result.status,
+    message: result.message,
+    providerRef: result.providerRef,
+  });
 }
 
 // NOTE: there is exactly one callback entry point — POST /api/payments/mpesa-callback
 // (secret-checked, rate-limited, amount-verified). A weaker PUT alternate lived
 // here and was removed: duplicate lax entry points are how forged payments happen.
 export async function PUT() {
-  return NextResponse.json({ error: "Use POST /api/payments/mpesa-callback." }, { status: 405 });
+  return NextResponse.json(
+    { error: "Use POST /api/payments/mpesa-callback." },
+    { status: 405 },
+  );
 }
-
-

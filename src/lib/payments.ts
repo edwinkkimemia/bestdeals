@@ -40,12 +40,15 @@ export type MpesaTransactionConfig = {
  * the store/Till number and switches the transaction type; a Paybill uses the
  * same shortcode for both. `MPESA_TRANSACTION_TYPE` can override the inference.
  */
-export function resolveMpesaTransaction(env: Record<string, string | undefined> = process.env): MpesaTransactionConfig {
+export function resolveMpesaTransaction(
+  env: Record<string, string | undefined> = process.env,
+): MpesaTransactionConfig {
   const shortcode = (env.MPESA_SHORTCODE || "").trim();
   const till = (env.MPESA_TILL || "").trim();
   const override = (env.MPESA_TRANSACTION_TYPE || "").trim();
   const transactionType =
-    override === "CustomerBuyGoodsOnline" || override === "CustomerPayBillOnline"
+    override === "CustomerBuyGoodsOnline" ||
+    override === "CustomerPayBillOnline"
       ? override
       : till
         ? "CustomerBuyGoodsOnline"
@@ -63,7 +66,7 @@ export function isPaymentsLive(): boolean {
     process.env.MPESA_CONSUMER_KEY &&
       process.env.MPESA_CONSUMER_SECRET &&
       tx.businessShortCode &&
-      process.env.MPESA_PASSKEY
+      process.env.MPESA_PASSKEY,
   );
 }
 
@@ -80,7 +83,9 @@ function darajaBase(): string {
  * Production MUST set it; without it any caller can forge callbacks.
  */
 export function mpesaCallbackUrl(): string {
-  const base = process.env.MPESA_CALLBACK_URL || "https://www.chap.co.ke/api/payments/mpesa-callback";
+  const base =
+    process.env.MPESA_CALLBACK_URL ||
+    "https://www.chap.co.ke/api/payments/mpesa-callback";
   const secret = (process.env.MPESA_CALLBACK_SECRET || "").trim();
   if (!secret) return base;
   const joiner = base.includes("?") ? "&" : "?";
@@ -104,7 +109,8 @@ export function verifyCallbackSecret(url: string): boolean {
   }
   if (given.length !== secret.length || given.length === 0) return false;
   let diff = 0;
-  for (let i = 0; i < secret.length; i++) diff |= secret.charCodeAt(i) ^ given.charCodeAt(i);
+  for (let i = 0; i < secret.length; i++)
+    diff |= secret.charCodeAt(i) ^ given.charCodeAt(i);
   return diff === 0;
 }
 
@@ -117,10 +123,15 @@ function timestamp(): string {
 async function darajaToken(): Promise<string> {
   const key = process.env.MPESA_CONSUMER_KEY!;
   const secret = process.env.MPESA_CONSUMER_SECRET!;
-  const r = await fetch(`${darajaBase()}/oauth/v1/generate?grant_type=client_credentials`, {
-    headers: { Authorization: `Basic ${Buffer.from(`${key}:${secret}`).toString("base64")}` },
-    cache: "no-store",
-  });
+  const r = await fetch(
+    `${darajaBase()}/oauth/v1/generate?grant_type=client_credentials`,
+    {
+      headers: {
+        Authorization: `Basic ${Buffer.from(`${key}:${secret}`).toString("base64")}`,
+      },
+      cache: "no-store",
+    },
+  );
   if (!r.ok) throw new Error(`Daraja OAuth failed (${r.status})`);
   const j = (await r.json().catch(() => ({}))) as { access_token?: string };
   if (!j.access_token) throw new Error("Daraja OAuth: no token");
@@ -136,7 +147,9 @@ function normalizeKEPhone(phone: string): string {
 }
 
 /** STK push initiation. Real Daraja HTTP when credentials exist; otherwise a safe stub. */
-export async function initiateSTKPush(init: PaymentInit): Promise<PaymentResult> {
+export async function initiateSTKPush(
+  init: PaymentInit,
+): Promise<PaymentResult> {
   if (!isPaymentsLive()) {
     return {
       ok: false,
@@ -145,20 +158,34 @@ export async function initiateSTKPush(init: PaymentInit): Promise<PaymentResult>
     };
   }
   try {
-    const { businessShortCode, partyB, transactionType } = resolveMpesaTransaction();
+    const { businessShortCode, partyB, transactionType } =
+      resolveMpesaTransaction();
     const passkey = process.env.MPESA_PASSKEY!;
     const ts = timestamp();
-    const password = Buffer.from(`${businessShortCode}${passkey}${ts}`).toString("base64");
+    const password = Buffer.from(
+      `${businessShortCode}${passkey}${ts}`,
+    ).toString("base64");
     const token = await darajaToken();
     const callbackURL = mpesaCallbackUrl();
     // Daraja caps AccountReference at 12 and TransactionDesc at 13 characters.
     // The callback maps back via the persisted CheckoutRequestID, not these labels.
-    const accountReference = init.orderId.replace(/[^A-Za-z0-9]/g, "").slice(-12) || "CHAP";
-    const descLabel = (init.label ?? "order").replace(/[^A-Za-z ]/g, "").trim().slice(0, 6) || "order";
-    const transactionDesc = `${descLabel} ${accountReference.slice(-5)}`.slice(0, 13);
+    const accountReference =
+      init.orderId.replace(/[^A-Za-z0-9]/g, "").slice(-12) || "CHAP";
+    const descLabel =
+      (init.label ?? "order")
+        .replace(/[^A-Za-z ]/g, "")
+        .trim()
+        .slice(0, 6) || "order";
+    const transactionDesc = `${descLabel} ${accountReference.slice(-5)}`.slice(
+      0,
+      13,
+    );
     const r = await fetch(`${darajaBase()}/mpesa/stkpush/v1/processrequest`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         BusinessShortCode: businessShortCode,
         Password: password,
@@ -181,14 +208,29 @@ export async function initiateSTKPush(init: PaymentInit): Promise<PaymentResult>
       ResponseDescription?: string;
     };
     if (!r.ok || j.ResponseCode !== "0" || !j.CheckoutRequestID) {
-      return { ok: false, status: "failed", message: j.errorMessage || j.ResponseDescription || "M-Pesa request failed. Try again." };
+      return {
+        ok: false,
+        status: "failed",
+        message:
+          j.errorMessage ||
+          j.ResponseDescription ||
+          "M-Pesa request failed. Try again.",
+      };
     }
     // Persist the Daraja → order mapping for the callback (settings-backed, demo + PG).
     try {
       const { getStore } = await import("./store");
-      await getStore().setSetting(`mpesa_req:${j.CheckoutRequestID}`, { orderId: init.orderId, amount: Math.round(init.amount), at: new Date().toISOString() });
+      await getStore().setSetting(`mpesa_req:${j.CheckoutRequestID}`, {
+        orderId: init.orderId,
+        amount: Math.round(init.amount),
+        at: new Date().toISOString(),
+      });
       if (j.MerchantRequestID) {
-        await getStore().setSetting(`mpesa_req:${j.MerchantRequestID}`, { orderId: init.orderId, amount: Math.round(init.amount), at: new Date().toISOString() });
+        await getStore().setSetting(`mpesa_req:${j.MerchantRequestID}`, {
+          orderId: init.orderId,
+          amount: Math.round(init.amount),
+          at: new Date().toISOString(),
+        });
       }
     } catch {}
     return {
@@ -198,7 +240,11 @@ export async function initiateSTKPush(init: PaymentInit): Promise<PaymentResult>
       message: "STK push sent. Enter your M-Pesa PIN to complete payment.",
     };
   } catch (e) {
-    return { ok: false, status: "failed", message: (e as Error)?.message?.slice(0, 160) || "M-Pesa request failed." };
+    return {
+      ok: false,
+      status: "failed",
+      message: (e as Error)?.message?.slice(0, 160) || "M-Pesa request failed.",
+    };
   }
 }
 
@@ -213,17 +259,25 @@ export type StkQueryResult = {
  * when a callback was lost/failed: a ResultCode of "0" means M-Pesa completed
  * the payment, so linked plan/boost fulfilment can be applied safely.
  */
-export async function querySTKPush(checkoutRequestId: string): Promise<StkQueryResult> {
-  if (!isPaymentsLive()) return { ok: false, message: "M-Pesa is not configured." };
+export async function querySTKPush(
+  checkoutRequestId: string,
+): Promise<StkQueryResult> {
+  if (!isPaymentsLive())
+    return { ok: false, message: "M-Pesa is not configured." };
   try {
     const { businessShortCode } = resolveMpesaTransaction();
     const passkey = process.env.MPESA_PASSKEY!;
     const ts = timestamp();
-    const password = Buffer.from(`${businessShortCode}${passkey}${ts}`).toString("base64");
+    const password = Buffer.from(
+      `${businessShortCode}${passkey}${ts}`,
+    ).toString("base64");
     const token = await darajaToken();
     const r = await fetch(`${darajaBase()}/mpesa/stkpushquery/v1/query`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         BusinessShortCode: businessShortCode,
         Password: password,
@@ -238,12 +292,16 @@ export async function querySTKPush(checkoutRequestId: string): Promise<StkQueryR
       ResponseDescription?: string;
       errorMessage?: string;
     };
-    const resultCode = j.ResultCode !== undefined ? String(j.ResultCode) : undefined;
+    const resultCode =
+      j.ResultCode !== undefined ? String(j.ResultCode) : undefined;
     if (!r.ok) {
       return {
         ok: false,
         resultCode,
-        message: j.errorMessage || j.ResponseDescription || `STK query failed (${r.status})`,
+        message:
+          j.errorMessage ||
+          j.ResponseDescription ||
+          `STK query failed (${r.status})`,
       };
     }
     return {
@@ -252,12 +310,23 @@ export async function querySTKPush(checkoutRequestId: string): Promise<StkQueryR
       message: j.ResultDesc || j.ResponseDescription || "STK query completed.",
     };
   } catch (e) {
-    return { ok: false, message: (e as Error)?.message?.slice(0, 160) || "STK query failed." };
+    return {
+      ok: false,
+      message: (e as Error)?.message?.slice(0, 160) || "STK query failed.",
+    };
   }
 }
 
-export type ReversalInput = { receipt: string; amount: number; occasion?: string };
-export type ReversalResult = { ok: boolean; message: string; conversationId?: string };
+export type ReversalInput = {
+  receipt: string;
+  amount: number;
+  occasion?: string;
+};
+export type ReversalResult = {
+  ok: boolean;
+  message: string;
+  conversationId?: string;
+};
 
 /**
  * Daraja transaction reversal (M-Pesa → customer). Needs MPESA_INITIATOR_NAME
@@ -265,9 +334,14 @@ export type ReversalResult = { ok: boolean; message: string; conversationId?: st
  * credential tooling and paste it into env — the private key never lives here).
  * Without both, returns ok:false so callers fall back to ledger + manual flow.
  */
-export async function requestDarajaReversal(input: ReversalInput): Promise<ReversalResult> {
+export async function requestDarajaReversal(
+  input: ReversalInput,
+): Promise<ReversalResult> {
   if (!isPaymentsLive()) {
-    return { ok: false, message: "M-Pesa reversal unavailable (provider not configured)." };
+    return {
+      ok: false,
+      message: "M-Pesa reversal unavailable (provider not configured).",
+    };
   }
   const initiator = (process.env.MPESA_INITIATOR_NAME || "").trim();
   const credential = (process.env.MPESA_SECURITY_CREDENTIAL || "").trim();
@@ -278,7 +352,10 @@ export async function requestDarajaReversal(input: ReversalInput): Promise<Rever
     const token = await darajaToken();
     const r = await fetch(`${darajaBase()}/mpesa/reversal/v1/request`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
         Initiator: initiator,
         SecurityCredential: credential,
@@ -288,7 +365,10 @@ export async function requestDarajaReversal(input: ReversalInput): Promise<Rever
         ReceiverParty: resolveMpesaTransaction().businessShortCode,
         ReceiverIdentifierType: "11",
         Remarks: "Chap dispute refund",
-        Occasion: (input.occasion ?? `refund-${Date.now().toString(36)}`).slice(0, 40),
+        Occasion: (input.occasion ?? `refund-${Date.now().toString(36)}`).slice(
+          0,
+          40,
+        ),
       }),
     });
     const j = (await r.json().catch(() => ({}))) as {
@@ -298,19 +378,34 @@ export async function requestDarajaReversal(input: ReversalInput): Promise<Rever
       ResponseDescription?: string;
     };
     if (!r.ok || j.ResponseCode !== "0" || !j.ConversationID) {
-      return { ok: false, message: j.errorMessage || j.ResponseDescription || "Reversal rejected." };
+      return {
+        ok: false,
+        message:
+          j.errorMessage || j.ResponseDescription || "Reversal rejected.",
+      };
     }
-    return { ok: true, message: "Reversal submitted to M-Pesa.", conversationId: j.ConversationID };
+    return {
+      ok: true,
+      message: "Reversal submitted to M-Pesa.",
+      conversationId: j.ConversationID,
+    };
   } catch (e) {
-    return { ok: false, message: (e as Error)?.message?.slice(0, 160) || "Reversal failed." };
+    return {
+      ok: false,
+      message: (e as Error)?.message?.slice(0, 160) || "Reversal failed.",
+    };
   }
 }
 
 /** Resolve a Daraja CheckoutRequestID/MerchantRequestID to our order id. */
-export async function resolveMpesaOrderId(ref: string): Promise<{ orderId?: string; amount?: number }> {
+export async function resolveMpesaOrderId(
+  ref: string,
+): Promise<{ orderId?: string; amount?: number }> {
   try {
     const { getStore } = await import("./store");
-    const rec = (await getStore().getSetting(`mpesa_req:${ref}`).catch(() => null)) as { orderId?: string; amount?: number } | null;
+    const rec = (await getStore()
+      .getSetting(`mpesa_req:${ref}`)
+      .catch(() => null)) as { orderId?: string; amount?: number } | null;
     return rec ?? {};
   } catch {
     return {};
@@ -338,9 +433,8 @@ export function validateMpesaCallback(body: unknown): {
     | undefined;
   if (!stk) return { valid: false };
   const resultCode = Number(stk.ResultCode);
-  const meta = (stk.CallbackMetadata as Record<string, unknown> | undefined)?.Item as
-    | { Name?: string; Value?: unknown }[]
-    | undefined;
+  const meta = (stk.CallbackMetadata as Record<string, unknown> | undefined)
+    ?.Item as { Name?: string; Value?: unknown }[] | undefined;
   const get = (n: string) => meta?.find((i) => i.Name === n)?.Value;
   const amount = Number(get("Amount") ?? NaN);
   const receipt = String(get("MpesaReceiptNumber") ?? "");

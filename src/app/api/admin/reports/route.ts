@@ -15,14 +15,20 @@ const schema = z.object({
  */
 export async function POST(req: NextRequest) {
   const user = await currentUser();
-  if (!user || user.role !== "ADMIN") return NextResponse.json({ error: "Admin only." }, { status: 403 });
+  if (!user || user.role !== "ADMIN")
+    return NextResponse.json({ error: "Admin only." }, { status: 403 });
   const body = await req.json().catch(() => ({}));
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Provide id + action (close|hide)." }, { status: 400 });
+  if (!parsed.success)
+    return NextResponse.json(
+      { error: "Provide id + action (close|hide)." },
+      { status: 400 },
+    );
   const store = getStore();
   const all = await store.listReports();
   const report = all.find((r) => r.id === parsed.data.id);
-  if (!report) return NextResponse.json({ error: "Report not found." }, { status: 404 });
+  if (!report)
+    return NextResponse.json({ error: "Report not found." }, { status: 404 });
 
   if (parsed.data.action === "hide" && report.listingId) {
     const listing = await store.getListing(report.listingId);
@@ -31,7 +37,7 @@ export async function POST(req: NextRequest) {
         report.listingId,
         "hidden",
         user.id,
-        `Hidden from report ${report.id}: ${report.reason}`.slice(0, 500)
+        `Hidden from report ${report.id}: ${report.reason}`.slice(0, 500),
       );
     }
   }

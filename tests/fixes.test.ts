@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 
 delete process.env.DATABASE_URL;
 
-import { validateMpesaCallback, resolveMpesaOrderId } from "../src/lib/payments.ts";
+import {
+  validateMpesaCallback,
+  resolveMpesaOrderId,
+} from "../src/lib/payments.ts";
 import { priceHint, nicheScore, priceTrends } from "../src/lib/insights.ts";
 import { rankDeterministic, shuffleSeeded } from "../src/lib/search.ts";
 import { getBalance, creditWallet, debitWallet } from "../src/lib/wallet.ts";
@@ -20,7 +23,12 @@ describe("mpesa callback mapping", () => {
           ResultCode: 0,
           MerchantRequestID: "M123",
           CheckoutRequestID: "C123",
-          CallbackMetadata: { Item: [{ Name: "Amount", Value: 500 }, { Name: "MpesaReceiptNumber", Value: "R1" }] },
+          CallbackMetadata: {
+            Item: [
+              { Name: "Amount", Value: 500 },
+              { Name: "MpesaReceiptNumber", Value: "R1" },
+            ],
+          },
         },
       },
     });
@@ -75,9 +83,24 @@ describe("pricing intel (jiji-style)", () => {
 describe("deterministic ranking", () => {
   it("TOP pins lead, stable across calls", () => {
     const items = [
-      { id: "a", featured: false, topPinned: false, createdAt: new Date().toISOString() },
-      { id: "b", featured: true, topPinned: false, createdAt: new Date().toISOString() },
-      { id: "c", featured: false, topPinned: true, createdAt: new Date().toISOString() },
+      {
+        id: "a",
+        featured: false,
+        topPinned: false,
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "b",
+        featured: true,
+        topPinned: false,
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: "c",
+        featured: false,
+        topPinned: true,
+        createdAt: new Date().toISOString(),
+      },
     ];
     const r1 = rankDeterministic(items).map((x) => x.id);
     const r2 = rankDeterministic(items).map((x) => x.id);

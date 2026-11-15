@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 
-type Props = Omit<React.ImgHTMLAttributes<HTMLImageElement>, "src" | "onError"> & {
+type Props = Omit<
+  React.ImgHTMLAttributes<HTMLImageElement>,
+  "src" | "onError"
+> & {
   src: string | null | undefined;
   alt: string;
   /** Shown when src is missing or the bytes 404 (e.g. pre-fix ephemeral uploads). */
@@ -14,7 +17,13 @@ type Props = Omit<React.ImgHTMLAttributes<HTMLImageElement>, "src" | "onError"> 
  * /tmp (pre-DB/S3 fix) 404 after a redeploy — without this the shop page shows
  * a tall broken-image box. With this the gradient/avatar behind stays visible.
  */
-export function SafeImage({ src, alt, fallback = null, className, ...rest }: Props) {
+export function SafeImage({
+  src,
+  alt,
+  fallback = null,
+  className,
+  ...rest
+}: Props) {
   const [failed, setFailed] = useState(false);
   // Dashboard previews reuse the instance across uploads — a 404 for the old
   // src must never hide the newly uploaded photo.
@@ -23,5 +32,13 @@ export function SafeImage({ src, alt, fallback = null, className, ...rest }: Pro
   }, [src]);
   if (!src || failed) return <>{fallback}</>;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} className={className} onError={() => setFailed(true)} {...rest} />;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onError={() => setFailed(true)}
+      {...rest}
+    />
+  );
 }

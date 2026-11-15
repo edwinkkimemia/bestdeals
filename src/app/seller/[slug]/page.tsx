@@ -5,7 +5,13 @@ import { MessageCircle, Phone } from "lucide-react";
 import { WhatsAppIcon } from "@/components/ui/whatsapp-icon";
 import { LISTINGS } from "@/data/catalog";
 import { storeRead } from "@/lib/store";
-import { resolveSellerProfile, getSellerListings, sellerSlug, withLiveVerification, resolveSellerContact } from "@/lib/live-listings";
+import {
+  resolveSellerProfile,
+  getSellerListings,
+  sellerSlug,
+  withLiveVerification,
+  resolveSellerContact,
+} from "@/lib/live-listings";
 import { ReviewsBlock } from "@/components/reviews-block";
 import { ReviewForm } from "@/components/review-form";
 import { ListingCard } from "@/components/ui/listing-card";
@@ -24,12 +30,18 @@ export function generateStaticParams() {
   return names.map((n) => ({ slug: sellerSlug(n) }));
 }
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: { slug: string };
+}): Promise<Metadata> {
   const p = await resolveSellerProfile(params.slug);
   if (!p) return { title: "Seller not found" };
   // The seller's own bio is the description; the cover doubles as the social
   // share image (falls back to the profile photo).
-  const description = (p.bio ?? "").trim() || `${p.businessName ? `${p.businessName} · ` : ""}${p.verified ? "Verified seller" : "Seller"} on Chap marketplace.`;
+  const description =
+    (p.bio ?? "").trim() ||
+    `${p.businessName ? `${p.businessName} · ` : ""}${p.verified ? "Verified seller" : "Seller"} on Chap marketplace.`;
   const shareImage = p.coverUrl || p.photoUrl || undefined;
   // Thin-profile guard: no bio, listings, or shops → browsable but not indexed.
   let noindex = false;
@@ -38,18 +50,48 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     const { storeRead } = await import("@/lib/store");
     const [profileItems, profileShops] = await Promise.all([
       getSellerListings(p).catch(() => []),
-      p.userId ? storeRead((s) => s.listShopsByOwner(p.userId as string), []).catch(() => []) : Promise.resolve([]),
+      p.userId
+        ? storeRead((s) => s.listShopsByOwner(p.userId as string), []).catch(
+            () => [],
+          )
+        : Promise.resolve([]),
     ]);
     noindex = profileItems.length === 0 && profileShops.length === 0;
   }
   return {
     title: `${p.name} — Seller on Chap`,
     description: description.slice(0, 160),
-    keywords: [p.name, p.businessName ?? "", `${p.name} Kenya`, "seller Kenya", "shop from seller", "chap.co.ke"].filter(Boolean),
+    keywords: [
+      p.name,
+      p.businessName ?? "",
+      `${p.name} Kenya`,
+      "seller Kenya",
+      "shop from seller",
+      "chap.co.ke",
+    ].filter(Boolean),
     alternates: { canonical: `https://chap.co.ke/seller/${params.slug}` },
-    ...(shareImage ? { openGraph: { type: "website", title: `${p.name} — Seller on Chap`, description: description.slice(0, 160), url: `https://chap.co.ke/seller/${params.slug}`, siteName: "chap.co.ke", locale: "en_KE", images: [{ url: shareImage, alt: p.name }] } } : {}),
-    twitter: { card: "summary_large_image", title: `${p.name} — Seller on Chap`, description: description.slice(0, 160), ...(shareImage ? { images: [shareImage] } : {}) },
-    ...(noindex ? { robots: { index: false, follow: true } } : { robots: { index: true, follow: true } }),
+    ...(shareImage
+      ? {
+          openGraph: {
+            type: "website",
+            title: `${p.name} — Seller on Chap`,
+            description: description.slice(0, 160),
+            url: `https://chap.co.ke/seller/${params.slug}`,
+            siteName: "chap.co.ke",
+            locale: "en_KE",
+            images: [{ url: shareImage, alt: p.name }],
+          },
+        }
+      : {}),
+    twitter: {
+      card: "summary_large_image",
+      title: `${p.name} — Seller on Chap`,
+      description: description.slice(0, 160),
+      ...(shareImage ? { images: [shareImage] } : {}),
+    },
+    ...(noindex
+      ? { robots: { index: false, follow: true } }
+      : { robots: { index: true, follow: true } }),
   };
 }
 
@@ -60,7 +102,11 @@ function memberSince(iso?: string): string {
   return `On Chap since ${d.toLocaleDateString("en-KE", { month: "short", year: "numeric" })}`;
 }
 
-export default async function SellerPage({ params }: { params: { slug: string } }) {
+export default async function SellerPage({
+  params,
+}: {
+  params: { slug: string };
+}) {
   const profile = await resolveSellerProfile(params.slug);
   if (!profile) notFound();
 
@@ -68,20 +114,31 @@ export default async function SellerPage({ params }: { params: { slug: string } 
   const [byNameReviews, byBizReviews] = await Promise.all([
     storeRead((s) => s.listApprovedReviewsForSeller(profile.name), []),
     profile.businessName
-      ? storeRead((s) => s.listApprovedReviewsForSeller(profile.businessName as string), [])
+      ? storeRead(
+          (s) => s.listApprovedReviewsForSeller(profile.businessName as string),
+          [],
+        )
       : Promise.resolve([]),
   ]);
   const seen = new Set<string>();
-  const reviews = [...byNameReviews, ...byBizReviews].filter((r) => (seen.has(r.id) ? false : (seen.add(r.id), true)));
+  const reviews = [...byNameReviews, ...byBizReviews].filter((r) =>
+    seen.has(r.id) ? false : (seen.add(r.id), true),
+  );
   const shops = profile.userId
     ? await storeRead((s) => s.listShopsByOwner(profile.userId as string), [])
     : [];
   const contact = resolveSellerContact(items, shops);
-  const waText = encodeURIComponent(`Hello ${profile.name}! I found you on Chap and have a question.`);
+  const waText = encodeURIComponent(
+    `Hello ${profile.name}! I found you on Chap and have a question.`,
+  );
   const liveItems = await withLiveVerification(items);
   const { getSellerPlan } = await import("@/lib/plans");
-  const sellerPlan = profile.userId ? (await getSellerPlan(profile.userId).catch(() => null)) : null;
-  const profileDescription = (profile.bio ?? "").trim() || `${profile.businessName ? `${profile.businessName} · ` : ""}${profile.verified ? "Verified seller" : "Seller"} on Chap marketplace.`;
+  const sellerPlan = profile.userId
+    ? await getSellerPlan(profile.userId).catch(() => null)
+    : null;
+  const profileDescription =
+    (profile.bio ?? "").trim() ||
+    `${profile.businessName ? `${profile.businessName} · ` : ""}${profile.verified ? "Verified seller" : "Seller"} on Chap marketplace.`;
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
@@ -102,63 +159,115 @@ export default async function SellerPage({ params }: { params: { slug: string } 
 
   return (
     <div>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <div aria-hidden className="relative h-32 w-full overflow-hidden bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 sm:h-44">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <div
+        aria-hidden
+        className="relative h-32 w-full overflow-hidden bg-ink-900 sm:h-44"
+      >
         {profile.coverUrl && (
-          <SafeImage src={profile.coverUrl} alt={`${profile.name} cover`} className="absolute inset-0 h-full w-full object-cover" />
+          <SafeImage
+            src={profile.coverUrl}
+            alt={`${profile.name} cover`}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
         )}
       </div>
       <div className="container-bd py-6">
-      <div className="card grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 p-5 lg:flex lg:flex-row lg:gap-4">
-        <span aria-hidden className="col-start-1 row-start-1 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-2xl font-black text-white">
-          {profile.photoUrl ? (
-            <SafeImage src={profile.photoUrl} alt="" className="h-full w-full object-cover" fallback={profile.name.charAt(0).toUpperCase()} />
-          ) : (
-            profile.name.charAt(0).toUpperCase()
-          )}
-        </span>
-        <div className="contents lg:block lg:min-w-0 lg:flex-1">
-          <h1 className="col-start-2 row-start-1 flex min-w-0 flex-wrap items-center gap-2 text-2xl font-bold">
-            {profile.name}
-            <PlanCheckmark plan={sellerPlan?.planId} />
-            {profile.verified ? <Badge tone="green">✓ Verified seller</Badge> : <Badge>Unverified seller</Badge>}
-            <TenureBadge since={profile.memberSince} />
-          </h1>
-          <p className="col-span-2 text-sm text-ink-500">
-            {profile.businessName ? `${profile.businessName} · ` : ""}
-            {profile.sellerKind === "business" ? "Business seller" : "Individual seller"} · {memberSince(profile.memberSince)} ·{" "}
-            {ratingLabel(reviews)}
-          </p>
-          {profile.bio && <p className="col-span-2 mt-1 text-sm">{profile.bio}</p>}
+        <div className="card grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-3 p-5 lg:flex lg:flex-row lg:gap-4">
+          <span
+            aria-hidden
+            className="col-start-1 row-start-1 flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 text-2xl font-black text-white"
+          >
+            {profile.photoUrl ? (
+              <SafeImage
+                src={profile.photoUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                fallback={profile.name.charAt(0).toUpperCase()}
+              />
+            ) : (
+              profile.name.charAt(0).toUpperCase()
+            )}
+          </span>
+          <div className="contents lg:block lg:min-w-0 lg:flex-1">
+            <h1 className="col-start-2 row-start-1 flex min-w-0 flex-wrap items-center gap-2 text-2xl font-bold">
+              {profile.name}
+              <PlanCheckmark plan={sellerPlan?.planId} />
+              {profile.verified ? (
+                <Badge tone="green">✓ Verified seller</Badge>
+              ) : (
+                <Badge>Unverified seller</Badge>
+              )}
+              <TenureBadge since={profile.memberSince} />
+            </h1>
+            <p className="col-span-2 text-sm text-ink-500">
+              {profile.businessName ? `${profile.businessName} · ` : ""}
+              {profile.sellerKind === "business"
+                ? "Business seller"
+                : "Individual seller"}{" "}
+              · {memberSince(profile.memberSince)} · {ratingLabel(reviews)}
+            </p>
+            {profile.bio && (
+              <p className="col-span-2 mt-1 text-sm">{profile.bio}</p>
+            )}
+          </div>
+          <div className="col-span-2 flex flex-wrap gap-2 lg:col-auto">
+            {contact && (
+              <>
+                <a
+                  href={`tel:${contact.phone.replace(/\s/g, "")}`}
+                  className="btn-secondary"
+                >
+                  <Phone className="h-4 w-4" /> Call
+                </a>
+                <a
+                  href={`https://wa.me/${contact.whatsapp}?text=${waText}`}
+                  target="_blank"
+                  rel="noopener"
+                  className="btn-whatsapp"
+                >
+                  <WhatsAppIcon className="h-4 w-4" /> WhatsApp
+                </a>
+              </>
+            )}
+            <Link
+              href={
+                profile.userId
+                  ? `/dashboard/messages/new?user=${profile.userId}`
+                  : "/dashboard/messages/new"
+              }
+              className="btn-primary"
+            >
+              <MessageCircle className="h-4 w-4" /> Message seller
+            </Link>
+          </div>
         </div>
-        <div className="col-span-2 flex flex-wrap gap-2 lg:col-auto">
-          {contact && (
-            <>
-              <a href={`tel:${contact.phone.replace(/\s/g, "")}`} className="btn-secondary"><Phone className="h-4 w-4" /> Call</a>
-              <a href={`https://wa.me/${contact.whatsapp}?text=${waText}`} target="_blank" rel="noopener" className="btn-whatsapp"><WhatsAppIcon className="h-4 w-4" /> WhatsApp</a>
-            </>
-          )}
-          <Link href={profile.userId ? `/dashboard/messages/new?user=${profile.userId}` : "/dashboard/messages/new"} className="btn-primary"><MessageCircle className="h-4 w-4" /> Message seller</Link>
+        <div className="mt-3">
+          <ShareRow
+            title={`${profile.name} on Chap`}
+            text={`${profile.name} — seller on Chap marketplace`}
+          />
         </div>
-      </div>
-      <div className="mt-3">
-        <ShareRow title={`${profile.name} on Chap`} text={`${profile.name} — seller on Chap marketplace`} />
-      </div>
-      <h2 className="section-title mt-8">Listings ({liveItems.length})</h2>
-      {liveItems.length === 0 ? (
-        <div className="card mt-4 p-6 text-center">
-          <p className="font-bold">No live listings yet</p>
-          <p className="mt-1 text-sm text-ink-500">New listings appear here once approved by moderation.</p>
-        </div>
-      ) : (
-        <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
-          {liveItems.map((l) => (
-            <ListingCard key={l.id} listing={l} />
-          ))}
-        </div>
-      )}
-      <ReviewsBlock reviews={reviews} title={`Reviews for ${profile.name}`} />
-      <ReviewForm sellerName={profile.name} />
+        <h2 className="section-title mt-8">Listings ({liveItems.length})</h2>
+        {liveItems.length === 0 ? (
+          <div className="card mt-4 p-6 text-center">
+            <p className="font-bold">No live listings yet</p>
+            <p className="mt-1 text-sm text-ink-500">
+              New listings appear here once approved by moderation.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
+            {liveItems.map((l) => (
+              <ListingCard key={l.id} listing={l} />
+            ))}
+          </div>
+        )}
+        <ReviewsBlock reviews={reviews} title={`Reviews for ${profile.name}`} />
+        <ReviewForm sellerName={profile.name} />
       </div>
     </div>
   );

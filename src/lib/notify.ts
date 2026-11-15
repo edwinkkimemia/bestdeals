@@ -12,7 +12,8 @@ export type NotificationAttachment = {
 };
 
 export function isNotifyLive(channel: Channel): boolean {
-  if (channel === "email") return Boolean(process.env.EMAIL_PROVIDER && process.env.EMAIL_API_KEY);
+  if (channel === "email")
+    return Boolean(process.env.EMAIL_PROVIDER && process.env.EMAIL_API_KEY);
   return Boolean(process.env.SMS_PROVIDER && process.env.SMS_API_KEY);
 }
 
@@ -20,7 +21,7 @@ async function sendEmail(
   to: string,
   subject: string,
   message: string,
-  opts?: { html?: string; attachments?: NotificationAttachment[] }
+  opts?: { html?: string; attachments?: NotificationAttachment[] },
 ): Promise<{ ok: boolean; provider: string; error?: string }> {
   const provider = (process.env.EMAIL_PROVIDER || "").toLowerCase();
   const key = process.env.EMAIL_API_KEY || "";
@@ -29,7 +30,10 @@ async function sendEmail(
     if (provider === "resend") {
       const r = await fetch("https://api.resend.com/emails", {
         method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           from: process.env.EMAIL_FROM || "Chap <info@chap.co.ke>",
           to,
@@ -49,7 +53,9 @@ async function sendEmail(
       });
       if (!r.ok) {
         const err = (await r.text().catch(() => "")).slice(0, 300);
-        console.log(`[notify:email:resend:failed] status=${r.status} to=${to} err=${err}`);
+        console.log(
+          `[notify:email:resend:failed] status=${r.status} to=${to} err=${err}`,
+        );
         return { ok: false, provider: "resend", error: err };
       }
       return { ok: true, provider: "resend" };
@@ -60,13 +66,21 @@ async function sendEmail(
       const from = process.env.EMAIL_FROM || "info@chap.co.ke";
       const fromMatch = from.match(/^(.*)<([^>]+)>\s*$/);
       const fromEmail = (fromMatch ? fromMatch[2] : from).trim();
-      const fromName = (fromMatch ? fromMatch[1] : "").trim().replace(/^"|"$/g, "");
+      const fromName = (fromMatch ? fromMatch[1] : "")
+        .trim()
+        .replace(/^"|"$/g, "");
       const r = await fetch("https://api.sendgrid.com/v3/mail/send", {
         method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${key}`,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           personalizations: [{ to: [{ email: to }] }],
-          from: { email: fromEmail, ...(fromName ? { name: fromName.slice(0, 60) } : {}) },
+          from: {
+            email: fromEmail,
+            ...(fromName ? { name: fromName.slice(0, 60) } : {}),
+          },
           subject,
           content: [
             { type: "text/plain", value: message },
@@ -86,7 +100,9 @@ async function sendEmail(
       });
       if (!r.ok) {
         const err = (await r.text().catch(() => "")).slice(0, 300);
-        console.log(`[notify:email:sendgrid:failed] status=${r.status} to=${to} err=${err}`);
+        console.log(
+          `[notify:email:sendgrid:failed] status=${r.status} to=${to} err=${err}`,
+        );
         return { ok: false, provider: "sendgrid", error: err };
       }
       return { ok: true, provider: "sendgrid" };
@@ -97,11 +113,20 @@ async function sendEmail(
       const fromRaw = process.env.EMAIL_FROM || "Chap <info@chap.co.ke>";
       const m = fromRaw.match(/^(.*)<([^>]+)>\s*$/);
       const fromAddr = (m ? m[2] : fromRaw).trim();
-      const fromName = ((m ? m[1] : "").trim().replace(/^"|"$/g, "") || "Chap").slice(0, 60);
-      const esc = message.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const fromName = (
+        (m ? m[1] : "").trim().replace(/^"|"$/g, "") || "Chap"
+      ).slice(0, 60);
+      const esc = message
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
       const r = await fetch("https://api.zeptomail.com/v1.1/email", {
         method: "POST",
-        headers: { Accept: "application/json", "Content-Type": "application/json", Authorization: `Zoho-enczapikey ${key}` },
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          Authorization: `Zoho-enczapikey ${key}`,
+        },
         body: JSON.stringify({
           from: { address: fromAddr, name: fromName },
           to: [{ email_address: { address: to } }],
@@ -121,40 +146,68 @@ async function sendEmail(
       });
       if (!r.ok) {
         const err = (await r.text().catch(() => "")).slice(0, 300);
-        console.log(`[notify:email:zeptomail:failed] status=${r.status} to=${to} err=${err}`);
+        console.log(
+          `[notify:email:zeptomail:failed] status=${r.status} to=${to} err=${err}`,
+        );
         return { ok: false, provider: "zeptomail", error: err };
       }
       return { ok: true, provider: "zeptomail" };
     }
-    console.log(`[notify:email:${provider}] to=${to} (no adapter — logged only)`);
+    console.log(
+      `[notify:email:${provider}] to=${to} (no adapter — logged only)`,
+    );
     return { ok: false, provider };
   } catch {
     return { ok: false, provider };
   }
 }
 
-async function sendSms(to: string, message: string): Promise<{ ok: boolean; provider: string }> {
+async function sendSms(
+  to: string,
+  message: string,
+): Promise<{ ok: boolean; provider: string }> {
   const provider = (process.env.SMS_PROVIDER || "").toLowerCase();
   const key = process.env.SMS_API_KEY || "";
   if (!provider || !key) return { ok: false, provider: "log" };
   try {
     if (provider === "africastalking") {
-      const params = new URLSearchParams({ username: process.env.SMS_USERNAME || "chap", to, message, from: process.env.SMS_SENDER_ID || "Chap" });
-      const r = await fetch("https://api.africastalking.com/version1/messaging", {
-        method: "POST",
-        headers: { apiKey: key, "Content-Type": "application/x-www-form-urlencoded" },
-        body: params.toString(),
+      const params = new URLSearchParams({
+        username: process.env.SMS_USERNAME || "chap",
+        to,
+        message,
+        from: process.env.SMS_SENDER_ID || "Chap",
       });
+      const r = await fetch(
+        "https://api.africastalking.com/version1/messaging",
+        {
+          method: "POST",
+          headers: {
+            apiKey: key,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: params.toString(),
+        },
+      );
       return { ok: r.ok, provider: "africastalking" };
     }
     if (provider === "twilio") {
       const sid = process.env.SMS_SID || "";
       const from = process.env.SMS_SENDER_ID || "";
-      const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-        method: "POST",
-        headers: { Authorization: `Basic ${Buffer.from(`${sid}:${key}`).toString("base64")}`, "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ To: to, From: from, Body: message }).toString(),
-      });
+      const r = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${Buffer.from(`${sid}:${key}`).toString("base64")}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            To: to,
+            From: from,
+            Body: message,
+          }).toString(),
+        },
+      );
       return { ok: r.ok, provider: "twilio" };
     }
     console.log(`[notify:sms:${provider}] to=${to} (no adapter — logged only)`);
@@ -180,15 +233,28 @@ export async function sendNotification(opts: {
       html: opts.html,
       attachments: opts.attachments,
     });
-    if (!r.ok) console.log(`[notify:email] to=${opts.to} msg=${opts.message.slice(0, 140)}`);
+    if (!r.ok)
+      console.log(
+        `[notify:email] to=${opts.to} msg=${opts.message.slice(0, 140)}`,
+      );
     return { queued: r.ok, provider: r.provider, live: r.ok };
   }
   const r = await sendSms(opts.to, opts.message);
-  if (!r.ok) console.log(`[notify:${opts.channel}] to=${opts.to} msg=${opts.message.slice(0, 140)}`);
+  if (!r.ok)
+    console.log(
+      `[notify:${opts.channel}] to=${opts.to} msg=${opts.message.slice(0, 140)}`,
+    );
   return { queued: r.ok, provider: r.provider, live: r.ok };
 }
 
 /** Fire-and-forget: never block checkout/chat on comms. Retried by lib/queue. */
-export function notifyLater(opts: { channel: Channel; to: string; subject?: string; message: string }): void {
-  void import("./queue").then(({ enqueue }) => enqueue("notify", { ...opts })).catch(() => {});
+export function notifyLater(opts: {
+  channel: Channel;
+  to: string;
+  subject?: string;
+  message: string;
+}): void {
+  void import("./queue")
+    .then(({ enqueue }) => enqueue("notify", { ...opts }))
+    .catch(() => {});
 }

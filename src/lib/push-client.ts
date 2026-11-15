@@ -53,26 +53,43 @@ export async function getBrowserPushState(): Promise<BrowserPushState> {
 
 /** Ask permission + create/save this device's push subscription. */
 export async function enableBrowserPush(): Promise<PushResult> {
-  if (!supported()) return { ok: false, state: "unsupported", error: "This browser doesn't support push notifications." };
+  if (!supported())
+    return {
+      ok: false,
+      state: "unsupported",
+      error: "This browser doesn't support push notifications.",
+    };
 
   try {
     const permission =
-      Notification.permission === "granted" ? "granted" : await Notification.requestPermission();
+      Notification.permission === "granted"
+        ? "granted"
+        : await Notification.requestPermission();
     if (permission !== "granted") {
       return permission === "denied"
         ? {
             ok: false,
             state: "denied",
-            error: "Notifications are blocked. Allow them for chap.co.ke in your browser settings, then try again.",
+            error:
+              "Notifications are blocked. Allow them for chap.co.ke in your browser settings, then try again.",
           }
-        : { ok: false, state: "off", message: "Notifications weren’t enabled. You can turn them on anytime." };
+        : {
+            ok: false,
+            state: "off",
+            message:
+              "Notifications weren’t enabled. You can turn them on anytime.",
+          };
     }
 
     const reg = await serviceWorker();
     const keyRes = await fetch("/api/push/public-key", { cache: "no-store" });
     const keyJson = await keyRes.json().catch(() => ({}));
     if (!keyRes.ok || !keyJson.publicKey) {
-      return { ok: false, state: "off", error: keyJson.error || "Push notifications are not configured yet." };
+      return {
+        ok: false,
+        state: "off",
+        error: keyJson.error || "Push notifications are not configured yet.",
+      };
     }
 
     const existing = await reg.pushManager.getSubscription();
@@ -80,7 +97,9 @@ export async function enableBrowserPush(): Promise<PushResult> {
       existing ??
       (await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(keyJson.publicKey) as BufferSource,
+        applicationServerKey: urlBase64ToUint8Array(
+          keyJson.publicKey,
+        ) as BufferSource,
       }));
 
     const save = await fetch("/api/push/subscribe", {
@@ -91,15 +110,26 @@ export async function enableBrowserPush(): Promise<PushResult> {
     const saved = await save.json().catch(() => ({}));
     if (!save.ok) {
       if (!existing) await subscription.unsubscribe().catch(() => {});
-      return { ok: false, state: "off", error: saved.error || "Could not enable push notifications." };
+      return {
+        ok: false,
+        state: "off",
+        error: saved.error || "Could not enable push notifications.",
+      };
     }
 
-    return { ok: true, state: "on", message: "Push notifications are on for this device." };
+    return {
+      ok: true,
+      state: "on",
+      message: "Push notifications are on for this device.",
+    };
   } catch (error) {
     return {
       ok: false,
       state: "off",
-      error: error instanceof Error ? error.message : "Could not enable push notifications.",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not enable push notifications.",
     };
   }
 }
@@ -118,9 +148,17 @@ export async function disableBrowserPush(): Promise<PushResult> {
       }).catch(() => {});
       await subscription.unsubscribe().catch(() => {});
     }
-    return { ok: true, state: "off", message: "Push notifications are off for this device." };
+    return {
+      ok: true,
+      state: "off",
+      message: "Push notifications are off for this device.",
+    };
   } catch {
-    return { ok: false, state: "off", error: "Could not turn off push notifications." };
+    return {
+      ok: false,
+      state: "off",
+      error: "Could not turn off push notifications.",
+    };
   }
 }
 
@@ -128,7 +166,12 @@ export async function sendTestBrowserPush(): Promise<PushResult> {
   try {
     const res = await fetch("/api/push/test", { method: "POST" });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok) return { ok: false, state: "off", error: json.error || "Could not send the test notification." };
+    if (!res.ok)
+      return {
+        ok: false,
+        state: "off",
+        error: json.error || "Could not send the test notification.",
+      };
     return {
       ok: true,
       state: "on",
@@ -136,6 +179,10 @@ export async function sendTestBrowserPush(): Promise<PushResult> {
       message: `Test notification sent to ${json.sent ?? 1} device${json.sent === 1 ? "" : "s"}.`,
     };
   } catch {
-    return { ok: false, state: "off", error: "Could not send the test notification." };
+    return {
+      ok: false,
+      state: "off",
+      error: "Could not send the test notification.",
+    };
   }
 }
