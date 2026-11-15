@@ -91,7 +91,7 @@ export default async function BlogIndex() {
                   ) : (
                     <div
                       aria-hidden
-                      className="flex h-24 w-full items-center justify-center bg-ink-900 text-3xl font-black text-white/80"
+                      className="flex h-24 w-full items-center justify-center bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 text-3xl font-black text-white/80"
                     >
                       {p.title.charAt(0).toUpperCase()}
                     </div>

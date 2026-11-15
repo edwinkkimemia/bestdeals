@@ -57,7 +57,7 @@ export function CategoryLanding({
       />
 
       <section className="card mt-2 overflow-hidden">
-        <div className="relative bg-ink-900 px-5 py-7 text-white sm:px-8">
+        <div className="relative bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 px-5 py-7 text-white sm:px-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={category.image}
@@ -104,7 +104,7 @@ export function CategoryLanding({
       >
         <Link
           href={categoryPath(category)}
-          className={`chip hover:border-ink-900 ${subcategory ? "" : "!border-brand-600 !text-brand-700"}`}
+          className={`chip hover:border-brand-600 ${subcategory ? "" : "!border-brand-600 !text-brand-700"}`}
         >
           All {category.name}
         </Link>
@@ -112,7 +112,7 @@ export function CategoryLanding({
           <Link
             key={s}
             href={categoryPath(category, s)}
-            className="chip hover:border-ink-900 hover:text-brand-700"
+            className="chip hover:border-brand-600 hover:text-brand-700"
           >
             {s}
           </Link>

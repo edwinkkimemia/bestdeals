@@ -55,7 +55,7 @@ export function SaveSearchButton({
       onClick={save}
       disabled={state === "saving"}
       title="Get a bell notification when new matching ads arrive"
-      className="inline-flex items-center gap-1.5 rounded bg-white px-3 py-1.5 text-xs font-bold text-brand-700 ring-1 ring-ink-900 hover:bg-brand-50 disabled:opacity-60"
+      className="inline-flex items-center gap-1.5 rounded bg-white px-3 py-1.5 text-xs font-bold text-brand-700 ring-1 ring-brand-600 hover:bg-brand-50 disabled:opacity-60"
     >
       <BellPlus className="h-3.5 w-3.5" />
       {state === "saving"

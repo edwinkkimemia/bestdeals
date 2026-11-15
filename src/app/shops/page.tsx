@@ -114,7 +114,7 @@ export default async function ShopsIndex() {
             href={`/shops/${s.slug}`}
             className="card overflow-hidden"
           >
-            <div aria-hidden className="h-28 w-full bg-ink-900">
+            <div aria-hidden className="h-28 w-full bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800">
               {s.cover && (
                 <SafeImage
                   src={s.cover}
@@ -156,7 +156,7 @@ export default async function ShopsIndex() {
                 href={`/shops/${s.slug}`}
                 className="card overflow-hidden hover:border-brand-600"
               >
-                <div aria-hidden className="h-28 w-full bg-ink-900">
+                <div aria-hidden className="h-28 w-full bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800">
                   {s.coverUrl && (
                     <SafeImage
                       src={s.coverUrl}

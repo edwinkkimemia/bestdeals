@@ -52,7 +52,7 @@ export function CategoryStrip({
               key={c.slug}
               href={hrefFor(c)}
               role="listitem"
-              className="group w-28 shrink-0 snap-start overflow-hidden rounded border border-neutral-200 bg-white transition hover:border-ink-900 sm:w-32"
+              className="group w-28 shrink-0 snap-start overflow-hidden rounded border border-neutral-200 bg-white transition hover:border-brand-600 sm:w-32"
             >
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}

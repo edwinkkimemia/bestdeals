@@ -214,7 +214,7 @@ export function SellerPlanPanel({
           return (
             <div
               key={p.id}
-              className={`flex flex-wrap items-center gap-2 rounded border p-3 text-sm ${active ? "border-brand-600 bg-brand-50" : highlighted ? "border-brand-600 ring-2 ring-ink-900" : "border-neutral-200"}`}
+              className={`flex flex-wrap items-center gap-2 rounded border p-3 text-sm ${active ? "border-brand-600 bg-brand-50" : highlighted ? "border-brand-600 ring-2 ring-brand-600" : "border-neutral-200"}`}
             >
               <div className="min-w-0 flex-1">
                 <p className="font-bold">

@@ -28,7 +28,7 @@ export function AuthShell({
     <div className="bg-white">
       <div className="container-bd grid items-stretch gap-5 py-10 lg:grid-cols-[1fr_1.05fr] lg:py-14">
         {/* Brand panel */}
-        <div className="relative hidden overflow-hidden rounded border-2 border-ink-900 bg-ink-900 p-8 text-white lg:flex lg:flex-col">
+        <div className="relative hidden overflow-hidden rounded bg-brand-700 p-8 text-white lg:flex lg:flex-col">
           <div aria-hidden className="hidden" />
           <div aria-hidden className="hidden" />
           <Link

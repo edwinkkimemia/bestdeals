@@ -66,7 +66,7 @@ export function RichTextEditor({
   ];
 
   return (
-    <div className="overflow-hidden rounded border border-neutral-300 bg-white focus-within:border-brand-600 focus-within:ring-1 focus-within:ring-ink-900">
+    <div className="overflow-hidden rounded border border-neutral-300 bg-white focus-within:border-brand-600 focus-within:ring-2 focus-within:ring-brand-600">
       <div
         className="flex flex-wrap items-center gap-1 border-b border-neutral-200 bg-neutral-100 p-1.5"
         role="toolbar"

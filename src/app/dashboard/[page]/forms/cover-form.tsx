@@ -65,7 +65,7 @@ export function SellerCoverForm({
       </p>
       {/* Fixed height lives on the container: a 404 cover collapses to the
  gradient instead of zero height. */}
-      <div className="relative mt-2 h-32 overflow-hidden rounded border border-neutral-200 bg-ink-900">
+      <div className="relative mt-2 h-32 overflow-hidden rounded border border-neutral-200 bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800">
         {url && (
           <SafeImage
             src={url}

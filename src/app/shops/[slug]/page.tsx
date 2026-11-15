@@ -159,7 +159,7 @@ export default async function ShopPage({
       <div>
         <div
           aria-hidden
-          className="relative h-32 w-full overflow-hidden bg-ink-900 sm:h-44"
+          className="relative h-32 w-full overflow-hidden bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 sm:h-44"
         >
           {nonNull.coverUrl && (
             <SafeImage
@@ -322,7 +322,7 @@ export default async function ShopPage({
     <div>
       <div
         aria-hidden
-        className="relative h-32 w-full overflow-hidden bg-ink-900 sm:h-44"
+        className="relative h-32 w-full overflow-hidden bg-gradient-to-r from-brand-700 via-brand-600 to-brand-800 sm:h-44"
       >
         {v.cover && (
           <SafeImage

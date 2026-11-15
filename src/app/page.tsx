@@ -128,8 +128,8 @@ export default async function HomePage() {
           <HeroCategories categories={categories} />
           <div className="min-w-0">
             <p className="kicker">Kenya&apos;s marketplace for everything</p>
-            <h1 className="mt-1 text-[28px] font-extrabold leading-[1.05] tracking-tight text-ink-900 sm:text-4xl xl:text-5xl">
-              Buy. Sell. Discover.
+            <h1 className="mt-1 text-[28px] font-extrabold leading-[1.05] tracking-tight sm:text-4xl xl:text-5xl">
+              <span className="text-brand-600">Buy.</span> <span className="text-accent-500">Sell.</span> <span className="text-brand-900">Discover.</span>
             </h1>
             <p className="mt-2 max-w-xl text-[15px] text-ink-500 sm:text-base">
               Shop trusted businesses, buy and sell new or pre-owned items, and
@@ -137,7 +137,7 @@ export default async function HomePage() {
             </p>
             <form
               action="/search"
-              className="mt-4 flex max-w-xl overflow-hidden rounded border-2 border-ink-900 bg-white"
+              className="mt-4 flex max-w-xl overflow-hidden rounded border-2 border-brand-600 bg-white"
             >
               <input
                 name="q"
@@ -146,7 +146,7 @@ export default async function HomePage() {
                 className="w-full min-w-0 px-4 py-3 text-[15px] font-medium outline-none"
               />
               <button
-                className="flex shrink-0 items-center gap-2 bg-ink-900 px-5 font-bold text-white hover:bg-black sm:px-6"
+                className="flex shrink-0 items-center gap-2 bg-brand-600 px-5 font-bold text-white hover:bg-brand-700 sm:px-6"
                 type="submit"
               >
                 <Search className="h-4 w-4" />{" "}
@@ -187,7 +187,7 @@ export default async function HomePage() {
                 key={c.slug}
                 href={`/browse/${c.slug}`}
                 aria-label={`Browse ${c.name}`}
-                className={`group relative block overflow-hidden rounded border border-neutral-200 bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-900 focus-visible:ring-offset-2 ${i < 2 ? "h-52" : "h-44"}`}
+                className={`group relative block overflow-hidden rounded border border-neutral-200 bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 ${i < 2 ? "h-52" : "h-44"}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -423,7 +423,7 @@ export default async function HomePage() {
 
       {/* I + J: sell + trust */}
       <section className="container-bd grid gap-3 py-10 lg:grid-cols-2">
-        <div className="rounded border-2 border-ink-900 bg-ink-900 p-6 text-white">
+        <div className="rounded bg-brand-700 p-6 text-white">
           <p className="kicker !text-white/60">For sellers</p>
           <h2 className="mt-1 text-2xl font-extrabold tracking-tight">
             Sell on Chap

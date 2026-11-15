@@ -262,7 +262,7 @@ export function PromotePanel({
                           onClick={() =>
                             setProduct((p) => ({ ...p, [l.id]: b.id }))
                           }
-                          className={`rounded border p-3 text-left text-sm transition ${selected ? "border-brand-600 bg-brand-50 ring-2 ring-ink-900" : "border-neutral-200 hover:border-brand-600"}`}
+                          className={`rounded border p-3 text-left text-sm transition ${selected ? "border-brand-600 bg-brand-50 ring-2 ring-brand-600" : "border-neutral-200 hover:border-brand-600"}`}
                         >
                           <span className="flex items-center justify-between gap-1 font-bold">
                             {b.name}

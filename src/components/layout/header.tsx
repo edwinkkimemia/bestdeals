@@ -283,32 +283,7 @@ export function Header({
 
   return (
     <>
-      {/* top utility strip — static, scrolls away naturally. Kept outside the
- sticky header so collapsing it never changes the sticky element's
- height (which caused the shake via scroll <-> layout feedback). */}
-      <div className="bg-brand-700 text-white">
-        <div className="container-bd flex h-8 items-center justify-between text-xs">
-          <p className="truncate">
-            Kenya&apos;s marketplace for everything · Find it. Sell it. Get the
-            best deal.
-          </p>
-          <div className="hidden items-center gap-4 sm:flex">
-            <a href="mailto:support@chap.co.ke" className="hover:underline">
-              support@chap.co.ke
-            </a>
-            <Link href="/help" className="hover:underline">
-              Help Centre
-            </Link>
-            <Link href="/pricing" className="hover:underline">
-              Business Plans
-            </Link>
-            <Link href="/safety" className="hover:underline">
-              Buyer Safety
-            </Link>
-          </div>
-        </div>
-      </div>
-      <header className="sticky top-0 z-40 border-b-2 border-ink-900 bg-white">
+      <header className="sticky top-0 z-40 border-b border-neutral-200 bg-white">
         <div className="container-bd flex items-center gap-2 py-3 sm:gap-3">
           <button
             className="rounded p-1.5 hover:bg-neutral-200 sm:p-2 lg:hidden"
@@ -339,7 +314,7 @@ export function Header({
           >
             <form
               action="/search"
-              className="flex overflow-hidden rounded border-2 border-ink-900 bg-white"
+              className="flex overflow-hidden rounded border-2 border-brand-600 bg-white"
               onSubmit={() => {
                 try {
                   localStorage.setItem("bd_county", county);
@@ -358,7 +333,7 @@ export function Header({
               />
               <input type="hidden" name="county" value={county} />
               <button
-                className="flex items-center gap-1.5 bg-ink-900 px-5 text-sm font-bold text-white hover:bg-black"
+                className="flex items-center gap-1.5 bg-brand-600 px-5 text-sm font-bold text-white hover:bg-brand-700"
                 type="submit"
               >
                 <Search className="h-4 w-4" />{" "}
@@ -455,7 +430,7 @@ export function Header({
                         onChange={(e) => setLocFilter(e.target.value)}
                         placeholder="Find county or town…"
                         aria-label="Filter counties"
-                        className="w-full rounded bg-neutral-100 px-2.5 py-1.5 text-xs outline-none focus:ring-1 focus:ring-ink-900"
+                        className="w-full rounded bg-neutral-100 px-2.5 py-1.5 text-xs outline-none focus:ring-1 focus:ring-brand-600"
                       />
                     </div>
                     <ul
@@ -668,7 +643,7 @@ export function Header({
           <div className="container-bd pb-3 md:hidden">
             <form
               action="/search"
-              className="flex overflow-hidden rounded border-2 border-ink-900"
+              className="flex overflow-hidden rounded border-2 border-brand-600"
             >
               <input
                 name="q"
@@ -679,7 +654,7 @@ export function Header({
               />
               <input type="hidden" name="county" value={county} />
               <button
-                className="bg-ink-900 px-4 text-white"
+                className="bg-brand-600 px-4 text-white"
                 aria-label="Search"
               >
                 <Search className="h-4 w-4" />

@@ -39,7 +39,7 @@ body {
     @apply inline-flex items-center justify-center gap-2 rounded bg-brand-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2 disabled:opacity-50;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded border border-neutral-300 bg-white px-5 py-2.5 text-sm font-bold text-ink-900 hover:border-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2;
+    @apply inline-flex items-center justify-center gap-2 rounded border border-neutral-300 bg-white px-5 py-2.5 text-sm font-bold text-ink-900 hover:bg-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-2;
   }
   .btn-accent {
     @apply inline-flex items-center justify-center gap-2 rounded bg-accent-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-accent-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2;
@@ -48,7 +48,7 @@ body {
     @apply inline-flex items-center justify-center gap-2 rounded bg-[#1DA851] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#178A43] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1DA851] focus-visible:ring-offset-2;
   }
   .input-bd {
-    @apply w-full rounded border border-neutral-300 bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-ink-900 focus:outline-none focus:ring-1 focus:ring-ink-900;
+    @apply w-full rounded border border-neutral-300 bg-white px-3.5 py-2.5 text-sm text-ink-900 placeholder:text-ink-400 focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600;
   }
   .label-bd {
     @apply mb-1.5 block text-sm font-bold text-ink-900;
