@@ -390,7 +390,9 @@ export function ListingDetail({
             /
           </span>
           <span className="min-w-0 break-words font-semibold text-ink-700">
-            {listing.title.slice(0, 60)}…
+            {listing.title.length > 60
+              ? `${listing.title.slice(0, 60)}…`
+              : listing.title}
           </span>
         </div>
       </nav>
